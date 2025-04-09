@@ -372,23 +372,31 @@ class KrakenWebsocket:
         """
         self.ticker_callbacks.append(callback)
         
-        # Convert trading pair format
-        formatted_pairs = [pair.replace('/', '') for pair in pairs]
-        
-        subscription = {
-            "name": "ticker"
-        }
-        
-        message = {
-            "event": "subscribe",
-            "pair": formatted_pairs,
-            "subscription": subscription
-        }
-        
-        if self.public_connected:
-            self.public_ws.send(json.dumps(message))
-        else:
-            self.public_buffer.append(message)
+        # For Kraken, we need to subscribe to each pair individually
+        for pair in pairs:
+            # Convert trading pair format (remove / and add XBT for BTC)
+            formatted_pair = pair.replace('/', '')
+            formatted_pair = formatted_pair.replace('BTC', 'XBT')
+            
+            subscription = {
+                "name": "ticker"
+            }
+            
+            message = {
+                "event": "subscribe",
+                "pair": [formatted_pair],
+                "subscription": subscription
+            }
+            
+            if self.public_connected and self.public_ws:
+                try:
+                    self.public_ws.send(json.dumps(message))
+                    logger.info(f"Subscribed to ticker for {formatted_pair}")
+                except Exception as e:
+                    logger.error(f"Error subscribing to ticker: {e}")
+                    self.public_buffer.append(message)
+            else:
+                self.public_buffer.append(message)
     
     def subscribe_ohlc(self, pairs: List[str], callback: Callable, interval: int = 1):
         """
@@ -401,24 +409,32 @@ class KrakenWebsocket:
         """
         self.ohlc_callbacks.append(callback)
         
-        # Convert trading pair format
-        formatted_pairs = [pair.replace('/', '') for pair in pairs]
-        
-        subscription = {
-            "name": "ohlc",
-            "interval": interval
-        }
-        
-        message = {
-            "event": "subscribe",
-            "pair": formatted_pairs,
-            "subscription": subscription
-        }
-        
-        if self.public_connected:
-            self.public_ws.send(json.dumps(message))
-        else:
-            self.public_buffer.append(message)
+        # For Kraken, we need to subscribe to each pair individually
+        for pair in pairs:
+            # Convert trading pair format (remove / and add XBT for BTC)
+            formatted_pair = pair.replace('/', '')
+            formatted_pair = formatted_pair.replace('BTC', 'XBT')
+            
+            subscription = {
+                "name": "ohlc",
+                "interval": interval
+            }
+            
+            message = {
+                "event": "subscribe",
+                "pair": [formatted_pair],
+                "subscription": subscription
+            }
+            
+            if self.public_connected and self.public_ws:
+                try:
+                    self.public_ws.send(json.dumps(message))
+                    logger.info(f"Subscribed to OHLC for {formatted_pair}")
+                except Exception as e:
+                    logger.error(f"Error subscribing to OHLC: {e}")
+                    self.public_buffer.append(message)
+            else:
+                self.public_buffer.append(message)
     
     def subscribe_trades(self, pairs: List[str], callback: Callable):
         """
@@ -430,23 +446,31 @@ class KrakenWebsocket:
         """
         self.trade_callbacks.append(callback)
         
-        # Convert trading pair format
-        formatted_pairs = [pair.replace('/', '') for pair in pairs]
-        
-        subscription = {
-            "name": "trade"
-        }
-        
-        message = {
-            "event": "subscribe",
-            "pair": formatted_pairs,
-            "subscription": subscription
-        }
-        
-        if self.public_connected:
-            self.public_ws.send(json.dumps(message))
-        else:
-            self.public_buffer.append(message)
+        # For Kraken, we need to subscribe to each pair individually
+        for pair in pairs:
+            # Convert trading pair format (remove / and add XBT for BTC)
+            formatted_pair = pair.replace('/', '')
+            formatted_pair = formatted_pair.replace('BTC', 'XBT')
+            
+            subscription = {
+                "name": "trade"
+            }
+            
+            message = {
+                "event": "subscribe",
+                "pair": [formatted_pair],
+                "subscription": subscription
+            }
+            
+            if self.public_connected and self.public_ws:
+                try:
+                    self.public_ws.send(json.dumps(message))
+                    logger.info(f"Subscribed to trades for {formatted_pair}")
+                except Exception as e:
+                    logger.error(f"Error subscribing to trades: {e}")
+                    self.public_buffer.append(message)
+            else:
+                self.public_buffer.append(message)
     
     def subscribe_book(self, pairs: List[str], callback: Callable, depth: int = 10):
         """
@@ -459,24 +483,32 @@ class KrakenWebsocket:
         """
         self.book_callbacks.append(callback)
         
-        # Convert trading pair format
-        formatted_pairs = [pair.replace('/', '') for pair in pairs]
-        
-        subscription = {
-            "name": "book",
-            "depth": depth
-        }
-        
-        message = {
-            "event": "subscribe",
-            "pair": formatted_pairs,
-            "subscription": subscription
-        }
-        
-        if self.public_connected:
-            self.public_ws.send(json.dumps(message))
-        else:
-            self.public_buffer.append(message)
+        # For Kraken, we need to subscribe to each pair individually
+        for pair in pairs:
+            # Convert trading pair format (remove / and add XBT for BTC)
+            formatted_pair = pair.replace('/', '')
+            formatted_pair = formatted_pair.replace('BTC', 'XBT')
+            
+            subscription = {
+                "name": "book",
+                "depth": depth
+            }
+            
+            message = {
+                "event": "subscribe",
+                "pair": [formatted_pair],
+                "subscription": subscription
+            }
+            
+            if self.public_connected and self.public_ws:
+                try:
+                    self.public_ws.send(json.dumps(message))
+                    logger.info(f"Subscribed to book for {formatted_pair}")
+                except Exception as e:
+                    logger.error(f"Error subscribing to book: {e}")
+                    self.public_buffer.append(message)
+            else:
+                self.public_buffer.append(message)
     
     def subscribe_own_trades(self, callback: Callable, snapshot: bool = True):
         """
