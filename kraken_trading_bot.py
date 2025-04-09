@@ -13,7 +13,7 @@ from config import (
     TRADING_PAIR, TRADE_QUANTITY, LOOP_INTERVAL, STRATEGY_TYPE,
     USE_SANDBOX, INITIAL_CAPITAL, LEVERAGE, MARGIN_PERCENT,
     SIGNAL_INTERVAL, VOL_THRESHOLD, ENTRY_ATR_MULTIPLIER,
-    LOOKBACK_HOURS, ORDER_TIMEOUT_SECONDS
+    LOOKBACK_HOURS, ORDER_TIMEOUT_SECONDS, STATUS_UPDATE_INTERVAL
 )
 
 logger = logging.getLogger(__name__)
@@ -124,7 +124,10 @@ class KrakenTradingBot:
                         'high': float(data['h'][1]) if isinstance(data['h'], list) and len(data['h']) > 1 else 0.0,
                         'open': float(data['o'][1]) if isinstance(data['o'], list) and len(data['o']) > 1 else 0.0
                     }
-                    logger.debug(f"Processed ticker data: {ticker}")
+                    # Log all price updates (we've filtered most of the noise already)
+                    if pair == self.trading_pair:
+                        # Force this to ERROR level to make it more visible (will still be shown as INFO in the log)
+                        logger.error(f"【TICKER】 {pair} = ${ticker['close']:.2f} | Bid: ${ticker['bid']:.2f} | Ask: ${ticker['ask']:.2f}")
                 except Exception as e:
                     logger.error(f"Error parsing ticker fields: {e}")
                     logger.debug(f"Raw ticker data: {data}")
@@ -140,24 +143,30 @@ class KrakenTradingBot:
                             'high': 0.0,    # Default
                             'open': 0.0     # Default
                         }
+                        logger.info(f"Used fallback parsing for {pair}: close={ticker['close']}")
                     except Exception:
                         logger.error(f"Failed to parse minimum ticker data, skipping update")
                         return
             else:
-                logger.warning(f"Unexpected ticker data format: {data}")
+                logger.warning(f"Unexpected ticker data format for {pair}: {data}")
                 return
             
             self.ticker_data[pair] = ticker
             
             # Update current price and trailing stops
             if pair == self.trading_pair:
+                # Update current price and log it
                 self.current_price = ticker['close']
+                # Use error level to ensure visibility in logs
+                logger.error(f"【TICKER】 {pair} = ${ticker['close']:.2f} | Bid: ${ticker['bid']:.2f} | Ask: ${ticker['ask']:.2f}")
                 
                 # Update trailing stop prices
                 if self.position == "long" and self.trailing_max_price is not None:
                     self.trailing_max_price = max(self.trailing_max_price, self.current_price)
+                    logger.debug(f"Updated trailing max price: {self.trailing_max_price}")
                 elif self.position == "short" and self.trailing_min_price is not None:
                     self.trailing_min_price = min(self.trailing_min_price, self.current_price)
+                    logger.debug(f"Updated trailing min price: {self.trailing_min_price}")
                 
                 # Check for trailing stop triggers and pending orders
                 self._check_orders()
@@ -400,7 +409,7 @@ class KrakenTradingBot:
                 
                 # Update signal timestamp
                 self.last_signal_update = time.time()
-                logger.info(f"Signals updated: Buy={buy_signal}, Sell={sell_signal}, ATR={atr_value:.4f}")
+                logger.info(f"【SIGNALS】 Buy={buy_signal}, Sell={sell_signal}, ATR={atr_value:.4f}")
                 
         except Exception as e:
             logger.error(f"Error updating signals: {e}")
@@ -726,6 +735,8 @@ class KrakenTradingBot:
         
         # Fetch initial price data
         try:
+            # Request at least 100 candles for better signal calculation
+            # Interval = 1 minute for more granular data
             ohlc_data = self.api.get_ohlc(self.trading_pair, 1)
             pair_key = list(ohlc_data.keys())[0]  # Get the pair key
             
@@ -735,6 +746,16 @@ class KrakenTradingBot:
             # Load historical OHLC data into strategy
             for _, row in df.iterrows():
                 self.strategy.update_ohlc(row['open'], row['high'], row['low'], row['close'])
+                
+                # Also add to the ohlc_data list for signal calculation
+                self.ohlc_data.append({
+                    'time': row['time'],
+                    'open': row['open'],
+                    'high': row['high'],
+                    'low': row['low'],
+                    'close': row['close'],
+                    'volume': row['volume']
+                })
             
             logger.info(f"Loaded {len(df)} historical candles")
             
@@ -768,6 +789,9 @@ class KrakenTradingBot:
         try:
             self.start()
             
+            # Add status update timing
+            self.last_status_update = 0
+            
             while self.running:
                 # Main loop sleeps to avoid excessive CPU usage
                 # Check orders and trailing stops periodically
@@ -777,10 +801,41 @@ class KrakenTradingBot:
                 if time.time() - self.last_signal_update >= SIGNAL_INTERVAL:
                     self._update_signals()
                 
-                # Log portfolio status
-                logger.info(f"Portfolio: ${self.portfolio_value:.2f} | "
-                          f"Total Profit: ${self.total_profit:.2f} "
-                          f"({self.total_profit_percent:.2f}%)")
+                # Display detailed status only every STATUS_UPDATE_INTERVAL seconds to avoid log spam
+                if time.time() - self.last_status_update >= STATUS_UPDATE_INTERVAL:
+                    position_str = "NONE" if self.position is None else ("LONG" if self.position == "long" else "SHORT")
+                    logger.info("=" * 60)
+                    # Use latest ticker data if available, even if current_price is None
+                    if self.current_price is not None:
+                        current_price_str = f"${self.current_price:.2f}"
+                    elif self.trading_pair in self.ticker_data and self.ticker_data[self.trading_pair]['close'] > 0:
+                        self.current_price = self.ticker_data[self.trading_pair]['close']
+                        current_price_str = f"${self.current_price:.2f}"
+                    else:
+                        current_price_str = "Unknown"
+                    
+                    logger.info(f"【MARKET】 PRICE: {current_price_str} | POSITION: {position_str}")
+                    if self.position is not None and self.entry_price is not None and self.current_price is not None:
+                        logger.info(f"ENTRY PRICE: ${self.entry_price:.2f}")
+                        if self.position == "long":
+                            profit = (self.current_price - self.entry_price) * self.trade_quantity
+                        else:  # short
+                            profit = (self.entry_price - self.current_price) * self.trade_quantity
+                        percent = (profit / (self.portfolio_value * MARGIN_PERCENT)) * 100
+                        logger.info(f"UNREALIZED P/L: ${profit:.2f} ({percent:.2f}%)")
+                    elif self.position is not None and self.entry_price is not None:
+                        # We have a position but no current price
+                        logger.info(f"ENTRY PRICE: ${self.entry_price:.2f}")
+                        logger.info("UNREALIZED P/L: Unknown (waiting for price data)")
+                    logger.info(f"【ACCOUNT】 PORTFOLIO: ${self.portfolio_value:.2f} | PROFIT: ${self.total_profit:.2f} ({self.total_profit_percent:.2f}%) | TRADES: {self.trade_count}")
+                    if self.trailing_stop_order is not None:
+                        logger.info(f"TRAILING STOP: ${self.trailing_stop_order['price']:.2f}")
+                    if self.breakeven_order is not None:
+                        logger.info(f"BREAKEVEN EXIT: ${self.breakeven_order['price']:.2f}")
+                    if self.liquidity_exit_order is not None:
+                        logger.info(f"LIQUIDITY EXIT: ${self.liquidity_exit_order['price']:.2f}")
+                    logger.info("=" * 60)
+                    self.last_status_update = time.time()
                 
                 time.sleep(LOOP_INTERVAL)
         

@@ -6,12 +6,33 @@ import sys
 from flask import Flask
 from threading import Thread
 
-# Configure logging
+# Configure logging with a cleaner format
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,  # Set to DEBUG to see more information
     format='%(asctime)s [%(levelname)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+
+# Filter out excessive websocket logs and specific error messages
+class LogFilter(logging.Filter):
+    def filter(self, record):
+        # Filter out verbose websocket connection messages
+        if "WebSocket connection established" in record.getMessage():
+            return False
+        # Filter out repeated subscription errors
+        if "Unsupported event for unknown" in record.getMessage():
+            return False
+        # Allow 【TICKER】 messages to pass through the filter
+        if "【TICKER】" in record.getMessage():
+            return True
+        # Filter out detailed JSON debug information but keep important errors 
+        if record.levelno < logging.ERROR and ("Received ticker update for" in record.getMessage() or 
+                                               "Processed ticker data for" in record.getMessage()):
+            return False
+        return True
+
+# Add filter to root logger
+logging.getLogger().addFilter(LogFilter())
 
 # Create logger
 logger = logging.getLogger(__name__)
