@@ -25,7 +25,8 @@ class LogFilter(logging.Filter):
             return False
             
         # Allow important messages to pass through regardless of level
-        if "【TICKER】" in record.getMessage() or "【MARKET】" in record.getMessage() or "【ACCOUNT】" in record.getMessage() or "【SIGNALS】" in record.getMessage():
+        if any(tag in record.getMessage() for tag in ["【TICKER】", "【MARKET】", "【ACCOUNT】", "【SIGNALS】", 
+                                                    "【ANALYSIS】", "【CONDITIONS】", "【SIGNAL】"]):
             return True
             
         # Filter out detailed WebSocket data dumps

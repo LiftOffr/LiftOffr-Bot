@@ -507,6 +507,10 @@ class KrakenTradingBot:
         # Calculate limit price based on ATR (from original code)
         limit_price = self.current_price - (self.current_atr * ENTRY_ATR_MULTIPLIER)
         
+        # Calculate position size and risk
+        position_size_usd = self.trade_quantity * self.current_price
+        account_risk_percent = (position_size_usd / self.portfolio_value) * 100
+        
         # Create pending order
         self.pending_order = {
             "type": "buy",
@@ -514,7 +518,8 @@ class KrakenTradingBot:
             "time": time.time()
         }
         
-        logger.info(f"Placed buy limit order at {limit_price:.4f}")
+        logger.info(f"【ORDER】 LONG - Placed buy limit order at ${limit_price:.4f}")
+        logger.info(f"【POSITION】 Size: {self.trade_quantity} ({position_size_usd:.2f} USD) | Leverage: {LEVERAGE}x | Risk: {account_risk_percent:.2f}%")
     
     def _place_sell_order(self, exit_only=False):
         """
@@ -546,7 +551,7 @@ class KrakenTradingBot:
             "exit_only": exit_only
         }
         
-        logger.info(f"Placed sell {'exit' if exit_only else 'limit'} order at {price:.4f}")
+        logger.info(f"【ORDER】 {'EXIT LONG' if exit_only else 'SHORT'} - Placed sell {'exit' if exit_only else 'limit'} order at ${price:.4f}")
         
         # Execute immediately
         if exit_only:
@@ -561,7 +566,7 @@ class KrakenTradingBot:
             logger.warning("Cannot execute buy: current price unknown")
             return
         
-        logger.info(f"BUY SIGNAL at price {self.current_price}")
+        logger.info(f"【EXECUTE】 LONG - Buy order at ${self.current_price:.4f}")
         
         # Calculate position size based on margin
         margin_amount = self.portfolio_value * MARGIN_PERCENT
@@ -618,7 +623,7 @@ class KrakenTradingBot:
             logger.warning("Cannot execute sell: current price unknown")
             return
         
-        logger.info(f"SELL SIGNAL at price {self.current_price}")
+        logger.info(f"【EXECUTE】 {'EXIT LONG' if exit_only else 'SHORT'} - Sell order at ${self.current_price:.4f}")
         
         # If exiting a long position
         if exit_only and self.position == "long":

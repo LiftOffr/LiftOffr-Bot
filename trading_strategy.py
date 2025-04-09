@@ -464,21 +464,55 @@ class AdaptiveStrategy(TradingStrategy):
         adaptive_filter = normalized_atr > VOL_THRESHOLD
         
         # Calculate bullish and bearish conditions (from original code)
-        bullish = (last['EMA9'] > last['EMA21']) and (45 < last['RSI14'] < 75) and \
-                  (last['MACD'] > last['MACD_signal']) and (last['ADX'] > 20) and \
-                  adaptive_filter and (last['close'] < last['bb_upper']) and (last['close'] > last['kc_middle'])
+        ema_condition = last['EMA9'] > last['EMA21']
+        rsi_bullish_condition = 45 < last['RSI14'] < 75
+        rsi_bearish_condition = 25 < last['RSI14'] < 55
+        macd_condition = last['MACD'] > last['MACD_signal']
+        adx_condition = last['ADX'] > 20
+        volatility_condition = adaptive_filter
+        bollinger_upper_condition = last['close'] < last['bb_upper']
+        bollinger_lower_condition = last['close'] > last['bb_lower']
+        keltner_middle_condition_bull = last['close'] > last['kc_middle']
+        keltner_middle_condition_bear = last['close'] < last['kc_middle']
         
-        bearish = (last['EMA9'] < last['EMA21']) and (25 < last['RSI14'] < 55) and \
-                  (last['MACD'] < last['MACD_signal']) and (last['ADX'] > 20) and \
-                  adaptive_filter and (last['close'] > last['bb_lower']) and (last['close'] < last['kc_middle'])
+        # Log detailed conditions
+        condition_log = [
+            f"EMA9 {'>=' if ema_condition else '<'} EMA21 ({last['EMA9']:.2f} vs {last['EMA21']:.2f})",
+            f"RSI = {last['RSI14']:.2f} {'✓' if rsi_bullish_condition or rsi_bearish_condition else '✗'}",
+            f"MACD {'>=' if macd_condition else '<'} Signal ({last['MACD']:.4f} vs {last['MACD_signal']:.4f})",
+            f"ADX = {last['ADX']:.2f} {'✓' if adx_condition else '✗'}",
+            f"Volatility = {normalized_atr:.4f} {'✓' if volatility_condition else '✗'} (threshold: {VOL_THRESHOLD})",
+            f"Price {'<' if bollinger_upper_condition else '>='} Upper BB ({last['close']:.2f} vs {last['bb_upper']:.2f})",
+            f"Price {'>' if bollinger_lower_condition else '<='} Lower BB ({last['close']:.2f} vs {last['bb_lower']:.2f})",
+            f"Price vs KC Middle: {last['close']:.2f} vs {last['kc_middle']:.2f}"
+        ]
+        
+        # Combine all conditions
+        bullish = ema_condition and rsi_bullish_condition and macd_condition and adx_condition and \
+                  volatility_condition and bollinger_upper_condition and keltner_middle_condition_bull
+        
+        bearish = (not ema_condition) and rsi_bearish_condition and (not macd_condition) and adx_condition and \
+                  volatility_condition and bollinger_lower_condition and keltner_middle_condition_bear
         
         # Add ARIMA forecast influence
         arima_forecast = self.compute_arima_forecast(df['close'])
+        forecast_direction = "BULLISH" if arima_forecast > last['close'] else "BEARISH" if arima_forecast < last['close'] else "NEUTRAL"
+        
+        logger.info(f"【ANALYSIS】 Forecast: {forecast_direction} ({last['close']:.2f} → {arima_forecast:.2f})")
+        logger.info(f"【CONDITIONS】 {' | '.join(condition_log)}")
+        
         agg_signal = (1.0 if bullish else (-1.0 if bearish else 0.0))
         agg_signal += 0.5 if (arima_forecast > last['close']) else (-0.5 if arima_forecast < last['close'] else 0.0)
         
         final_bullish = agg_signal >= 1.0
         final_bearish = agg_signal <= -1.0
+        
+        if final_bullish:
+            logger.info(f"【SIGNAL】 BULLISH - Trade conditions met for LONG position")
+        elif final_bearish:
+            logger.info(f"【SIGNAL】 BEARISH - Trade conditions met for SHORT position")
+        else:
+            logger.info(f"【SIGNAL】 NEUTRAL - No clear trade signal detected")
         
         # Store the latest indicators
         self.latest_indicators = last
