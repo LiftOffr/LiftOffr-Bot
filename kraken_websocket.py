@@ -57,8 +57,18 @@ class KrakenWebsocket:
         self.public_thread = None
         self.private_thread = None
         self.reconnect_thread = None
+        self.public_ping_thread = None
+        self.private_ping_thread = None
         self.reconnect_interval = 5  # seconds
+        self.ping_interval = 30  # seconds - send a ping every 30 seconds to keep connection alive
+        self.max_reconnect_attempts = 10  # maximum number of consecutive reconnection attempts
+        self.reconnect_attempts = 0  # current number of reconnection attempts
+        self.reconnect_backoff = 2  # exponential backoff factor
         self.keep_running = True
+        
+        # Subscription tracking
+        self.public_subscriptions = []  # Track subscriptions for automatic resubscription after reconnect
+        self.private_subscriptions = []
     
     def _get_auth_token(self) -> Dict:
         """
@@ -335,27 +345,70 @@ class KrakenWebsocket:
             "signature": auth_token['signature']
         }))
     
+    def _send_ping(self, ws, ws_type):
+        """
+        Send periodic ping to keep WebSocket connection alive
+        
+        Args:
+            ws: WebSocket connection
+            ws_type: Type of WebSocket (public/private)
+        """
+        while self.keep_running:
+            try:
+                if ws and ((ws_type == 'public' and self.public_connected) or 
+                           (ws_type == 'private' and self.private_connected)):
+                    # Send ping message to prevent timeouts
+                    ws.send(json.dumps({"event": "ping"}))
+                    logger.debug(f"Sent ping to {ws_type} WebSocket")
+                else:
+                    logger.debug(f"{ws_type} WebSocket not connected, skipping ping")
+                    break
+            except Exception as e:
+                logger.error(f"Error sending ping to {ws_type} WebSocket: {e}")
+                break
+                
+            # Sleep for ping interval
+            time.sleep(self.ping_interval)
+    
     def _reconnect(self):
         """
-        Handle reconnection for WebSockets
+        Handle reconnection for WebSockets with exponential backoff
         """
-        logger.info(f"Attempting to reconnect in {self.reconnect_interval} seconds...")
-        time.sleep(self.reconnect_interval)
+        # Increase reconnect attempts
+        self.reconnect_attempts += 1
+        
+        # Calculate backoff time (with maximum cap at 5 minutes)
+        backoff_time = min(300, self.reconnect_interval * (self.reconnect_backoff ** (self.reconnect_attempts - 1)))
+        
+        logger.info(f"Attempting to reconnect in {backoff_time:.1f} seconds... (Attempt {self.reconnect_attempts}/{self.max_reconnect_attempts})")
+        time.sleep(backoff_time)
         
         try:
             if not self.public_connected and self.public_ws:
                 self.connect_public()
+                # Reset reconnect attempts on successful connection
+                self.reconnect_attempts = 0
             
             if not self.private_connected and self.private_ws:
                 self.connect_private()
+                # Reset reconnect attempts on successful connection
+                self.reconnect_attempts = 0
             
             self.reconnect_thread = None
         except Exception as e:
             logger.error(f"Reconnection failed: {e}")
-            # Retry reconnection
-            self.reconnect_thread = threading.Thread(target=self._reconnect)
-            self.reconnect_thread.daemon = True
-            self.reconnect_thread.start()
+            
+            # If we haven't reached max attempts, retry
+            if self.reconnect_attempts < self.max_reconnect_attempts:
+                self.reconnect_thread = threading.Thread(target=self._reconnect)
+                self.reconnect_thread.daemon = True
+                self.reconnect_thread.start()
+            else:
+                logger.error(f"Maximum reconnection attempts ({self.max_reconnect_attempts}) reached. Giving up.")
+                self.reconnect_thread = None
+                
+                # Reset counter for future attempts
+                self.reconnect_attempts = 0
     
     def connect_public(self):
         """
