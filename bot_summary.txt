@@ -1,0 +1,14 @@
+Kraken Trading Bot Usage Instructions
+
+Run the bot with these optional arguments:
+--sandbox: Run in test mode (no real trades)
+--live: Run in live trading mode
+--pair <symbol>: Specify trading pair (e.g. SOLUSD)
+--quantity <amount>: Set trade quantity
+--strategy <type>: Choose strategy (adaptive, simple_moving_average, rsi)
+--capital <amount>: Initial capital
+--leverage <multiplier>: Set leverage level
+--margin <percent>: Margin percentage
+--web: Start web interface
+
+Example: python main.py --sandbox --pair SOLUSD

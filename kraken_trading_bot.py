@@ -36,7 +36,25 @@ class KrakenTradingBot:
             trade_quantity (float, optional): Quantity to trade
             strategy_type (str, optional): Type of trading strategy
         """
-        self.trading_pair = trading_pair
+        # Format the trading pair correctly for Kraken
+        # Kraken WebSocket requires ISO 4217-A3 format with / (e.g. "SOL/USD")
+        self.original_pair = trading_pair  # Keep original for REST API calls
+        
+        # Format pair for WebSockets (with slash)
+        if '/' not in trading_pair:
+            if len(trading_pair) == 6:  # For 6 character pairs like SOLUSD
+                self.trading_pair = trading_pair[:3] + '/' + trading_pair[3:]
+            else:
+                # For other length pairs, just use as is for now
+                self.trading_pair = trading_pair
+        else:
+            self.trading_pair = trading_pair
+            
+        # Special case for BTC (Kraken uses XBT)
+        if 'BTC' in self.trading_pair:
+            self.trading_pair = self.trading_pair.replace('BTC', 'XBT')
+            
+        logger.info(f"Using trading pair: {self.trading_pair} (original: {trading_pair})")
         self.trade_quantity = trade_quantity
         
         # Use API keys from params or environment variables
@@ -107,6 +125,9 @@ class KrakenTradingBot:
             data (dict): Ticker data
         """
         try:
+            # Log raw data for debugging
+            logger.debug(f"Received ticker data for {pair}: {str(data)[:200]}...")
+            
             # Convert ticker data to easier format (handle different data formats gracefully)
             ticker = {}
             # Kraken ticker format: https://docs.kraken.com/websockets/#message-ticker
@@ -124,10 +145,8 @@ class KrakenTradingBot:
                         'high': float(data['h'][1]) if isinstance(data['h'], list) and len(data['h']) > 1 else 0.0,
                         'open': float(data['o'][1]) if isinstance(data['o'], list) and len(data['o']) > 1 else 0.0
                     }
-                    # Log all price updates (we've filtered most of the noise already)
-                    if pair == self.trading_pair:
-                        # Force this to ERROR level to make it more visible (will still be shown as INFO in the log)
-                        logger.error(f"【TICKER】 {pair} = ${ticker['close']:.2f} | Bid: ${ticker['bid']:.2f} | Ask: ${ticker['ask']:.2f}")
+                    # Log at INFO level now that we've fixed the visibility issues
+                    logger.info(f"【TICKER】 {pair} = ${ticker['close']:.2f} | Bid: ${ticker['bid']:.2f} | Ask: ${ticker['ask']:.2f}")
                 except Exception as e:
                     logger.error(f"Error parsing ticker fields: {e}")
                     logger.debug(f"Raw ticker data: {data}")
@@ -143,7 +162,7 @@ class KrakenTradingBot:
                             'high': 0.0,    # Default
                             'open': 0.0     # Default
                         }
-                        logger.info(f"Used fallback parsing for {pair}: close={ticker['close']}")
+                        logger.info(f"Used fallback parsing for {pair}: close=${ticker['close']:.2f}")
                     except Exception:
                         logger.error(f"Failed to parse minimum ticker data, skipping update")
                         return
@@ -155,10 +174,8 @@ class KrakenTradingBot:
             
             # Update current price and trailing stops
             if pair == self.trading_pair:
-                # Update current price and log it
+                # Update current price
                 self.current_price = ticker['close']
-                # Use error level to ensure visibility in logs
-                logger.error(f"【TICKER】 {pair} = ${ticker['close']:.2f} | Bid: ${ticker['bid']:.2f} | Ask: ${ticker['ask']:.2f}")
                 
                 # Update trailing stop prices
                 if self.position == "long" and self.trailing_max_price is not None:
@@ -721,10 +738,22 @@ class KrakenTradingBot:
         self.ws.connect_private()
         
         # Subscribe to data streams
+        # Subscribe to ticker first as it's the most important for price updates
+        logger.info(f"Subscribing to ticker for {self.trading_pair}")
         self.ws.subscribe_ticker([self.trading_pair], self._handle_ticker_update)
+        
+        # Subscribe to OHLC for strategy updates
+        logger.info(f"Subscribing to OHLC for {self.trading_pair}")
         self.ws.subscribe_ohlc([self.trading_pair], self._handle_ohlc_update, 1)
+        
+        # Subscribe to trades for real-time price updates
+        logger.info(f"Subscribing to trades for {self.trading_pair}")
         self.ws.subscribe_trades([self.trading_pair], self._handle_trade_update)
-        self.ws.subscribe_book([self.trading_pair], self._handle_book_update, 10)
+        
+        # Commenting out order book subscription as it generates too many messages
+        # and overwhelms the more important ticker and trade messages
+        # logger.info(f"Subscribing to order book for {self.trading_pair}")
+        # self.ws.subscribe_book([self.trading_pair], self._handle_book_update, 10)
         
         # Subscribe to private data streams
         self.ws.subscribe_own_trades(self._handle_own_trades)
@@ -737,8 +766,11 @@ class KrakenTradingBot:
         try:
             # Request at least 100 candles for better signal calculation
             # Interval = 1 minute for more granular data
-            ohlc_data = self.api.get_ohlc(self.trading_pair, 1)
+            # Use original_pair for REST API calls since it expects a different format
+            logger.info(f"Fetching OHLC data for {self.original_pair}")
+            ohlc_data = self.api.get_ohlc(self.original_pair, 1)
             pair_key = list(ohlc_data.keys())[0]  # Get the pair key
+            logger.info(f"Received OHLC data with pair key: {pair_key}")
             
             # Convert to DataFrame for easier processing
             df = parse_kraken_ohlc(ohlc_data[pair_key])
@@ -808,10 +840,16 @@ class KrakenTradingBot:
                     # Use latest ticker data if available, even if current_price is None
                     if self.current_price is not None:
                         current_price_str = f"${self.current_price:.2f}"
-                    elif self.trading_pair in self.ticker_data and self.ticker_data[self.trading_pair]['close'] > 0:
+                    elif self.trading_pair in self.ticker_data and 'close' in self.ticker_data[self.trading_pair] and self.ticker_data[self.trading_pair]['close'] > 0:
                         self.current_price = self.ticker_data[self.trading_pair]['close']
                         current_price_str = f"${self.current_price:.2f}"
+                        logger.info(f"Updated current price from ticker data: {current_price_str}")
                     else:
+                        # More aggressive debugging
+                        if self.trading_pair in self.ticker_data:
+                            logger.debug(f"Ticker data for {self.trading_pair}: {self.ticker_data[self.trading_pair]}")
+                        else:
+                            logger.debug(f"No ticker data for {self.trading_pair}. Available pairs: {list(self.ticker_data.keys())}")
                         current_price_str = "Unknown"
                     
                     logger.info(f"【MARKET】 PRICE: {current_price_str} | POSITION: {position_str}")

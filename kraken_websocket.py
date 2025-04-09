@@ -120,15 +120,24 @@ class KrakenWebsocket:
             # Handle actual data messages (in array format)
             if isinstance(msg, list):
                 try:
+                    # Log the raw message for debugging
+                    logger.debug(f"Received WebSocket data: {str(msg)[:200]}...")
+                    
                     # Determine message type from the subscription details
                     if len(msg) >= 4 and isinstance(msg[2], str):
                         channel_name = msg[2]
                         pair = msg[3]
                         data = msg[1]
                         
+                        logger.debug(f"Processing {channel_name} data for {pair}")
+                        
                         if channel_name == 'ticker':
+                            logger.debug(f"Ticker data: {str(data)[:100]}...")
                             for callback in self.ticker_callbacks:
-                                callback(pair, data)
+                                try:
+                                    callback(pair, data)
+                                except Exception as e:
+                                    logger.error(f"Error in ticker callback: {e}")
                         
                         elif channel_name == 'ohlc':
                             for callback in self.ohlc_callbacks:
@@ -150,9 +159,15 @@ class KrakenWebsocket:
                             channel_name = msg[2]
                             pair = msg[3] if len(msg) > 3 else None
                             
+                            logger.debug(f"Alternative format: {channel_name} for {pair}")
+                            
                             if channel_name == 'ticker':
+                                logger.debug(f"Alt format ticker data: {str(data)[:100]}...")
                                 for callback in self.ticker_callbacks:
-                                    callback(pair, data)
+                                    try:
+                                        callback(pair, data)
+                                    except Exception as e:
+                                        logger.error(f"Error in alt ticker callback: {e}")
                             
                             elif 'ohlc' in channel_name:
                                 for callback in self.ohlc_callbacks:

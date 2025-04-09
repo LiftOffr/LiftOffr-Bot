@@ -1,19 +1,22 @@
 # Kraken Trading Bot
 
-A Python trading bot that connects to Kraken US exchange using their API and websockets. This bot implements various trading strategies and can be run in sandbox/test mode to validate functionality before trading with real funds.
+A sophisticated Python trading bot designed for the Kraken US exchange, leveraging advanced API and websocket technologies for real-time cryptocurrency trading and intelligent market analysis.
 
 ## Features
 
-- Connect to Kraken US API for trading
-- Real-time market data via Kraken US websockets
-- Multiple trading strategies:
+- Full Kraken US API integration for trading operations
+- Real-time market data via Kraken US WebSockets
+- Multiple advanced trading strategies:
   - Simple Moving Average (SMA) crossover
   - Relative Strength Index (RSI)
-  - Combined strategy (SMA + RSI)
-- Sandbox/test mode for safe testing
-- Customizable trading pairs and quantities
-- Error handling and reconnection logic
-- Detailed logging
+  - Adaptive strategy with multiple indicators (EMA, MACD, ATR, Bollinger Bands)
+  - Linear regression forecasting
+- Trailing stop implementation with ATR-based sizing
+- Intelligent position management
+- Sandbox/test mode for risk-free testing
+- Customizable trading pairs and position sizing
+- Robust error handling and automatic reconnection
+- Clean, informative logging with categorized output
 
 ## Requirements
 

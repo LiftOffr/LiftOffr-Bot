@@ -8,7 +8,7 @@ from threading import Thread
 
 # Configure logging with a cleaner format
 logging.basicConfig(
-    level=logging.DEBUG,  # Set to DEBUG to see more information
+    level=logging.INFO,  # Set to INFO to reduce noise in logs
     format='%(asctime)s [%(levelname)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
@@ -19,16 +19,30 @@ class LogFilter(logging.Filter):
         # Filter out verbose websocket connection messages
         if "WebSocket connection established" in record.getMessage():
             return False
+            
         # Filter out repeated subscription errors
         if "Unsupported event for unknown" in record.getMessage():
             return False
-        # Allow 【TICKER】 messages to pass through the filter
-        if "【TICKER】" in record.getMessage():
+            
+        # Allow important messages to pass through regardless of level
+        if "【TICKER】" in record.getMessage() or "【MARKET】" in record.getMessage() or "【ACCOUNT】" in record.getMessage() or "【SIGNALS】" in record.getMessage():
             return True
-        # Filter out detailed JSON debug information but keep important errors 
-        if record.levelno < logging.ERROR and ("Received ticker update for" in record.getMessage() or 
-                                               "Processed ticker data for" in record.getMessage()):
+            
+        # Filter out detailed WebSocket data dumps
+        if record.levelno <= logging.DEBUG and "Received WebSocket data:" in record.getMessage():
             return False
+            
+        # Filter out ticker processing debug information
+        if record.levelno <= logging.DEBUG and ("Processing ticker data for" in record.getMessage() or 
+                                               "Ticker data:" in record.getMessage() or
+                                               "Received ticker data for" in record.getMessage()):
+            return False
+            
+        # Filter out OHLC and trade processing debug info
+        if record.levelno <= logging.DEBUG and ("Processing ohlc" in record.getMessage() or 
+                                               "Processing trade data for" in record.getMessage()):
+            return False
+            
         return True
 
 # Add filter to root logger

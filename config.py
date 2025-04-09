@@ -57,10 +57,10 @@ BREAKEVEN_PROFIT_TARGET = float(os.getenv('BREAKEVEN_PROFIT_TARGET', '1.0'))  # 
 ARIMA_LOOKBACK = int(os.getenv('ARIMA_LOOKBACK', '10'))  # Lookback period for linear regression forecast
 
 # Sleep time between iterations (in seconds)
-LOOP_INTERVAL = int(os.getenv('LOOP_INTERVAL', '60'))
+LOOP_INTERVAL = int(os.getenv('LOOP_INTERVAL', '5'))  # Sleep 5 seconds between iterations
 SIGNAL_INTERVAL = int(os.getenv('SIGNAL_INTERVAL', '300'))  # Update signals every 5 minutes
 LOOKBACK_HOURS = int(os.getenv('LOOKBACK_HOURS', '12'))  # Hours of historical data to fetch
-STATUS_UPDATE_INTERVAL = int(os.getenv('STATUS_UPDATE_INTERVAL', '30'))  # Status update interval
+STATUS_UPDATE_INTERVAL = int(os.getenv('STATUS_UPDATE_INTERVAL', '10'))  # Status update every 10 seconds
 
 # Order execution settings
 ORDER_TIMEOUT_SECONDS = 2 * LOOP_INTERVAL  # Time before reconsidering a pending order
