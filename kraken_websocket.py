@@ -111,30 +111,59 @@ class KrakenWebsocket:
             
             # Handle actual data messages (in array format)
             if isinstance(msg, list):
-                channel_name = msg[2]
-                pair = msg[3]
-                data = msg[1]
-                
-                if channel_name == 'ticker':
-                    for callback in self.ticker_callbacks:
-                        callback(pair, data)
-                
-                elif channel_name == 'ohlc':
-                    for callback in self.ohlc_callbacks:
-                        callback(pair, data)
-                
-                elif channel_name == 'trade':
-                    for callback in self.trade_callbacks:
-                        callback(pair, data)
-                
-                elif channel_name == 'book':
-                    for callback in self.book_callbacks:
-                        callback(pair, data)
+                try:
+                    # Determine message type from the subscription details
+                    if len(msg) >= 4 and isinstance(msg[2], str):
+                        channel_name = msg[2]
+                        pair = msg[3]
+                        data = msg[1]
+                        
+                        if channel_name == 'ticker':
+                            for callback in self.ticker_callbacks:
+                                callback(pair, data)
+                        
+                        elif channel_name == 'ohlc':
+                            for callback in self.ohlc_callbacks:
+                                callback(pair, data)
+                        
+                        elif channel_name == 'trade':
+                            for callback in self.trade_callbacks:
+                                callback(pair, data)
+                        
+                        elif channel_name == 'book':
+                            for callback in self.book_callbacks:
+                                callback(pair, data)
+                    else:
+                        # Alternative format for some Kraken WebSocket messages
+                        # For example, some callbacks might be in format [channelID, data, channelName, pair]
+                        if len(msg) >= 3 and isinstance(msg[0], int) and isinstance(msg[2], str):
+                            channel_id = msg[0]
+                            data = msg[1]
+                            channel_name = msg[2]
+                            pair = msg[3] if len(msg) > 3 else None
+                            
+                            if channel_name == 'ticker':
+                                for callback in self.ticker_callbacks:
+                                    callback(pair, data)
+                            
+                            elif 'ohlc' in channel_name:
+                                for callback in self.ohlc_callbacks:
+                                    callback(pair, data)
+                            
+                            elif channel_name == 'trade':
+                                for callback in self.trade_callbacks:
+                                    callback(pair, data)
+                            
+                            elif 'book' in channel_name:
+                                for callback in self.book_callbacks:
+                                    callback(pair, data)
+                except IndexError:
+                    logger.error(f"Unexpected message format: {msg}")
         
         except json.JSONDecodeError:
             logger.error(f"Failed to parse message: {message}")
         except Exception as e:
-            logger.error(f"Error handling message: {e}")
+            logger.error(f"Error handling message: {e}, Message: {message}")
     
     def _on_private_message(self, ws, message):
         """
@@ -343,13 +372,16 @@ class KrakenWebsocket:
         """
         self.ticker_callbacks.append(callback)
         
+        # Convert trading pair format
+        formatted_pairs = [pair.replace('/', '') for pair in pairs]
+        
         subscription = {
-            "name": "ticker",
+            "name": "ticker"
         }
         
         message = {
             "event": "subscribe",
-            "pair": pairs,
+            "pair": formatted_pairs,
             "subscription": subscription
         }
         
@@ -369,6 +401,9 @@ class KrakenWebsocket:
         """
         self.ohlc_callbacks.append(callback)
         
+        # Convert trading pair format
+        formatted_pairs = [pair.replace('/', '') for pair in pairs]
+        
         subscription = {
             "name": "ohlc",
             "interval": interval
@@ -376,7 +411,7 @@ class KrakenWebsocket:
         
         message = {
             "event": "subscribe",
-            "pair": pairs,
+            "pair": formatted_pairs,
             "subscription": subscription
         }
         
@@ -395,13 +430,16 @@ class KrakenWebsocket:
         """
         self.trade_callbacks.append(callback)
         
+        # Convert trading pair format
+        formatted_pairs = [pair.replace('/', '') for pair in pairs]
+        
         subscription = {
-            "name": "trade",
+            "name": "trade"
         }
         
         message = {
             "event": "subscribe",
-            "pair": pairs,
+            "pair": formatted_pairs,
             "subscription": subscription
         }
         
@@ -421,6 +459,9 @@ class KrakenWebsocket:
         """
         self.book_callbacks.append(callback)
         
+        # Convert trading pair format
+        formatted_pairs = [pair.replace('/', '') for pair in pairs]
+        
         subscription = {
             "name": "book",
             "depth": depth
@@ -428,7 +469,7 @@ class KrakenWebsocket:
         
         message = {
             "event": "subscribe",
-            "pair": pairs,
+            "pair": formatted_pairs,
             "subscription": subscription
         }
         

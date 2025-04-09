@@ -96,32 +96,40 @@ class KrakenTradingBot:
             pair (str): Trading pair
             data (dict): Ticker data
         """
-        # Convert ticker data to easier format
-        ticker = {
-            'ask': float(data['a'][0]),
-            'bid': float(data['b'][0]),
-            'close': float(data['c'][0]),
-            'volume': float(data['v'][1]),
-            'vwap': float(data['p'][1]),
-            'low': float(data['l'][1]),
-            'high': float(data['h'][1]),
-            'open': float(data['o'])
-        }
-        
-        self.ticker_data[pair] = ticker
-        
-        # Update current price and trailing stops
-        if pair == self.trading_pair:
-            self.current_price = ticker['close']
+        try:
+            # Convert ticker data to easier format (handle different data formats gracefully)
+            ticker = {}
+            if isinstance(data, dict) and 'a' in data and 'b' in data and 'c' in data:
+                ticker = {
+                    'ask': float(data['a'][0]) if isinstance(data['a'], list) and len(data['a']) > 0 else 0.0,
+                    'bid': float(data['b'][0]) if isinstance(data['b'], list) and len(data['b']) > 0 else 0.0,
+                    'close': float(data['c'][0]) if isinstance(data['c'], list) and len(data['c']) > 0 else 0.0,
+                    'volume': float(data['v'][1]) if isinstance(data['v'], list) and len(data['v']) > 1 else 0.0,
+                    'vwap': float(data['p'][1]) if isinstance(data['p'], list) and len(data['p']) > 1 else 0.0,
+                    'low': float(data['l'][1]) if isinstance(data['l'], list) and len(data['l']) > 1 else 0.0,
+                    'high': float(data['h'][1]) if isinstance(data['h'], list) and len(data['h']) > 1 else 0.0,
+                    'open': float(data['o']) if 'o' in data else 0.0
+                }
+            else:
+                logger.warning(f"Unexpected ticker data format: {data}")
+                return
             
-            # Update trailing stop prices
-            if self.position == "long" and self.trailing_max_price is not None:
-                self.trailing_max_price = max(self.trailing_max_price, self.current_price)
-            elif self.position == "short" and self.trailing_min_price is not None:
-                self.trailing_min_price = min(self.trailing_min_price, self.current_price)
+            self.ticker_data[pair] = ticker
             
-            # Check for trailing stop triggers and pending orders
-            self._check_orders()
+            # Update current price and trailing stops
+            if pair == self.trading_pair:
+                self.current_price = ticker['close']
+                
+                # Update trailing stop prices
+                if self.position == "long" and self.trailing_max_price is not None:
+                    self.trailing_max_price = max(self.trailing_max_price, self.current_price)
+                elif self.position == "short" and self.trailing_min_price is not None:
+                    self.trailing_min_price = min(self.trailing_min_price, self.current_price)
+                
+                # Check for trailing stop triggers and pending orders
+                self._check_orders()
+        except Exception as e:
+            logger.error(f"Error processing ticker update: {e}, Data: {data}")
     
     def _handle_ohlc_update(self, pair: str, data: List):
         """
@@ -131,35 +139,43 @@ class KrakenTradingBot:
             pair (str): Trading pair
             data (list): OHLC data
         """
-        # data format: [time, open, high, low, close, vwap, volume, count]
-        candle = {
-            'time': float(data[0]),
-            'open': float(data[1]),
-            'high': float(data[2]),
-            'low': float(data[3]),
-            'close': float(data[4]),
-            'vwap': float(data[5]),
-            'volume': float(data[6]),
-            'count': int(data[7])
-        }
-        
-        # Add to OHLC data
-        self.ohlc_data.append(candle)
-        
-        # Keep only the last 1000 candles
-        if len(self.ohlc_data) > 1000:
-            self.ohlc_data = self.ohlc_data[-1000:]
-        
-        # Update current price and strategy
-        if pair == self.trading_pair:
-            self.current_price = candle['close']
+        try:
+            # Check if we have valid OHLC data
+            if not isinstance(data, list) or len(data) < 8:
+                logger.warning(f"Invalid OHLC data format: {data}")
+                return
             
-            # Update strategy with OHLC data
-            self.strategy.update_ohlc(candle['open'], candle['high'], candle['low'], candle['close'])
+            # data format: [time, open, high, low, close, vwap, volume, count]
+            candle = {
+                'time': float(data[0]),
+                'open': float(data[1]),
+                'high': float(data[2]),
+                'low': float(data[3]),
+                'close': float(data[4]),
+                'vwap': float(data[5]),
+                'volume': float(data[6]),
+                'count': int(data[7])
+            }
             
-            # Check if we need to update signals
-            if time.time() - self.last_signal_update >= SIGNAL_INTERVAL or self.last_signal_update == 0:
-                self._update_signals()
+            # Add to OHLC data
+            self.ohlc_data.append(candle)
+            
+            # Keep only the last 1000 candles
+            if len(self.ohlc_data) > 1000:
+                self.ohlc_data = self.ohlc_data[-1000:]
+            
+            # Update current price and strategy
+            if pair == self.trading_pair:
+                self.current_price = candle['close']
+                
+                # Update strategy with OHLC data
+                self.strategy.update_ohlc(candle['open'], candle['high'], candle['low'], candle['close'])
+                
+                # Check if we need to update signals
+                if time.time() - self.last_signal_update >= SIGNAL_INTERVAL or self.last_signal_update == 0:
+                    self._update_signals()
+        except Exception as e:
+            logger.error(f"Error processing OHLC update: {e}, Data: {data}")
     
     def _handle_trade_update(self, pair: str, data: List):
         """
@@ -169,9 +185,20 @@ class KrakenTradingBot:
             pair (str): Trading pair
             data (list): Trade data
         """
-        # Only process the most recent trade
-        if len(data) > 0:
+        try:
+            # Validate the data structure
+            if not isinstance(data, list) or len(data) == 0:
+                logger.warning(f"Invalid trade data format: {data}")
+                return
+                
+            # Only process the most recent trade
             latest_trade = data[-1]
+            
+            # Make sure we have a valid trade data element
+            if not isinstance(latest_trade, list) or len(latest_trade) < 1:
+                logger.warning(f"Invalid trade element format: {latest_trade}")
+                return
+                
             price = float(latest_trade[0])
             
             # Update current price
@@ -186,6 +213,8 @@ class KrakenTradingBot:
                 
                 # Check for trailing stop triggers and pending orders
                 self._check_orders()
+        except Exception as e:
+            logger.error(f"Error processing trade update: {e}, Data: {data}")
     
     def _handle_book_update(self, pair: str, data: Dict):
         """
@@ -195,33 +224,55 @@ class KrakenTradingBot:
             pair (str): Trading pair
             data (dict): Order book data
         """
-        # Initialize order book if not exists
-        if pair not in self.order_book:
-            self.order_book[pair] = {'asks': {}, 'bids': {}}
-        
-        # Update asks
-        if 'a' in data:
-            for ask in data['a']:
-                price = float(ask[0])
-                volume = float(ask[1])
+        try:
+            # Validate data
+            if not isinstance(data, dict):
+                logger.warning(f"Invalid order book data format: {data}")
+                return
                 
-                if volume == 0:
-                    if price in self.order_book[pair]['asks']:
-                        del self.order_book[pair]['asks'][price]
-                else:
-                    self.order_book[pair]['asks'][price] = volume
-        
-        # Update bids
-        if 'b' in data:
-            for bid in data['b']:
-                price = float(bid[0])
-                volume = float(bid[1])
-                
-                if volume == 0:
-                    if price in self.order_book[pair]['bids']:
-                        del self.order_book[pair]['bids'][price]
-                else:
-                    self.order_book[pair]['bids'][price] = volume
+            # Initialize order book if not exists
+            if pair not in self.order_book:
+                self.order_book[pair] = {'asks': {}, 'bids': {}}
+            
+            # Update asks
+            if 'a' in data and isinstance(data['a'], list):
+                for ask in data['a']:
+                    if not isinstance(ask, list) or len(ask) < 2:
+                        logger.warning(f"Invalid ask format: {ask}")
+                        continue
+                        
+                    try:
+                        price = float(ask[0])
+                        volume = float(ask[1])
+                        
+                        if volume == 0:
+                            if price in self.order_book[pair]['asks']:
+                                del self.order_book[pair]['asks'][price]
+                        else:
+                            self.order_book[pair]['asks'][price] = volume
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Error processing ask: {e}, Data: {ask}")
+            
+            # Update bids
+            if 'b' in data and isinstance(data['b'], list):
+                for bid in data['b']:
+                    if not isinstance(bid, list) or len(bid) < 2:
+                        logger.warning(f"Invalid bid format: {bid}")
+                        continue
+                        
+                    try:
+                        price = float(bid[0])
+                        volume = float(bid[1])
+                        
+                        if volume == 0:
+                            if price in self.order_book[pair]['bids']:
+                                del self.order_book[pair]['bids'][price]
+                        else:
+                            self.order_book[pair]['bids'][price] = volume
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Error processing bid: {e}, Data: {bid}")
+        except Exception as e:
+            logger.error(f"Error processing book update: {e}, Data: {data}")
     
     def _handle_own_trades(self, data: Dict):
         """
