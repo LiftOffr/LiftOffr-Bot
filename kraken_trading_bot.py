@@ -1,5 +1,6 @@
 import logging
 import time
+import os
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Union, Any
@@ -37,6 +38,11 @@ class KrakenTradingBot:
         """
         self.trading_pair = trading_pair
         self.trade_quantity = trade_quantity
+        
+        # Use API keys from params or environment variables
+        from config import API_KEY, API_SECRET
+        api_key = api_key or API_KEY
+        api_secret = api_secret or API_SECRET
         
         # Initialize API clients
         self.api = KrakenAPI(api_key, api_secret)
@@ -83,10 +89,14 @@ class KrakenTradingBot:
         
         # Bot control
         self.running = False
-        self.sandbox_mode = USE_SANDBOX
+        
+        # Get sandbox mode from environment variable (may have been changed by command line)
+        self.sandbox_mode = os.environ.get('USE_SANDBOX', 'True').lower() in ['true', 't', 'yes', '1']
         
         if self.sandbox_mode:
             logger.warning("Running in sandbox/test mode. No real trades will be executed.")
+        else:
+            logger.info("Running in LIVE mode with REAL trading enabled.")
     
     def _handle_ticker_update(self, pair: str, data: Dict):
         """
@@ -99,17 +109,40 @@ class KrakenTradingBot:
         try:
             # Convert ticker data to easier format (handle different data formats gracefully)
             ticker = {}
+            # Kraken ticker format: https://docs.kraken.com/websockets/#message-ticker
             if isinstance(data, dict) and 'a' in data and 'b' in data and 'c' in data:
-                ticker = {
-                    'ask': float(data['a'][0]) if isinstance(data['a'], list) and len(data['a']) > 0 else 0.0,
-                    'bid': float(data['b'][0]) if isinstance(data['b'], list) and len(data['b']) > 0 else 0.0,
-                    'close': float(data['c'][0]) if isinstance(data['c'], list) and len(data['c']) > 0 else 0.0,
-                    'volume': float(data['v'][1]) if isinstance(data['v'], list) and len(data['v']) > 1 else 0.0,
-                    'vwap': float(data['p'][1]) if isinstance(data['p'], list) and len(data['p']) > 1 else 0.0,
-                    'low': float(data['l'][1]) if isinstance(data['l'], list) and len(data['l']) > 1 else 0.0,
-                    'high': float(data['h'][1]) if isinstance(data['h'], list) and len(data['h']) > 1 else 0.0,
-                    'open': float(data['o']) if 'o' in data else 0.0
-                }
+                # Kraken ticker format is different from Binance
+                # Example: {'a': ['119.07000', 125, '125.27527800'], 'b': ['119.06000', 0, '0.16798252'], ...}
+                try:
+                    ticker = {
+                        'ask': float(data['a'][0]) if isinstance(data['a'], list) and len(data['a']) > 0 else 0.0,
+                        'bid': float(data['b'][0]) if isinstance(data['b'], list) and len(data['b']) > 0 else 0.0,
+                        'close': float(data['c'][0]) if isinstance(data['c'], list) and len(data['c']) > 0 else 0.0,
+                        'volume': float(data['v'][1]) if isinstance(data['v'], list) and len(data['v']) > 1 else 0.0,
+                        'vwap': float(data['p'][1]) if isinstance(data['p'], list) and len(data['p']) > 1 else 0.0,
+                        'low': float(data['l'][1]) if isinstance(data['l'], list) and len(data['l']) > 1 else 0.0,
+                        'high': float(data['h'][1]) if isinstance(data['h'], list) and len(data['h']) > 1 else 0.0,
+                        'open': float(data['o'][1]) if isinstance(data['o'], list) and len(data['o']) > 1 else 0.0
+                    }
+                    logger.debug(f"Processed ticker data: {ticker}")
+                except Exception as e:
+                    logger.error(f"Error parsing ticker fields: {e}")
+                    logger.debug(f"Raw ticker data: {data}")
+                    # Create a ticker with safer parsing
+                    try:
+                        ticker = {
+                            'ask': float(str(data['a'][0]).strip()) if isinstance(data['a'], list) and len(data['a']) > 0 else 0.0,
+                            'bid': float(str(data['b'][0]).strip()) if isinstance(data['b'], list) and len(data['b']) > 0 else 0.0,
+                            'close': float(str(data['c'][0]).strip()) if isinstance(data['c'], list) and len(data['c']) > 0 else 0.0,
+                            'volume': 0.0,  # Default
+                            'vwap': 0.0,    # Default
+                            'low': 0.0,     # Default
+                            'high': 0.0,    # Default
+                            'open': 0.0     # Default
+                        }
+                    except Exception:
+                        logger.error(f"Failed to parse minimum ticker data, skipping update")
+                        return
             else:
                 logger.warning(f"Unexpected ticker data format: {data}")
                 return

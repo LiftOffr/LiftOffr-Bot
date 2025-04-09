@@ -2,19 +2,49 @@ import logging
 import argparse
 import os
 import time
+import sys
 from flask import Flask
 from threading import Thread
-from kraken_trading_bot import KrakenTradingBot
-from config import (
-    TRADING_PAIR, TRADE_QUANTITY, STRATEGY_TYPE, USE_SANDBOX,
-    INITIAL_CAPITAL, LEVERAGE, MARGIN_PERCENT
-)
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+# Create logger
+logger = logging.getLogger(__name__)
+
+# Parse command line arguments
+parser = argparse.ArgumentParser(description='Kraken Trading Bot')
+parser.add_argument('--pair', type=str, help='Trading pair (e.g. XBTUSD)')
+parser.add_argument('--quantity', type=float, help='Trade quantity')
+parser.add_argument('--strategy', type=str, help='Trading strategy (simple_moving_average, rsi, adaptive)')
+parser.add_argument('--sandbox', action='store_true', help='Run in sandbox/test mode')
+parser.add_argument('--capital', type=float, help='Initial capital')
+parser.add_argument('--leverage', type=int, help='Leverage')
+parser.add_argument('--margin', type=float, help='Margin percent')
+parser.add_argument('--web', action='store_true', help='Start web interface')
+parser.add_argument('--live', action='store_true', help='Run in live trading mode (disables sandbox)')
+
+args = parser.parse_args()
+print(f"Command line arguments: sandbox={args.sandbox}, live={args.live}")
+
+# Set environment variables based on command line before importing config
+if args.live:
+    os.environ['USE_SANDBOX'] = 'False'
+    os.environ['FLASK_DEBUG'] = 'False'  
+    logger.info("Running in live mode (--live flag)")
+elif args.sandbox:
+    os.environ['USE_SANDBOX'] = 'True'
+    logger.info("Running in sandbox mode (--sandbox flag)")
+
+# Now import configuration and other modules
+from kraken_trading_bot import KrakenTradingBot
+from config import (
+    TRADING_PAIR, TRADE_QUANTITY, STRATEGY_TYPE, USE_SANDBOX,
+    INITIAL_CAPITAL, LEVERAGE, MARGIN_PERCENT
 )
 
 # Create Flask app for web interface
@@ -227,24 +257,35 @@ def main():
     """
     global bot_instance
     
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Kraken Trading Bot')
-    parser.add_argument('--pair', type=str, help='Trading pair (e.g. XBTUSD)')
-    parser.add_argument('--quantity', type=float, help='Trade quantity')
-    parser.add_argument('--strategy', type=str, help='Trading strategy (simple_moving_average, rsi, adaptive)')
-    parser.add_argument('--sandbox', action='store_true', help='Run in sandbox/test mode')
-    parser.add_argument('--capital', type=float, help=f'Initial capital (default: {INITIAL_CAPITAL})')
-    parser.add_argument('--leverage', type=int, help=f'Leverage (default: {LEVERAGE})')
-    parser.add_argument('--margin', type=float, help=f'Margin percent (default: {MARGIN_PERCENT})')
-    parser.add_argument('--web', action='store_true', help='Start web interface')
-    
-    args = parser.parse_args()
+    # Command line arguments have already been parsed at the top level
     
     # Get parameters from arguments or environment variables
     trading_pair = args.pair or TRADING_PAIR
     trade_quantity = args.quantity or TRADE_QUANTITY
     strategy_type = args.strategy or STRATEGY_TYPE
-    sandbox_mode = args.sandbox or USE_SANDBOX
+    
+    # Load API keys
+    from config import API_KEY, API_SECRET
+    api_key_present = API_KEY and len(API_KEY) > 10
+    api_secret_present = API_SECRET and len(API_SECRET) > 10
+    
+    # Set the sandbox mode based on arguments and API keys
+    if args.sandbox:
+        sandbox_mode = True
+        os.environ['USE_SANDBOX'] = 'True'
+        logger.info("Running in sandbox mode (--sandbox flag)")
+    elif args.live:
+        sandbox_mode = False
+        os.environ['USE_SANDBOX'] = 'False'
+        logger.info("Running in live mode (--live flag)")
+    elif api_key_present and api_secret_present:
+        sandbox_mode = False
+        os.environ['USE_SANDBOX'] = 'False'
+        logger.info("API keys found, running in live mode with real trading")
+    else:
+        sandbox_mode = True
+        os.environ['USE_SANDBOX'] = 'True'
+        logger.info("No valid API keys or live flag, defaulting to sandbox mode")
     
     # Override environment variables for later use
     if args.pair:

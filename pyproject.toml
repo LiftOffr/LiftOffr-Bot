@@ -15,4 +15,5 @@ dependencies = [
     "websocket-client==1.8.0",
     "websocket>=0.2.1",
     "websockets>=15.0.1",
+    "python-dotenv>=1.1.0",
 ]

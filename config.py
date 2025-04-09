@@ -1,5 +1,9 @@
 import os
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -14,6 +18,12 @@ logging.basicConfig(
 API_KEY = os.getenv('KRAKEN_API_KEY', '')
 API_SECRET = os.getenv('KRAKEN_API_SECRET', '')
 
+# Log whether API keys are available
+if API_KEY and API_SECRET:
+    logging.info("Kraken API credentials loaded successfully")
+else:
+    logging.warning("Kraken API credentials not found - running in sandbox mode only")
+
 # Kraken API URLs
 API_URL = "https://api.kraken.com"
 API_VERSION = "0"  # Base API version
@@ -23,9 +33,9 @@ WEBSOCKET_PUBLIC_URL = "wss://ws.kraken.com"
 WEBSOCKET_PRIVATE_URL = "wss://ws-auth.kraken.com"
 
 # Trading configuration
-TRADING_PAIR = os.getenv('TRADING_PAIR', 'XBTUSD')  # Default to BTC/USD
+TRADING_PAIR = os.getenv('TRADING_PAIR', 'SOLUSD')  # Default to SOL/USD
 TRADE_QUANTITY = float(os.getenv('TRADE_QUANTITY', '0.001'))  # Default to 0.001 BTC
-USE_SANDBOX = os.getenv('USE_SANDBOX', 'True').lower() == 'true'  # Default to True for testing
+USE_SANDBOX = os.getenv('USE_SANDBOX', 'True').lower() in ['true', 't', 'yes', '1']  # Default to True for testing
 
 # Position management
 INITIAL_CAPITAL = float(os.getenv('INITIAL_CAPITAL', '20000.0'))  # Starting portfolio value in USD

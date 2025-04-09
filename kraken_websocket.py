@@ -106,7 +106,15 @@ class KrakenWebsocket:
             
             # Handle subscription status
             if isinstance(msg, dict) and 'event' in msg and msg['event'] == 'subscriptionStatus':
-                logger.info(f"Subscription status: {msg['status']} for {msg.get('subscription', {}).get('name')}")
+                status = msg.get('status', 'unknown')
+                name = msg.get('subscription', {}).get('name', 'unknown')
+                logger.info(f"Subscription status: {status} for {name}")
+                
+                # Log more details if there's an error
+                if status == 'error':
+                    error_msg = msg.get('errorMessage', 'Unknown error')
+                    logger.error(f"WebSocket subscription error: {error_msg} for {name}")
+                    logger.debug(f"Full error response: {msg}")
                 return
             
             # Handle actual data messages (in array format)
@@ -182,7 +190,15 @@ class KrakenWebsocket:
             
             # Handle subscription status
             if isinstance(msg, dict) and 'event' in msg and msg['event'] == 'subscriptionStatus':
-                logger.info(f"Private subscription status: {msg['status']} for {msg.get('subscription', {}).get('name')}")
+                status = msg.get('status', 'unknown')
+                name = msg.get('subscription', {}).get('name', 'unknown')
+                logger.info(f"Private subscription status: {status} for {name}")
+                
+                # Log more details if there's an error
+                if status == 'error':
+                    error_msg = msg.get('errorMessage', 'Unknown error')
+                    logger.error(f"Private WebSocket subscription error: {error_msg} for {name}")
+                    logger.debug(f"Full error response: {msg}")
                 return
             
             # Handle authentication status
@@ -374,9 +390,23 @@ class KrakenWebsocket:
         
         # For Kraken, we need to subscribe to each pair individually
         for pair in pairs:
-            # Convert trading pair format (remove / and add XBT for BTC)
-            formatted_pair = pair.replace('/', '')
-            formatted_pair = formatted_pair.replace('BTC', 'XBT')
+            # Format pair according to Kraken's ISO 4217-A3 requirements
+            # Kraken requires ISO 4217-A3 format such as "SOL/USD" for websockets
+            if '/' not in pair:
+                # Add the slash if it's not there (SOLUSD -> SOL/USD)
+                if len(pair) == 6:  # For 6 character pairs like SOLUSD
+                    formatted_pair = pair[:3] + '/' + pair[3:]
+                else:
+                    # For pairs with different length, try to split at standard locations
+                    formatted_pair = pair
+            else:
+                formatted_pair = pair
+                
+            # Special case for BTC (Kraken uses XBT)
+            if 'BTC' in formatted_pair:
+                formatted_pair = formatted_pair.replace('BTC', 'XBT')
+                
+            logger.info(f"Formatted pair for WebSocket: {pair} → {formatted_pair}")
             
             subscription = {
                 "name": "ticker"
@@ -411,9 +441,23 @@ class KrakenWebsocket:
         
         # For Kraken, we need to subscribe to each pair individually
         for pair in pairs:
-            # Convert trading pair format (remove / and add XBT for BTC)
-            formatted_pair = pair.replace('/', '')
-            formatted_pair = formatted_pair.replace('BTC', 'XBT')
+            # Format pair according to Kraken's ISO 4217-A3 requirements
+            # Kraken requires ISO 4217-A3 format such as "SOL/USD" for websockets
+            if '/' not in pair:
+                # Add the slash if it's not there (SOLUSD -> SOL/USD)
+                if len(pair) == 6:  # For 6 character pairs like SOLUSD
+                    formatted_pair = pair[:3] + '/' + pair[3:]
+                else:
+                    # For pairs with different length, try to split at standard locations
+                    formatted_pair = pair
+            else:
+                formatted_pair = pair
+                
+            # Special case for BTC (Kraken uses XBT)
+            if 'BTC' in formatted_pair:
+                formatted_pair = formatted_pair.replace('BTC', 'XBT')
+                
+            logger.info(f"Formatted pair for OHLC WebSocket: {pair} → {formatted_pair}")
             
             subscription = {
                 "name": "ohlc",
@@ -448,9 +492,23 @@ class KrakenWebsocket:
         
         # For Kraken, we need to subscribe to each pair individually
         for pair in pairs:
-            # Convert trading pair format (remove / and add XBT for BTC)
-            formatted_pair = pair.replace('/', '')
-            formatted_pair = formatted_pair.replace('BTC', 'XBT')
+            # Format pair according to Kraken's ISO 4217-A3 requirements
+            # Kraken requires ISO 4217-A3 format such as "SOL/USD" for websockets
+            if '/' not in pair:
+                # Add the slash if it's not there (SOLUSD -> SOL/USD)
+                if len(pair) == 6:  # For 6 character pairs like SOLUSD
+                    formatted_pair = pair[:3] + '/' + pair[3:]
+                else:
+                    # For pairs with different length, try to split at standard locations
+                    formatted_pair = pair
+            else:
+                formatted_pair = pair
+                
+            # Special case for BTC (Kraken uses XBT)
+            if 'BTC' in formatted_pair:
+                formatted_pair = formatted_pair.replace('BTC', 'XBT')
+                
+            logger.info(f"Formatted pair for trades WebSocket: {pair} → {formatted_pair}")
             
             subscription = {
                 "name": "trade"
@@ -485,9 +543,23 @@ class KrakenWebsocket:
         
         # For Kraken, we need to subscribe to each pair individually
         for pair in pairs:
-            # Convert trading pair format (remove / and add XBT for BTC)
-            formatted_pair = pair.replace('/', '')
-            formatted_pair = formatted_pair.replace('BTC', 'XBT')
+            # Format pair according to Kraken's ISO 4217-A3 requirements
+            # Kraken requires ISO 4217-A3 format such as "SOL/USD" for websockets
+            if '/' not in pair:
+                # Add the slash if it's not there (SOLUSD -> SOL/USD)
+                if len(pair) == 6:  # For 6 character pairs like SOLUSD
+                    formatted_pair = pair[:3] + '/' + pair[3:]
+                else:
+                    # For pairs with different length, try to split at standard locations
+                    formatted_pair = pair
+            else:
+                formatted_pair = pair
+                
+            # Special case for BTC (Kraken uses XBT)
+            if 'BTC' in formatted_pair:
+                formatted_pair = formatted_pair.replace('BTC', 'XBT')
+                
+            logger.info(f"Formatted pair for book WebSocket: {pair} → {formatted_pair}")
             
             subscription = {
                 "name": "book",
@@ -530,9 +602,17 @@ class KrakenWebsocket:
             "subscription": subscription
         }
         
-        if self.private_connected:
-            self.private_ws.send(json.dumps(message))
+        logger.info(f"Preparing to subscribe to own trades (private WebSocket)")
+        
+        if self.private_connected and self.private_ws:
+            try:
+                self.private_ws.send(json.dumps(message))
+                logger.info("Subscribed to own trades")
+            except Exception as e:
+                logger.error(f"Error subscribing to own trades: {e}")
+                self.private_buffer.append(message)
         else:
+            logger.warning("Private WebSocket not connected, buffering own trades subscription")
             self.private_buffer.append(message)
     
     def subscribe_open_orders(self, callback: Callable, snapshot: bool = True):
@@ -555,9 +635,17 @@ class KrakenWebsocket:
             "subscription": subscription
         }
         
-        if self.private_connected:
-            self.private_ws.send(json.dumps(message))
+        logger.info(f"Preparing to subscribe to open orders (private WebSocket)")
+        
+        if self.private_connected and self.private_ws:
+            try:
+                self.private_ws.send(json.dumps(message))
+                logger.info("Subscribed to open orders")
+            except Exception as e:
+                logger.error(f"Error subscribing to open orders: {e}")
+                self.private_buffer.append(message)
         else:
+            logger.warning("Private WebSocket not connected, buffering open orders subscription")
             self.private_buffer.append(message)
     
     def disconnect(self):
