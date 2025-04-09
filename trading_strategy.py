@@ -498,8 +498,20 @@ class AdaptiveStrategy(TradingStrategy):
         arima_forecast = self.compute_arima_forecast(df['close'])
         forecast_direction = "BULLISH" if arima_forecast > last['close'] else "BEARISH" if arima_forecast < last['close'] else "NEUTRAL"
         
-        logger.info(f"【ANALYSIS】 Forecast: {forecast_direction} ({last['close']:.2f} → {arima_forecast:.2f})")
-        logger.info(f"【CONDITIONS】 {' | '.join(condition_log)}")
+        # Create more formatted logs with consistent spacing and clear sections
+        logger.info("============================================================")
+        logger.info(f"【ANALYSIS】 Forecast: {forecast_direction} | Current: ${last['close']:.2f} → Target: ${arima_forecast:.2f}")
+        
+        # Format technical indicators in a more readable grouped format
+        ema_status = "EMA9 >= EMA21" if ema_condition else "EMA9 < EMA21"
+        rsi_value = f"RSI = {last['RSI14']:.2f} {'✓' if (rsi_bullish_condition or rsi_bearish_condition) else '✗'}"
+        macd_status = "MACD >= Signal" if macd_condition else "MACD < Signal"
+        adx_info = f"ADX = {last['ADX']:.2f} {'✓' if adx_condition else '✗'}"
+        vol_info = f"Volatility = {normalized_atr:.4f} {'✓' if volatility_condition else '✗'} (threshold: {VOL_THRESHOLD})"
+        
+        logger.info(f"【INDICATORS】 {ema_status} | {rsi_value} | {macd_status} | {adx_info}")
+        logger.info(f"【VOLATILITY】 {vol_info}")
+        logger.info(f"【BANDS】 {' | '.join(condition_log)}")
         
         agg_signal = (1.0 if bullish else (-1.0 if bearish else 0.0))
         agg_signal += 0.5 if (arima_forecast > last['close']) else (-0.5 if arima_forecast < last['close'] else 0.0)
@@ -507,12 +519,15 @@ class AdaptiveStrategy(TradingStrategy):
         final_bullish = agg_signal >= 1.0
         final_bearish = agg_signal <= -1.0
         
+        # Format signal with emoji indicators and clear action
+        signal_emoji = "🟢" if final_bullish else "🔴" if final_bearish else "⚪"
         if final_bullish:
-            logger.info(f"【SIGNAL】 BULLISH - Trade conditions met for LONG position")
+            logger.info(f"【SIGNAL】 {signal_emoji} BULLISH - Trade conditions met for LONG position")
         elif final_bearish:
-            logger.info(f"【SIGNAL】 BEARISH - Trade conditions met for SHORT position")
+            logger.info(f"【SIGNAL】 {signal_emoji} BEARISH - Trade conditions met for SHORT position")
         else:
-            logger.info(f"【SIGNAL】 NEUTRAL - No clear trade signal detected")
+            logger.info(f"【SIGNAL】 {signal_emoji} NEUTRAL - No clear trade signal detected")
+        logger.info("============================================================")
         
         # Store the latest indicators
         self.latest_indicators = last

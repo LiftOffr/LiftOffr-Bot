@@ -404,18 +404,18 @@ class KrakenTradingBot:
             # Get the latest candle time
             current_last_candle = df['time'].max()
             
-            # Only update indicators if we have a new candle
+            # Calculate signals (always calculate to get updated analysis)
+            buy_signal, sell_signal, atr_value = self.strategy.calculate_signals(df)
+            
+            # Store ATR value
+            self.current_atr = atr_value
+            
+            # Store the DataFrame with indicators
+            self.cached_df = df
+            
+            # Only execute trades if we have a new candle
             if self.last_candle_time is None or current_last_candle > self.last_candle_time:
                 self.last_candle_time = current_last_candle
-                
-                # Calculate signals
-                buy_signal, sell_signal, atr_value = self.strategy.calculate_signals(df)
-                
-                # Store ATR value
-                self.current_atr = atr_value
-                
-                # Store the DataFrame with indicators
-                self.cached_df = df
                 
                 # Check for entry signals
                 if self.position is None and buy_signal:
@@ -423,11 +423,28 @@ class KrakenTradingBot:
                 elif self.position == "long" and sell_signal:
                     self._place_sell_order(exit_only=True)
                 # We could add short selling here, but keeping it simple for now
-                
-                # Update signal timestamp
-                self.last_signal_update = time.time()
-                logger.info(f"【SIGNALS】 Buy={buy_signal}, Sell={sell_signal}, ATR={atr_value:.4f}")
-                
+            
+            # Update signal timestamp (even for test updates)
+            self.last_signal_update = time.time()
+            
+            # Format the signals log in a clean, easy-to-read format
+            signal_emoji = "🟢" if buy_signal else "🔴" if sell_signal else "⚪"
+            direction = "BUY" if buy_signal else "SELL" if sell_signal else "HOLD"
+            
+            # Calculate volatility stop (ATR-based) using current price from dataframe
+            stop_price = 0
+            current_df_price = df.iloc[-1]['close']  # Get most recent price from dataframe
+            
+            # Always use the most recent price we have for stop calculation
+            used_price = self.current_price if self.current_price else current_df_price
+            
+            # Calculate volatility-based stop level (2 x ATR below price)
+            if used_price:
+                stop_price = used_price - (atr_value * 2.0)
+            
+            # Display the ACTION line for decisions
+            logger.info(f"【ACTION】 {signal_emoji} {direction} | ATR: ${atr_value:.4f} | Volatility Stop: ${stop_price:.2f}")
+            
         except Exception as e:
             logger.error(f"Error updating signals: {e}")
     
@@ -836,6 +853,10 @@ class KrakenTradingBot:
                 
                 # Check if we need to update signals
                 if time.time() - self.last_signal_update >= SIGNAL_INTERVAL:
+                    logger.info("Signal interval reached, updating signals...")
+                    self._update_signals()
+                elif int(time.time()) % 30 == 0:  # Force update every 30 seconds for testing
+                    logger.info("Forcing signal update for testing...")
                     self._update_signals()
                 
                 # Display detailed status only every STATUS_UPDATE_INTERVAL seconds to avoid log spam

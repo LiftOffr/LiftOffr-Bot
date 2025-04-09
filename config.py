@@ -58,7 +58,7 @@ ARIMA_LOOKBACK = int(os.getenv('ARIMA_LOOKBACK', '10'))  # Lookback period for l
 
 # Sleep time between iterations (in seconds)
 LOOP_INTERVAL = int(os.getenv('LOOP_INTERVAL', '5'))  # Sleep 5 seconds between iterations
-SIGNAL_INTERVAL = int(os.getenv('SIGNAL_INTERVAL', '300'))  # Update signals every 5 minutes
+SIGNAL_INTERVAL = int(os.getenv('SIGNAL_INTERVAL', '30'))  # Update signals every 30 seconds for testing
 LOOKBACK_HOURS = int(os.getenv('LOOKBACK_HOURS', '12'))  # Hours of historical data to fetch
 STATUS_UPDATE_INTERVAL = int(os.getenv('STATUS_UPDATE_INTERVAL', '10'))  # Status update every 10 seconds
 
