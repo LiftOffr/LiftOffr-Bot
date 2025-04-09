@@ -1,12 +1,18 @@
 import logging
 import time
+import pandas as pd
+import numpy as np
 from typing import Dict, List, Optional, Union, Any
+from decimal import Decimal
 from kraken_api import KrakenAPI
 from kraken_websocket import KrakenWebsocket
 from trading_strategy import get_strategy, TradingStrategy
+from utils import record_trade, parse_kraken_ohlc
 from config import (
     TRADING_PAIR, TRADE_QUANTITY, LOOP_INTERVAL, STRATEGY_TYPE,
-    USE_SANDBOX
+    USE_SANDBOX, INITIAL_CAPITAL, LEVERAGE, MARGIN_PERCENT,
+    SIGNAL_INTERVAL, VOL_THRESHOLD, ENTRY_ATR_MULTIPLIER,
+    LOOKBACK_HOURS, ORDER_TIMEOUT_SECONDS
 )
 
 logger = logging.getLogger(__name__)
@@ -39,16 +45,41 @@ class KrakenTradingBot:
         # Initialize trading strategy
         self.strategy = get_strategy(strategy_type, trading_pair)
         
+        # Portfolio and position tracking (from original code)
+        self.portfolio_value = INITIAL_CAPITAL
+        self.total_profit = 0.0
+        self.total_profit_percent = 0.0
+        self.trade_count = 0
+        
         # Trading state
         self.current_price = None
-        self.in_position = False
-        self.position_price = None
+        self.position = None    # None, "long", or "short"
+        self.entry_price = None
+        
+        # For trailing stops and exits
+        self.trailing_max_price = None  # For long positions
+        self.trailing_min_price = None  # For short positions
+        
+        # Order management (from original code)
+        self.pending_order = None
+        self.trailing_stop_order = None
+        self.breakeven_order = None
+        self.liquidity_exit_order = None
+        
+        # Signal timing
+        self.last_signal_update = 0
+        self.last_candle_time = None
         
         # WebSocket data
         self.ohlc_data = []
         self.ticker_data = {}
         self.order_book = {}
         self.open_orders = {}
+        
+        # Cached data for signal calculations
+        self.cached_df = None
+        self.cached_indicators = None
+        self.current_atr = None
         
         # Bot control
         self.running = False
@@ -79,13 +110,18 @@ class KrakenTradingBot:
         
         self.ticker_data[pair] = ticker
         
-        # Update current price and strategy
+        # Update current price and trailing stops
         if pair == self.trading_pair:
             self.current_price = ticker['close']
-            self.strategy.update_price(self.current_price)
             
-            # Check for buy/sell signals
-            self._check_signals()
+            # Update trailing stop prices
+            if self.position == "long" and self.trailing_max_price is not None:
+                self.trailing_max_price = max(self.trailing_max_price, self.current_price)
+            elif self.position == "short" and self.trailing_min_price is not None:
+                self.trailing_min_price = min(self.trailing_min_price, self.current_price)
+            
+            # Check for trailing stop triggers and pending orders
+            self._check_orders()
     
     def _handle_ohlc_update(self, pair: str, data: List):
         """
@@ -95,7 +131,7 @@ class KrakenTradingBot:
             pair (str): Trading pair
             data (list): OHLC data
         """
-        # data format: [channelID, [time, open, high, low, close, vwap, volume, count], channelName, pair]
+        # data format: [time, open, high, low, close, vwap, volume, count]
         candle = {
             'time': float(data[0]),
             'open': float(data[1]),
@@ -117,10 +153,13 @@ class KrakenTradingBot:
         # Update current price and strategy
         if pair == self.trading_pair:
             self.current_price = candle['close']
-            self.strategy.update_price(self.current_price)
             
-            # Check for buy/sell signals
-            self._check_signals()
+            # Update strategy with OHLC data
+            self.strategy.update_ohlc(candle['open'], candle['high'], candle['low'], candle['close'])
+            
+            # Check if we need to update signals
+            if time.time() - self.last_signal_update >= SIGNAL_INTERVAL or self.last_signal_update == 0:
+                self._update_signals()
     
     def _handle_trade_update(self, pair: str, data: List):
         """
@@ -135,13 +174,18 @@ class KrakenTradingBot:
             latest_trade = data[-1]
             price = float(latest_trade[0])
             
-            # Update current price and strategy
+            # Update current price
             if pair == self.trading_pair:
                 self.current_price = price
-                self.strategy.update_price(price)
                 
-                # Check for buy/sell signals
-                self._check_signals()
+                # Update trailing stop prices
+                if self.position == "long" and self.trailing_max_price is not None:
+                    self.trailing_max_price = max(self.trailing_max_price, self.current_price)
+                elif self.position == "short" and self.trailing_min_price is not None:
+                    self.trailing_min_price = min(self.trailing_min_price, self.current_price)
+                
+                # Check for trailing stop triggers and pending orders
+                self._check_orders()
     
     def _handle_book_update(self, pair: str, data: Dict):
         """
@@ -192,17 +236,39 @@ class KrakenTradingBot:
             
             if symbol == self.trading_pair:
                 if trade['type'] == 'buy':
-                    self.in_position = True
-                    self.position_price = float(trade['price'])
-                    logger.info(f"Position entered at {self.position_price}")
+                    self.position = "long"
+                    self.entry_price = float(trade['price'])
+                    self.trailing_max_price = self.entry_price
+                    self.trailing_min_price = None
+                    logger.info(f"LONG position entered at {self.entry_price}")
                     
                 elif trade['type'] == 'sell':
-                    self.in_position = False
-                    self.position_price = None
-                    logger.info("Position exited")
+                    self.position = "short" if self.position is None else None
+                    
+                    if self.position == "short":
+                        self.entry_price = float(trade['price'])
+                        self.trailing_min_price = self.entry_price
+                        self.trailing_max_price = None
+                        logger.info(f"SHORT position entered at {self.entry_price}")
+                    else:
+                        # This was a close of a long position
+                        trade_profit = (float(trade['price']) - self.entry_price) * float(trade['vol'])
+                        profit_percent = (trade_profit / (self.portfolio_value * MARGIN_PERCENT)) * 100.0
+                        
+                        # Update portfolio
+                        self.portfolio_value += trade_profit
+                        self.total_profit += trade_profit
+                        self.total_profit_percent = (self.total_profit / INITIAL_CAPITAL) * 100.0
+                        self.trade_count += 1
+                        
+                        logger.info(f"LONG position exited at {float(trade['price'])}, Profit=${trade_profit:.2f} ({profit_percent:.2f}%)")
+                        
+                        self.entry_price = None
+                        self.trailing_max_price = None
+                        self.trailing_min_price = None
                 
                 # Update strategy with position information
-                self.strategy.update_position(self.in_position, self.position_price)
+                self.strategy.update_position(self.position, self.entry_price)
     
     def _handle_open_orders(self, data: Dict):
         """
@@ -213,22 +279,169 @@ class KrakenTradingBot:
         """
         self.open_orders = data
     
-    def _check_signals(self):
+    def _update_signals(self):
         """
-        Check for trading signals and execute trades
+        Update trading signals based on current market data
         """
-        if not self.running:
+        try:
+            if len(self.ohlc_data) < 30:
+                logger.warning("Not enough OHLC data to update signals")
+                return
+            
+            # Convert OHLC data to DataFrame
+            df = pd.DataFrame(self.ohlc_data)
+            
+            # Get the latest candle time
+            current_last_candle = df['time'].max()
+            
+            # Only update indicators if we have a new candle
+            if self.last_candle_time is None or current_last_candle > self.last_candle_time:
+                self.last_candle_time = current_last_candle
+                
+                # Calculate signals
+                buy_signal, sell_signal, atr_value = self.strategy.calculate_signals(df)
+                
+                # Store ATR value
+                self.current_atr = atr_value
+                
+                # Store the DataFrame with indicators
+                self.cached_df = df
+                
+                # Check for entry signals
+                if self.position is None and buy_signal:
+                    self._place_buy_order()
+                elif self.position == "long" and sell_signal:
+                    self._place_sell_order(exit_only=True)
+                # We could add short selling here, but keeping it simple for now
+                
+                # Update signal timestamp
+                self.last_signal_update = time.time()
+                logger.info(f"Signals updated: Buy={buy_signal}, Sell={sell_signal}, ATR={atr_value:.4f}")
+                
+        except Exception as e:
+            logger.error(f"Error updating signals: {e}")
+    
+    def _check_orders(self):
+        """
+        Check and manage pending orders and trailing stops
+        """
+        if not self.running or self.current_price is None:
             return
         
         try:
-            if self.strategy.should_buy():
-                self._execute_buy()
+            # Check if pending order is filled based on live price
+            if self.pending_order is not None:
+                # Check for timeout
+                if time.time() - self.pending_order["time"] > ORDER_TIMEOUT_SECONDS:
+                    logger.info(f"Pending {self.pending_order['type']} order timed out")
+                    self.pending_order = None
+                    return
+                
+                # Check if price conditions are met
+                if self.pending_order["type"] == "buy" and self.current_price <= self.pending_order["price"]:
+                    logger.info(f"Buy limit order filled at {self.pending_order['price']:.4f}")
+                    self._execute_buy()
+                    self.pending_order = None
+                
+                elif self.pending_order["type"] == "sell" and self.current_price >= self.pending_order["price"]:
+                    logger.info(f"Sell limit order filled at {self.pending_order['price']:.4f}")
+                    self._execute_sell()
+                    self.pending_order = None
             
-            elif self.strategy.should_sell():
-                self._execute_sell()
+            # Check trailing stop for long position
+            if self.position == "long" and self.trailing_stop_order is not None:
+                if self.current_price <= self.trailing_stop_order["price"]:
+                    logger.info(f"Trailing stop triggered at {self.trailing_stop_order['price']:.4f}")
+                    self._place_sell_order(exit_only=True)
+                    self.trailing_stop_order = None
+            
+            # Check breakeven exit for long position
+            if self.position == "long" and self.breakeven_order is not None:
+                if self.current_price >= self.breakeven_order["price"]:
+                    logger.info(f"Breakeven exit triggered at {self.breakeven_order['price']:.4f}")
+                    self._place_sell_order(exit_only=True)
+                    self.breakeven_order = None
+            
+            # Update trailing stop based on current price for long position
+            if self.position == "long" and self.trailing_max_price is not None and self.current_atr is not None:
+                new_stop_price = self.trailing_max_price - (2.0 * self.current_atr)
+                
+                if self.trailing_stop_order is None:
+                    self.trailing_stop_order = {
+                        "type": "sell", 
+                        "price": new_stop_price, 
+                        "time": time.time()
+                    }
+                    logger.info(f"Setting trailing stop at {new_stop_price:.4f}")
+                
+                # Only move stop up, never down
+                elif new_stop_price > self.trailing_stop_order["price"]:
+                    self.trailing_stop_order["price"] = new_stop_price
+                    logger.info(f"Updated trailing stop to {new_stop_price:.4f}")
         
         except Exception as e:
-            logger.error(f"Error checking signals: {e}")
+            logger.error(f"Error checking orders: {e}")
+    
+    def _place_buy_order(self):
+        """
+        Place a buy limit order based on ATR
+        """
+        if self.current_price is None or self.current_atr is None:
+            logger.warning("Cannot place buy order: price or ATR unknown")
+            return
+        
+        if self.position is not None:
+            logger.info(f"Already in {self.position} position; skipping buy order")
+            return
+        
+        # Calculate limit price based on ATR (from original code)
+        limit_price = self.current_price - (self.current_atr * ENTRY_ATR_MULTIPLIER)
+        
+        # Create pending order
+        self.pending_order = {
+            "type": "buy",
+            "price": limit_price,
+            "time": time.time()
+        }
+        
+        logger.info(f"Placed buy limit order at {limit_price:.4f}")
+    
+    def _place_sell_order(self, exit_only=False):
+        """
+        Place a sell limit order
+        
+        Args:
+            exit_only (bool): Whether this is just to exit a position
+        """
+        if self.current_price is None:
+            logger.warning("Cannot place sell order: current price unknown")
+            return
+        
+        if exit_only and self.position != "long":
+            logger.info("No long position to exit; skipping sell order")
+            return
+        
+        if not exit_only and self.position is not None:
+            logger.info(f"Already in {self.position} position; skipping sell order")
+            return
+        
+        # For exit orders, use market price
+        price = self.current_price
+        
+        # Create pending order for immediate execution
+        self.pending_order = {
+            "type": "sell",
+            "price": price,
+            "time": time.time(),
+            "exit_only": exit_only
+        }
+        
+        logger.info(f"Placed sell {'exit' if exit_only else 'limit'} order at {price:.4f}")
+        
+        # Execute immediately
+        if exit_only:
+            self._execute_sell(exit_only=True)
+            self.pending_order = None
     
     def _execute_buy(self):
         """
@@ -240,6 +453,11 @@ class KrakenTradingBot:
         
         logger.info(f"BUY SIGNAL at price {self.current_price}")
         
+        # Calculate position size based on margin
+        margin_amount = self.portfolio_value * MARGIN_PERCENT
+        notional = margin_amount * LEVERAGE
+        quantity = notional / self.current_price
+        
         # Execute order only if not in sandbox mode
         if not self.sandbox_mode:
             try:
@@ -247,29 +465,44 @@ class KrakenTradingBot:
                     pair=self.trading_pair,
                     type_="buy",
                     ordertype="market",
-                    volume=str(self.trade_quantity)
+                    volume=str(quantity)
                 )
                 
                 logger.info(f"Buy order executed: {order_result}")
                 
                 # Update position status
-                self.in_position = True
-                self.position_price = self.current_price
-                self.strategy.update_position(True, self.current_price)
+                self.position = "long"
+                self.entry_price = self.current_price
+                self.trailing_max_price = self.current_price
+                self.trailing_min_price = None
+                self.strategy.update_position("long", self.current_price)
+                
+                # Record the trade
+                record_trade("buy", self.trading_pair, quantity, self.current_price, 
+                            profit=None, profit_percent=None, position="long")
             
             except Exception as e:
                 logger.error(f"Error executing buy order: {e}")
         else:
-            logger.info("SANDBOX MODE: Buy order would be executed here")
+            logger.info(f"SANDBOX MODE: Buy order for {quantity:.6f} units would be executed at {self.current_price:.4f}")
             
             # Simulate position status update in sandbox mode
-            self.in_position = True
-            self.position_price = self.current_price
-            self.strategy.update_position(True, self.current_price)
+            self.position = "long"
+            self.entry_price = self.current_price
+            self.trailing_max_price = self.current_price
+            self.trailing_min_price = None
+            self.strategy.update_position("long", self.current_price)
+            
+            # Record the trade
+            record_trade("buy", self.trading_pair, quantity, self.current_price, 
+                        profit=None, profit_percent=None, position="long")
     
-    def _execute_sell(self):
+    def _execute_sell(self, exit_only=False):
         """
         Execute sell order
+        
+        Args:
+            exit_only (bool): Whether this is just to exit a position
         """
         if not self.current_price:
             logger.warning("Cannot execute sell: current price unknown")
@@ -277,32 +510,70 @@ class KrakenTradingBot:
         
         logger.info(f"SELL SIGNAL at price {self.current_price}")
         
-        # Execute order only if not in sandbox mode
-        if not self.sandbox_mode:
-            try:
-                order_result = self.api.place_order(
-                    pair=self.trading_pair,
-                    type_="sell",
-                    ordertype="market",
-                    volume=str(self.trade_quantity)
-                )
+        # If exiting a long position
+        if exit_only and self.position == "long":
+            # Calculate actual trade quantity based on entry
+            margin_amount = self.portfolio_value * MARGIN_PERCENT
+            notional = margin_amount * LEVERAGE
+            quantity = notional / self.entry_price
+            
+            # Calculate profit
+            trade_profit = (self.current_price - self.entry_price) * quantity
+            profit_percent = (trade_profit / margin_amount) * 100.0
+            
+            # Execute order only if not in sandbox mode
+            if not self.sandbox_mode:
+                try:
+                    order_result = self.api.place_order(
+                        pair=self.trading_pair,
+                        type_="sell",
+                        ordertype="market",
+                        volume=str(quantity)
+                    )
+                    
+                    logger.info(f"Sell order executed: {order_result}")
+                    
+                    # Update portfolio
+                    self.portfolio_value += trade_profit
+                    self.total_profit += trade_profit
+                    self.total_profit_percent = (self.total_profit / INITIAL_CAPITAL) * 100.0
+                    self.trade_count += 1
+                    
+                    # Update position status
+                    self.position = None
+                    self.entry_price = None
+                    self.trailing_max_price = None
+                    self.trailing_min_price = None
+                    self.strategy.update_position(None, None)
+                    
+                    # Record the trade
+                    record_trade("sell", self.trading_pair, quantity, self.current_price, 
+                               profit=trade_profit, profit_percent=profit_percent, position="none")
                 
-                logger.info(f"Sell order executed: {order_result}")
+                except Exception as e:
+                    logger.error(f"Error executing sell order: {e}")
+            else:
+                logger.info(f"SANDBOX MODE: Sell order for {quantity:.6f} units would be executed at {self.current_price:.4f}")
+                logger.info(f"SANDBOX MODE: Profit would be ${trade_profit:.2f} ({profit_percent:.2f}%)")
+                
+                # Update portfolio in sandbox mode
+                self.portfolio_value += trade_profit
+                self.total_profit += trade_profit
+                self.total_profit_percent = (self.total_profit / INITIAL_CAPITAL) * 100.0
+                self.trade_count += 1
                 
                 # Update position status
-                self.in_position = False
-                self.position_price = None
-                self.strategy.update_position(False, None)
-            
-            except Exception as e:
-                logger.error(f"Error executing sell order: {e}")
+                self.position = None
+                self.entry_price = None
+                self.trailing_max_price = None
+                self.trailing_min_price = None
+                self.strategy.update_position(None, None)
+                
+                # Record the trade
+                record_trade("sell", self.trading_pair, quantity, self.current_price, 
+                           profit=trade_profit, profit_percent=profit_percent, position="none")
         else:
-            logger.info("SANDBOX MODE: Sell order would be executed here")
-            
-            # Simulate position status update in sandbox mode
-            self.in_position = False
-            self.position_price = None
-            self.strategy.update_position(False, None)
+            logger.warning("Sell order only supported for exit_only=True at this time")
     
     def check_position(self):
         """
@@ -332,14 +603,16 @@ class KrakenTradingBot:
                 last_order = orders_list[0]
                 
                 if last_order['type'] == 'buy':
-                    self.in_position = True
-                    self.position_price = last_order['price']
+                    self.position = "long"
+                    self.entry_price = last_order['price']
+                    self.trailing_max_price = self.entry_price
                 else:
-                    self.in_position = False
-                    self.position_price = None
+                    self.position = None
+                    self.entry_price = None
+                    self.trailing_max_price = None
                 
-                logger.info(f"Position status from order history: in_position={self.in_position}, price={self.position_price}")
-                self.strategy.update_position(self.in_position, self.position_price)
+                logger.info(f"Position status from order history: position={self.position}, price={self.entry_price}")
+                self.strategy.update_position(self.position, self.entry_price)
         
         except Exception as e:
             logger.error(f"Error checking position: {e}")
@@ -372,11 +645,17 @@ class KrakenTradingBot:
             ohlc_data = self.api.get_ohlc(self.trading_pair, 1)
             pair_key = list(ohlc_data.keys())[0]  # Get the pair key
             
-            # Load historical price data into strategy
-            for candle in ohlc_data[pair_key]:
-                self.strategy.update_price(float(candle[4]))  # 4 is the close price index
+            # Convert to DataFrame for easier processing
+            df = parse_kraken_ohlc(ohlc_data[pair_key])
             
-            logger.info(f"Loaded {len(ohlc_data[pair_key])} historical candles")
+            # Load historical OHLC data into strategy
+            for _, row in df.iterrows():
+                self.strategy.update_ohlc(row['open'], row['high'], row['low'], row['close'])
+            
+            logger.info(f"Loaded {len(df)} historical candles")
+            
+            # Calculate initial signals
+            self._update_signals()
         
         except Exception as e:
             logger.error(f"Error fetching initial price data: {e}")
@@ -407,7 +686,18 @@ class KrakenTradingBot:
             
             while self.running:
                 # Main loop sleeps to avoid excessive CPU usage
-                # Trading signals are processed in WebSocket callbacks
+                # Check orders and trailing stops periodically
+                self._check_orders()
+                
+                # Check if we need to update signals
+                if time.time() - self.last_signal_update >= SIGNAL_INTERVAL:
+                    self._update_signals()
+                
+                # Log portfolio status
+                logger.info(f"Portfolio: ${self.portfolio_value:.2f} | "
+                          f"Total Profit: ${self.total_profit:.2f} "
+                          f"({self.total_profit_percent:.2f}%)")
+                
                 time.sleep(LOOP_INTERVAL)
         
         except KeyboardInterrupt:
