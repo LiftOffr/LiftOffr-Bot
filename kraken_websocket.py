@@ -1,0 +1,502 @@
+import json
+import time
+import logging
+import threading
+from websocket import WebSocketApp
+import hmac
+import base64
+import hashlib
+import urllib.parse
+from typing import Dict, List, Callable, Any, Optional, Union
+from config import (
+    API_KEY, API_SECRET, WEBSOCKET_PUBLIC_URL, 
+    WEBSOCKET_PRIVATE_URL, TRADING_PAIR
+)
+from utils import get_nonce
+
+logger = logging.getLogger(__name__)
+
+class KrakenWebsocket:
+    """
+    Class to handle Kraken WebSocket connections
+    """
+    def __init__(self, api_key: str = API_KEY, api_secret: str = API_SECRET):
+        """
+        Initialize the KrakenWebsocket class
+        
+        Args:
+            api_key (str): Kraken API key
+            api_secret (str): Kraken API secret
+        """
+        self.api_key = api_key
+        self.api_secret = api_secret
+        self.public_ws_url = WEBSOCKET_PUBLIC_URL
+        self.private_ws_url = WEBSOCKET_PRIVATE_URL
+        
+        # WebSocket connections
+        self.public_ws = None
+        self.private_ws = None
+        
+        # Connection status
+        self.public_connected = False
+        self.private_connected = False
+        
+        # Callbacks
+        self.ticker_callbacks = []
+        self.ohlc_callbacks = []
+        self.trade_callbacks = []
+        self.book_callbacks = []
+        self.own_trades_callbacks = []
+        self.open_orders_callbacks = []
+        
+        # Message buffer for reconnection
+        self.public_buffer = []
+        self.private_buffer = []
+        
+        # Threading
+        self.public_thread = None
+        self.private_thread = None
+        self.reconnect_thread = None
+        self.reconnect_interval = 5  # seconds
+        self.keep_running = True
+    
+    def _get_auth_token(self) -> Dict:
+        """
+        Generate authentication token for private WebSocket API
+        
+        Returns:
+            dict: Authentication token
+        """
+        if not self.api_key or not self.api_secret:
+            raise ValueError("API key and secret required for private WebSocket connection")
+        
+        nonce = get_nonce()
+        token_data = {
+            'token': self.api_key,
+            'nonce': nonce
+        }
+        
+        # Create signature
+        urlpath = "/ws/auth"
+        postdata = urllib.parse.urlencode(token_data)
+        encoded = (str(nonce) + postdata).encode()
+        message = urlpath.encode() + hashlib.sha256(encoded).digest()
+        
+        signature = hmac.new(base64.b64decode(self.api_secret), message, hashlib.sha512)
+        sigdigest = base64.b64encode(signature.digest())
+        
+        token_data['signature'] = sigdigest.decode()
+        
+        return token_data
+    
+    def _on_public_message(self, ws, message):
+        """
+        Handle public WebSocket messages
+        
+        Args:
+            ws: WebSocket connection
+            message: Message received
+        """
+        try:
+            msg = json.loads(message)
+            
+            # Handle heartbeat
+            if isinstance(msg, dict) and 'event' in msg and msg['event'] == 'heartbeat':
+                return
+            
+            # Handle subscription status
+            if isinstance(msg, dict) and 'event' in msg and msg['event'] == 'subscriptionStatus':
+                logger.info(f"Subscription status: {msg['status']} for {msg.get('subscription', {}).get('name')}")
+                return
+            
+            # Handle actual data messages (in array format)
+            if isinstance(msg, list):
+                channel_name = msg[2]
+                pair = msg[3]
+                data = msg[1]
+                
+                if channel_name == 'ticker':
+                    for callback in self.ticker_callbacks:
+                        callback(pair, data)
+                
+                elif channel_name == 'ohlc':
+                    for callback in self.ohlc_callbacks:
+                        callback(pair, data)
+                
+                elif channel_name == 'trade':
+                    for callback in self.trade_callbacks:
+                        callback(pair, data)
+                
+                elif channel_name == 'book':
+                    for callback in self.book_callbacks:
+                        callback(pair, data)
+        
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse message: {message}")
+        except Exception as e:
+            logger.error(f"Error handling message: {e}")
+    
+    def _on_private_message(self, ws, message):
+        """
+        Handle private WebSocket messages
+        
+        Args:
+            ws: WebSocket connection
+            message: Message received
+        """
+        try:
+            msg = json.loads(message)
+            
+            # Handle heartbeat
+            if isinstance(msg, dict) and 'event' in msg and msg['event'] == 'heartbeat':
+                return
+            
+            # Handle subscription status
+            if isinstance(msg, dict) and 'event' in msg and msg['event'] == 'subscriptionStatus':
+                logger.info(f"Private subscription status: {msg['status']} for {msg.get('subscription', {}).get('name')}")
+                return
+            
+            # Handle authentication status
+            if isinstance(msg, dict) and 'event' in msg and msg['event'] == 'authenticationStatus':
+                logger.info(f"Authentication status: {msg['status']}")
+                
+                # Once authenticated, send the subscription messages from buffer
+                if msg['status'] == 'success':
+                    for buffered_msg in self.private_buffer:
+                        self.private_ws.send(json.dumps(buffered_msg))
+                    self.private_buffer = []
+                return
+            
+            # Handle actual data messages (in array format)
+            if isinstance(msg, list):
+                channel_name = msg[1]
+                data = msg[0]
+                
+                if channel_name == 'ownTrades':
+                    for callback in self.own_trades_callbacks:
+                        callback(data)
+                
+                elif channel_name == 'openOrders':
+                    for callback in self.open_orders_callbacks:
+                        callback(data)
+        
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse private message: {message}")
+        except Exception as e:
+            logger.error(f"Error handling private message: {e}")
+    
+    def _on_public_error(self, ws, error):
+        """
+        Handle public WebSocket errors
+        
+        Args:
+            ws: WebSocket connection
+            error: Error
+        """
+        logger.error(f"Public WebSocket error: {error}")
+    
+    def _on_private_error(self, ws, error):
+        """
+        Handle private WebSocket errors
+        
+        Args:
+            ws: WebSocket connection
+            error: Error
+        """
+        logger.error(f"Private WebSocket error: {error}")
+    
+    def _on_public_close(self, ws, close_status_code, close_msg):
+        """
+        Handle public WebSocket close
+        
+        Args:
+            ws: WebSocket connection
+            close_status_code: Close status code
+            close_msg: Close message
+        """
+        logger.info(f"Public WebSocket closed: {close_msg} (Code: {close_status_code})")
+        self.public_connected = False
+        
+        # Start reconnection if still running
+        if self.keep_running and not self.reconnect_thread:
+            self.reconnect_thread = threading.Thread(target=self._reconnect)
+            self.reconnect_thread.daemon = True
+            self.reconnect_thread.start()
+    
+    def _on_private_close(self, ws, close_status_code, close_msg):
+        """
+        Handle private WebSocket close
+        
+        Args:
+            ws: WebSocket connection
+            close_status_code: Close status code
+            close_msg: Close message
+        """
+        logger.info(f"Private WebSocket closed: {close_msg} (Code: {close_status_code})")
+        self.private_connected = False
+        
+        # Start reconnection if still running
+        if self.keep_running and not self.reconnect_thread:
+            self.reconnect_thread = threading.Thread(target=self._reconnect)
+            self.reconnect_thread.daemon = True
+            self.reconnect_thread.start()
+    
+    def _on_public_open(self, ws):
+        """
+        Handle public WebSocket open
+        
+        Args:
+            ws: WebSocket connection
+        """
+        logger.info("Public WebSocket connected")
+        self.public_connected = True
+        
+        # Send subscription messages from buffer
+        for msg in self.public_buffer:
+            ws.send(json.dumps(msg))
+        self.public_buffer = []
+    
+    def _on_private_open(self, ws):
+        """
+        Handle private WebSocket open
+        
+        Args:
+            ws: WebSocket connection
+        """
+        logger.info("Private WebSocket connected")
+        self.private_connected = True
+        
+        # Authenticate
+        auth_token = self._get_auth_token()
+        ws.send(json.dumps({
+            "event": "authenticate",
+            "token": auth_token['token'],
+            "nonce": auth_token['nonce'],
+            "signature": auth_token['signature']
+        }))
+    
+    def _reconnect(self):
+        """
+        Handle reconnection for WebSockets
+        """
+        logger.info(f"Attempting to reconnect in {self.reconnect_interval} seconds...")
+        time.sleep(self.reconnect_interval)
+        
+        try:
+            if not self.public_connected and self.public_ws:
+                self.connect_public()
+            
+            if not self.private_connected and self.private_ws:
+                self.connect_private()
+            
+            self.reconnect_thread = None
+        except Exception as e:
+            logger.error(f"Reconnection failed: {e}")
+            # Retry reconnection
+            self.reconnect_thread = threading.Thread(target=self._reconnect)
+            self.reconnect_thread.daemon = True
+            self.reconnect_thread.start()
+    
+    def connect_public(self):
+        """
+        Connect to public WebSocket
+        """
+        self.public_ws = WebSocketApp(
+            self.public_ws_url,
+            on_open=self._on_public_open,
+            on_message=self._on_public_message,
+            on_error=self._on_public_error,
+            on_close=self._on_public_close
+        )
+        
+        self.public_thread = threading.Thread(target=self.public_ws.run_forever)
+        self.public_thread.daemon = True
+        self.public_thread.start()
+    
+    def connect_private(self):
+        """
+        Connect to private WebSocket
+        """
+        if not self.api_key or not self.api_secret:
+            logger.warning("API key and secret not provided. Private WebSocket not connected.")
+            return
+        
+        self.private_ws = WebSocketApp(
+            self.private_ws_url,
+            on_open=self._on_private_open,
+            on_message=self._on_private_message,
+            on_error=self._on_private_error,
+            on_close=self._on_private_close
+        )
+        
+        self.private_thread = threading.Thread(target=self.private_ws.run_forever)
+        self.private_thread.daemon = True
+        self.private_thread.start()
+    
+    def subscribe_ticker(self, pairs: List[str], callback: Callable):
+        """
+        Subscribe to ticker information
+        
+        Args:
+            pairs (list): List of asset pairs
+            callback (callable): Callback function for ticker updates
+        """
+        self.ticker_callbacks.append(callback)
+        
+        subscription = {
+            "name": "ticker",
+        }
+        
+        message = {
+            "event": "subscribe",
+            "pair": pairs,
+            "subscription": subscription
+        }
+        
+        if self.public_connected:
+            self.public_ws.send(json.dumps(message))
+        else:
+            self.public_buffer.append(message)
+    
+    def subscribe_ohlc(self, pairs: List[str], callback: Callable, interval: int = 1):
+        """
+        Subscribe to OHLC data
+        
+        Args:
+            pairs (list): List of asset pairs
+            interval (int, optional): Time frame interval in minutes (1, 5, 15, 30, 60, 240, 1440, 10080, 21600)
+            callback (callable): Callback function for OHLC updates
+        """
+        self.ohlc_callbacks.append(callback)
+        
+        subscription = {
+            "name": "ohlc",
+            "interval": interval
+        }
+        
+        message = {
+            "event": "subscribe",
+            "pair": pairs,
+            "subscription": subscription
+        }
+        
+        if self.public_connected:
+            self.public_ws.send(json.dumps(message))
+        else:
+            self.public_buffer.append(message)
+    
+    def subscribe_trades(self, pairs: List[str], callback: Callable):
+        """
+        Subscribe to trades
+        
+        Args:
+            pairs (list): List of asset pairs
+            callback (callable): Callback function for trade updates
+        """
+        self.trade_callbacks.append(callback)
+        
+        subscription = {
+            "name": "trade",
+        }
+        
+        message = {
+            "event": "subscribe",
+            "pair": pairs,
+            "subscription": subscription
+        }
+        
+        if self.public_connected:
+            self.public_ws.send(json.dumps(message))
+        else:
+            self.public_buffer.append(message)
+    
+    def subscribe_book(self, pairs: List[str], callback: Callable, depth: int = 10):
+        """
+        Subscribe to order book
+        
+        Args:
+            pairs (list): List of asset pairs
+            depth (int, optional): Order book depth (10, 25, 100, 500, 1000)
+            callback (callable): Callback function for order book updates
+        """
+        self.book_callbacks.append(callback)
+        
+        subscription = {
+            "name": "book",
+            "depth": depth
+        }
+        
+        message = {
+            "event": "subscribe",
+            "pair": pairs,
+            "subscription": subscription
+        }
+        
+        if self.public_connected:
+            self.public_ws.send(json.dumps(message))
+        else:
+            self.public_buffer.append(message)
+    
+    def subscribe_own_trades(self, callback: Callable, snapshot: bool = True):
+        """
+        Subscribe to own trades
+        
+        Args:
+            callback (callable): Callback function for own trades updates
+            snapshot (bool, optional): Include initial snapshot
+        """
+        self.own_trades_callbacks.append(callback)
+        
+        subscription = {
+            "name": "ownTrades",
+            "snapshot": snapshot
+        }
+        
+        message = {
+            "event": "subscribe",
+            "subscription": subscription
+        }
+        
+        if self.private_connected:
+            self.private_ws.send(json.dumps(message))
+        else:
+            self.private_buffer.append(message)
+    
+    def subscribe_open_orders(self, callback: Callable, snapshot: bool = True):
+        """
+        Subscribe to open orders
+        
+        Args:
+            callback (callable): Callback function for open orders updates
+            snapshot (bool, optional): Include initial snapshot
+        """
+        self.open_orders_callbacks.append(callback)
+        
+        subscription = {
+            "name": "openOrders",
+            "snapshot": snapshot
+        }
+        
+        message = {
+            "event": "subscribe",
+            "subscription": subscription
+        }
+        
+        if self.private_connected:
+            self.private_ws.send(json.dumps(message))
+        else:
+            self.private_buffer.append(message)
+    
+    def disconnect(self):
+        """
+        Disconnect from WebSockets
+        """
+        self.keep_running = False
+        
+        if self.public_ws:
+            self.public_ws.close()
+        
+        if self.private_ws:
+            self.private_ws.close()
+        
+        logger.info("WebSocket connections closed")
