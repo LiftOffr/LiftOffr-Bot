@@ -541,13 +541,16 @@ def get_strategy(strategy_type: str, symbol: str) -> TradingStrategy:
     Factory function to get a trading strategy
     
     Args:
-        strategy_type (str): Type of strategy ('simple_moving_average', 'rsi', 'adaptive', 'combined')
+        strategy_type (str): Type of strategy ('simple_moving_average', 'rsi', 'adaptive', 'combined', 'arima')
         symbol (str): Trading symbol
     
     Returns:
         TradingStrategy: Trading strategy instance
     """
-    if strategy_type.lower() == 'simple_moving_average':
+    if strategy_type.lower() == 'arima':
+        from arima_strategy import ARIMAStrategy
+        return ARIMAStrategy(symbol)
+    elif strategy_type.lower() == 'simple_moving_average':
         return SimpleMovingAverageStrategy(symbol)
     elif strategy_type.lower() == 'rsi':
         return RSIStrategy(symbol)

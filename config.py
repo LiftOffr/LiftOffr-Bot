@@ -54,7 +54,7 @@ LEVERAGE = int(os.getenv('LEVERAGE', '25'))  # Leverage for trading (25x by defa
 MARGIN_PERCENT = float(os.getenv('MARGIN_PERCENT', '0.25'))  # Percentage of portfolio used as margin
 
 # Strategy configuration
-STRATEGY_TYPE = os.getenv('STRATEGY_TYPE', 'adaptive')  # Default to adaptive strategy from original code
+STRATEGY_TYPE = os.getenv('STRATEGY_TYPE', 'adaptive')  # Options: 'adaptive', 'simple_moving_average', 'rsi', 'arima'
 SMA_SHORT_PERIOD = int(os.getenv('SMA_SHORT_PERIOD', '9'))
 SMA_LONG_PERIOD = int(os.getenv('SMA_LONG_PERIOD', '21'))
 RSI_PERIOD = int(os.getenv('RSI_PERIOD', '14'))

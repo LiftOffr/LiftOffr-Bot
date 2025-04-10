@@ -56,7 +56,8 @@ logger = logging.getLogger(__name__)
 parser = argparse.ArgumentParser(description='Kraken Trading Bot')
 parser.add_argument('--pair', type=str, help='Trading pair (e.g. XBTUSD)')
 parser.add_argument('--quantity', type=float, help='Trade quantity')
-parser.add_argument('--strategy', type=str, help='Trading strategy (simple_moving_average, rsi, adaptive)')
+parser.add_argument('--strategy', type=str, help='Primary trading strategy (simple_moving_average, rsi, adaptive, arima)')
+parser.add_argument('--multi-strategy', type=str, help='Comma-separated list of additional strategies to run concurrently')
 parser.add_argument('--sandbox', action='store_true', help='Run in sandbox/test mode')
 parser.add_argument('--capital', type=float, help='Initial capital')
 parser.add_argument('--leverage', type=int, help='Leverage')
@@ -266,32 +267,24 @@ def index():
     </html>
     """
 
+# Global variable for bot manager that can be accessed from routes
+bot_manager_instance = None
+
 @app.route('/api/status')
 def api_status():
     """
     API endpoint for getting bot status
     """
-    if bot_instance:
-        return {
-            'running': bot_instance.running,
-            'trading_pair': bot_instance.trading_pair,
-            'position': bot_instance.position,
-            'entry_price': bot_instance.entry_price,
-            'current_price': bot_instance.current_price,
-            'portfolio_value': bot_instance.portfolio_value,
-            'total_profit': bot_instance.total_profit,
-            'total_profit_percent': bot_instance.total_profit_percent,
-            'trade_count': bot_instance.trade_count,
-            'strategy_type': bot_instance.strategy.__class__.__name__
-        }
+    if bot_manager_instance:
+        return bot_manager_instance.get_status()
     else:
-        return {'error': 'Bot not initialized'}
+        return {'error': 'Bot manager not initialized'}
 
 def main():
     """
     Main entry point for the Kraken Trading Bot
     """
-    global bot_instance
+    global bot_manager_instance
     
     # Command line arguments have already been parsed at the top level
     
@@ -339,25 +332,46 @@ def main():
     if args.margin:
         os.environ['MARGIN_PERCENT'] = str(args.margin)
     
-    # Initialize the trading bot
-    bot_instance = KrakenTradingBot(
+    # Initialize the bot manager
+    from bot_manager import BotManager
+    
+    bot_manager = BotManager()
+    
+    # Add the primary strategy
+    primary_bot_id = bot_manager.add_bot(
+        strategy_type=strategy_type,
         trading_pair=trading_pair,
-        trade_quantity=trade_quantity,
-        strategy_type=strategy_type
+        trade_quantity=trade_quantity
     )
+    
+    # Check for multiple strategies from command line arguments
+    if args.multi_strategy:
+        strategies = args.multi_strategy.split(',')
+        for strategy in strategies:
+            if strategy.strip() and strategy.strip() != strategy_type:
+                bot_manager.add_bot(
+                    strategy_type=strategy.strip(),
+                    trading_pair=trading_pair,
+                    trade_quantity=trade_quantity
+                )
+    
+    # Start all bots in separate threads
+    bot_manager.start_all()
     
     # Start web interface if requested
     if args.web:
-        # Start the trading bot in a separate thread
-        bot_thread = Thread(target=bot_instance.run)
-        bot_thread.daemon = True
-        bot_thread.start()
-        
-        # Start the Flask web server
-        app.run(host='0.0.0.0', port=5000)
+        # Import and run the web app
+        from web_app import run_web_app
+        # Run web app in main thread
+        run_web_app(bot_manager)
     else:
-        # Just run the trading bot
-        bot_instance.run()
+        # Just keep the main thread alive
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            bot_manager.stop_all()
+            logger.info("Trading bot stopped by user")
 
 if __name__ == '__main__':
     main()

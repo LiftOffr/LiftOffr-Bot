@@ -1,14 +1,81 @@
-Kraken Trading Bot Usage Instructions
+# Kraken Trading Bot: Strategy Summary
 
-Run the bot with these optional arguments:
---sandbox: Run in test mode (no real trades)
---live: Run in live trading mode
---pair <symbol>: Specify trading pair (e.g. SOLUSD)
---quantity <amount>: Set trade quantity
---strategy <type>: Choose strategy (adaptive, simple_moving_average, rsi)
---capital <amount>: Initial capital
---leverage <multiplier>: Set leverage level
---margin <percent>: Margin percentage
---web: Start web interface
+## ARIMA Strategy Implementation
 
-Example: python main.py --sandbox --pair SOLUSD
+The ARIMA (AutoRegressive Integrated Moving Average) strategy uses time series forecasting to predict future price movements and make trading decisions based on these predictions.
+
+### Key Components
+
+1. **Time Series Forecasting**
+   - Uses ARIMA model from statsmodels to predict price movements
+   - Parameters: p=1, d=1, q=0 (default)
+   - Forecasts next price based on historical data
+
+2. **Risk Management**
+   - ATR (Average True Range) for volatility assessment
+   - Trailing stops based on ATR multiples
+   - Risk buffer multiplier to prevent liquidation
+   - Entry price offset for limit orders
+
+3. **Entry Signals**
+   - Buy when forecast is higher than current price (bullish)
+   - Sell when forecast is lower than current price (bearish)
+   - Entry orders placed as limit orders with small ATR offset
+
+4. **Exit Signals**
+   - Trailing stop based on ATR multiple (default: 4x ATR)
+   - Updated as price moves favorably
+   - Implemented as exchange limit orders
+
+### Parameters
+
+- `lookback_period`: Number of periods for analysis (default: 32)
+- `atr_trailing_multiplier`: Multiplier for ATR trailing stop (default: 4.0)
+- `entry_atr_multiplier`: Multiplier for entry price offset (default: 0.01)
+- `leverage`: Trading leverage (default: 30x)
+- `risk_buffer_multiplier`: ATR buffer for liquidation protection (default: 1.25)
+- `arima_order`: ARIMA model parameters (default: (1,1,0))
+
+### Running the Strategy
+
+The ARIMA strategy can be run using the included script:
+
+```bash
+./start_arima_trading.sh         # Run in sandbox mode
+./start_arima_trading.sh --live  # Run in live trading mode
+```
+
+Or directly using Python:
+
+```bash
+python main.py --strategy arima --pair SOLUSD --sandbox
+```
+
+## Adaptive Strategy
+
+This is the default multi-factor strategy that combines various technical indicators:
+
+1. **Technical Indicators**
+   - EMA (Exponential Moving Average)
+   - RSI (Relative Strength Index)
+   - MACD (Moving Average Convergence Divergence)
+   - ADX (Average Directional Index)
+   - Bollinger Bands
+   - Keltner Channels
+
+2. **Entry Conditions**
+   - Trend following with EMA crossovers
+   - Momentum confirmation with RSI
+   - Volatility assessment
+   - Linear regression forecast
+
+3. **Risk Management**
+   - ATR-based position sizing
+   - Dynamic trailing stops
+   - Volatility filters
+
+The adaptive strategy can be run using:
+
+```bash
+./start_live_trading.sh
+```
