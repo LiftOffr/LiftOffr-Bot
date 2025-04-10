@@ -87,7 +87,8 @@ class KrakenTradingBot:
         
         # Order management (from original code)
         self.pending_order = None
-        self.trailing_stop_order = None
+        self.trailing_stop_order = None  # In-memory representation
+        self.trailing_stop_limit_order_id = None  # Actual order ID in the exchange
         self.breakeven_order = None
         self.liquidity_exit_order = None
         
@@ -509,9 +510,9 @@ class KrakenTradingBot:
                     self._execute_sell()
                     self.pending_order = None
             
-            # Check trailing stop for long position
+            # Check trailing stop for long position (in-memory tracking only)
             if self.position == "long" and self.trailing_stop_order is not None:
-                if self.current_price <= self.trailing_stop_order["price"]:
+                if self.current_price <= self.trailing_stop_order["price"] and self.trailing_stop_limit_order_id is None:
                     logger.info(f"Trailing stop triggered at {self.trailing_stop_order['price']:.4f}")
                     self._place_sell_order(exit_only=True)
                     self.trailing_stop_order = None
@@ -527,6 +528,7 @@ class KrakenTradingBot:
             if self.position == "long" and self.trailing_max_price is not None and self.current_atr is not None:
                 new_stop_price = self.trailing_max_price - (2.0 * self.current_atr)
                 
+                # Initialize trailing stop if none exists
                 if self.trailing_stop_order is None:
                     self.trailing_stop_order = {
                         "type": "sell", 
@@ -534,11 +536,20 @@ class KrakenTradingBot:
                         "time": time.time()
                     }
                     logger.info(f"Setting trailing stop at {new_stop_price:.4f}")
+                    
+                    # Place actual trailing stop limit order if not in sandbox mode
+                    if not self.sandbox_mode:
+                        self._place_trailing_stop_limit_order(new_stop_price)
                 
                 # Only move stop up, never down
                 elif new_stop_price > self.trailing_stop_order["price"]:
+                    old_price = self.trailing_stop_order["price"]
                     self.trailing_stop_order["price"] = new_stop_price
-                    logger.info(f"Updated trailing stop to {new_stop_price:.4f}")
+                    logger.info(f"Updated trailing stop from {old_price:.4f} to {new_stop_price:.4f}")
+                    
+                    # Update actual limit order in the exchange
+                    if not self.sandbox_mode and self.trailing_stop_limit_order_id is not None:
+                        self._update_trailing_stop_limit_order(new_stop_price)
         
         except Exception as e:
             logger.error(f"Error checking orders: {e}")
@@ -728,11 +739,20 @@ class KrakenTradingBot:
                     self.total_profit_percent = (self.total_profit / INITIAL_CAPITAL) * 100.0
                     self.trade_count += 1
                     
+                    # Clear any trailing stop limit orders
+                    if self.trailing_stop_limit_order_id is not None:
+                        try:
+                            cancel_result = self.api.cancel_order(self.trailing_stop_limit_order_id)
+                            logger.info(f"Cancelled trailing stop order: {self.trailing_stop_limit_order_id}")
+                        except Exception as e:
+                            logger.error(f"Error cancelling trailing stop order: {e}")
+                    
                     # Update position status
                     self.position = None
                     self.entry_price = None
                     self.trailing_max_price = None
                     self.trailing_min_price = None
+                    self.trailing_stop_limit_order_id = None
                     self.strategy.update_position(None, None)
                     
                     # Record the trade
@@ -756,6 +776,7 @@ class KrakenTradingBot:
                 self.entry_price = None
                 self.trailing_max_price = None
                 self.trailing_min_price = None
+                self.trailing_stop_limit_order_id = None
                 self.strategy.update_position(None, None)
                 
                 # Record the trade
@@ -777,6 +798,74 @@ class KrakenTradingBot:
                 )
         else:
             logger.warning("Sell order only supported for exit_only=True at this time")
+    
+    def _place_trailing_stop_limit_order(self, stop_price):
+        """
+        Place a trailing stop limit order at the specified price
+        
+        Args:
+            stop_price (float): Price at which to place the stop limit order
+        """
+        try:
+            # Only proceed if we have a valid position
+            if self.position != "long" or self.entry_price is None:
+                logger.warning("Cannot place trailing stop: no long position exists")
+                return
+            
+            # Calculate position size based on entry price
+            margin_amount = self.portfolio_value * MARGIN_PERCENT
+            notional = margin_amount * LEVERAGE
+            quantity = notional / self.entry_price
+            
+            # Place the stop limit order with a small offset for guaranteed execution
+            execution_price = stop_price * 0.999  # Slightly lower price to ensure execution
+            
+            # Place the order
+            order_result = self.api.place_order(
+                pair=self.trading_pair,
+                type_="sell",
+                ordertype="stop-loss",  # Using stop-loss type for trailing stop
+                price=execution_price,  # Limit price
+                volume=str(quantity)    # Order volume
+            )
+            
+            # Store the order ID for future reference
+            if 'txid' in order_result and len(order_result['txid']) > 0:
+                self.trailing_stop_limit_order_id = order_result['txid'][0]
+                logger.info(f"Placed trailing stop limit order at {stop_price:.4f}, execution price {execution_price:.4f}, ID: {self.trailing_stop_limit_order_id}")
+            else:
+                logger.error(f"Failed to place trailing stop limit order: {order_result}")
+        
+        except Exception as e:
+            logger.error(f"Error placing trailing stop limit order: {e}")
+    
+    def _update_trailing_stop_limit_order(self, new_stop_price):
+        """
+        Cancel the existing trailing stop limit order and place a new one at the updated price
+        
+        Args:
+            new_stop_price (float): New price for the trailing stop
+        """
+        try:
+            # Only proceed if we have a valid order ID
+            if self.trailing_stop_limit_order_id is None:
+                logger.warning("Cannot update trailing stop: no order ID exists")
+                return
+            
+            # Cancel the existing order
+            cancel_result = self.api.cancel_order(self.trailing_stop_limit_order_id)
+            logger.info(f"Cancelled previous trailing stop order: {self.trailing_stop_limit_order_id}")
+            
+            # Reset the order ID
+            self.trailing_stop_limit_order_id = None
+            
+            # Place a new order at the updated price
+            self._place_trailing_stop_limit_order(new_stop_price)
+            
+        except Exception as e:
+            logger.error(f"Error updating trailing stop limit order: {e}")
+            # If cancellation fails, we should still try to place a new order
+            self._place_trailing_stop_limit_order(new_stop_price)
     
     def check_position(self):
         """
