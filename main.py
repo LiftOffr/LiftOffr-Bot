@@ -354,6 +354,15 @@ def main():
                     trading_pair=trading_pair,
                     trade_quantity=trade_quantity
                 )
+    else:
+        # Always add ARIMA strategy by default if not specified in command line
+        if strategy_type != "arima":
+            bot_manager.add_bot(
+                strategy_type="arima",
+                trading_pair=trading_pair,
+                trade_quantity=trade_quantity
+            )
+            logger.info("Added default ARIMA strategy to run concurrently")
     
     # Start all bots in separate threads
     bot_manager.start_all()

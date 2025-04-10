@@ -25,9 +25,16 @@ def main():
     # Create bot manager
     bot_manager = BotManager()
     
-    # Add default strategy
+    # Add adaptive strategy
     bot_manager.add_bot(
-        strategy_type=STRATEGY_TYPE,
+        strategy_type="adaptive",
+        trading_pair=TRADING_PAIR,
+        trade_quantity=TRADE_QUANTITY
+    )
+    
+    # Add ARIMA strategy
+    bot_manager.add_bot(
+        strategy_type="arima",
         trading_pair=TRADING_PAIR,
         trade_quantity=TRADE_QUANTITY
     )
