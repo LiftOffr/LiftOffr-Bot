@@ -446,11 +446,15 @@ class KrakenTradingBot:
                 self.last_candle_time = current_last_candle
                 
                 # Check for entry signals and exit signals
-                if self.position is None and buy_signal:
-                    self._place_buy_order()
+                if self.position is None:
+                    if buy_signal:
+                        self._place_buy_order()  # Enter long position
+                    elif sell_signal:
+                        self._place_short_order()  # Enter short position
                 elif self.position == "long" and sell_signal:
-                    self._place_sell_order(exit_only=True)
-                # We could add short selling here, but keeping it simple for now
+                    self._place_sell_order(exit_only=True)  # Exit long position
+                elif self.position == "short" and buy_signal:
+                    self._place_buy_order(exit_only=True)  # Exit short position
             
             # Update signal timestamp (even for test updates)
             self.last_signal_update = time.time()
@@ -554,22 +558,73 @@ class KrakenTradingBot:
         except Exception as e:
             logger.error(f"Error checking orders: {e}")
     
-    def _place_buy_order(self):
+    def _place_buy_order(self, exit_only=False):
         """
         Place a buy limit order based on ATR
+        
+        Args:
+            exit_only (bool): Whether this is just to exit a short position
         """
         if self.current_price is None or self.current_atr is None:
             logger.warning("Cannot place buy order: price or ATR unknown")
             return
         
-        if self.position is not None:
+        if exit_only and self.position != "short":
+            logger.info("No short position to exit; skipping buy order")
+            return
+            
+        if not exit_only and self.position is not None:
             logger.info(f"Already in {self.position} position; skipping buy order")
             return
         
         # Calculate price for buy order
-        if ENTRY_ATR_MULTIPLIER > 0:
+        if ENTRY_ATR_MULTIPLIER > 0 and not exit_only:
             # Use limit price based on ATR if multiplier is positive
             limit_price = self.current_price - (self.current_atr * ENTRY_ATR_MULTIPLIER)
+            order_type = "limit"
+        else:
+            # Use current price if multiplier is 0 (no offset) or exiting position
+            limit_price = self.current_price
+            order_type = "market"
+        
+        # Calculate position size and risk
+        position_size_usd = self.trade_quantity * self.current_price
+        account_risk_percent = (position_size_usd / self.portfolio_value) * 100
+        
+        # Create pending order
+        self.pending_order = {
+            "type": "buy",
+            "price": limit_price,
+            "time": time.time(),
+            "exit_only": exit_only
+        }
+        
+        logger.info(f"【ORDER】 {'EXIT SHORT' if exit_only else 'LONG'} - Placed buy {order_type} order at ${limit_price:.4f}")
+        logger.info(f"【POSITION】 Size: {self.trade_quantity} ({position_size_usd:.2f} USD) | Leverage: {LEVERAGE}x | Risk: {account_risk_percent:.2f}%")
+        
+        # Execute immediately for exit orders
+        if exit_only:
+            self._execute_buy(exit_only=True)
+            self.pending_order = None
+    
+    def _place_short_order(self):
+        """
+        Place a short sell order based on ATR
+        """
+        if self.current_price is None or self.current_atr is None:
+            logger.warning("Cannot place short order: price or ATR unknown")
+            return
+        
+        if self.position is not None:
+            logger.info(f"Already in {self.position} position; skipping short order")
+            return
+        
+        # Calculate price for short order
+        # If ENTRY_ATR_MULTIPLIER is positive, sell price is slightly above current price
+        # If ENTRY_ATR_MULTIPLIER is 0, use market order at current price
+        if ENTRY_ATR_MULTIPLIER > 0:
+            # Use limit price based on ATR if multiplier is positive
+            limit_price = self.current_price + (self.current_atr * ENTRY_ATR_MULTIPLIER)
             order_type = "limit"
         else:
             # Use current price if multiplier is 0 (no offset)
@@ -582,13 +637,18 @@ class KrakenTradingBot:
         
         # Create pending order
         self.pending_order = {
-            "type": "buy",
+            "type": "sell",
             "price": limit_price,
-            "time": time.time()
+            "time": time.time(),
+            "exit_only": False
         }
         
-        logger.info(f"【ORDER】 LONG - Placed buy {order_type} order at ${limit_price:.4f}")
+        logger.info(f"【ORDER】 SHORT - Placed sell {order_type} order at ${limit_price:.4f}")
         logger.info(f"【POSITION】 Size: {self.trade_quantity} ({position_size_usd:.2f} USD) | Leverage: {LEVERAGE}x | Risk: {account_risk_percent:.2f}%")
+        
+        # Execute immediately
+        self._execute_sell(exit_only=False)
+        self.pending_order = None
     
     def _place_sell_order(self, exit_only=False):
         """
@@ -627,15 +687,18 @@ class KrakenTradingBot:
             self._execute_sell(exit_only=True)
             self.pending_order = None
     
-    def _execute_buy(self):
+    def _execute_buy(self, exit_only=False):
         """
         Execute buy order
+        
+        Args:
+            exit_only (bool): Whether this is just to exit a short position
         """
         if not self.current_price:
             logger.warning("Cannot execute buy: current price unknown")
             return
         
-        logger.info(f"【EXECUTE】 LONG - Buy order at ${self.current_price:.4f}")
+        logger.info(f"【EXECUTE】 {'EXIT SHORT' if exit_only else 'LONG'} - Buy order at ${self.current_price:.4f}")
         
         # Calculate volatility stop price for notifications
         stop_price = 0
@@ -812,8 +875,81 @@ class KrakenTradingBot:
                     self.total_profit_percent,
                     self.trade_count
                 )
+        # Entering a short position
+        elif not exit_only:
+            # Calculate position size based on margin
+            margin_amount = self.portfolio_value * MARGIN_PERCENT
+            notional = margin_amount * LEVERAGE
+            quantity = notional / self.current_price
+            
+            # Execute order only if not in sandbox mode
+            if not self.sandbox_mode:
+                try:
+                    # Use the price from the pending order if it exists, which is a limit price
+                    # with the small ATR offset. Otherwise, use a market order at current price.
+                    if self.pending_order and 'price' in self.pending_order:
+                        limit_price = self.pending_order['price']
+                        order_result = self.api.place_order(
+                            pair=self.trading_pair,
+                            type_="sell",
+                            ordertype="limit",
+                            price=str(limit_price),
+                            volume=str(quantity)
+                        )
+                        logger.info(f"Short sell limit order placed at ${limit_price:.4f} with {ENTRY_ATR_MULTIPLIER} ATR offset")
+                    else:
+                        # Fallback to market order if no pending order price
+                        order_result = self.api.place_order(
+                            pair=self.trading_pair,
+                            type_="sell",
+                            ordertype="market",
+                            volume=str(quantity)
+                        )
+                    
+                    logger.info(f"Short sell order executed: {order_result}")
+                    
+                    # Update position status
+                    # If we're using a limit order, the entry price will be the limit price, not current price
+                    entry_price = self.pending_order['price'] if self.pending_order and 'price' in self.pending_order else self.current_price
+                    self.position = "short"
+                    self.entry_price = entry_price
+                    self.trailing_max_price = None
+                    self.trailing_min_price = entry_price
+                    self.strategy.update_position("short", entry_price)
+                    
+                    # Record the trade
+                    record_trade("sell", self.trading_pair, quantity, self.current_price, 
+                                profit=None, profit_percent=None, position="short")
+                    
+                    # Send trade entry notification
+                    if self.current_atr:
+                        stop_price = self.current_price + (self.current_atr * 2.0)
+                        send_trade_entry_notification(
+                            self.trading_pair, 
+                            self.current_price, 
+                            quantity, 
+                            self.current_atr, 
+                            stop_price,
+                            position_type="short"
+                        )
+                
+                except Exception as e:
+                    logger.error(f"Error executing short sell order: {e}")
+            else:
+                logger.info(f"SANDBOX MODE: Short sell order for {quantity:.6f} units would be executed at {self.current_price:.4f}")
+                
+                # Simulate position status update in sandbox mode
+                self.position = "short"
+                self.entry_price = self.current_price
+                self.trailing_max_price = None
+                self.trailing_min_price = self.current_price
+                self.strategy.update_position("short", self.current_price)
+                
+                # Record the trade
+                record_trade("sell", self.trading_pair, quantity, self.current_price, 
+                            profit=None, profit_percent=None, position="short")
         else:
-            logger.warning("Sell order only supported for exit_only=True at this time")
+            logger.warning("Invalid sell order configuration")
     
     def _place_trailing_stop_limit_order(self, stop_price):
         """

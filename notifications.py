@@ -57,7 +57,7 @@ def log_notification_to_file(subject, content):
         return False
 
 
-def send_trade_entry_notification(trading_pair, entry_price, quantity, atr, volatility_stop):
+def send_trade_entry_notification(trading_pair, entry_price, quantity, atr, volatility_stop, position_type="long"):
     """
     Send notification when a trade is entered
     
@@ -67,15 +67,19 @@ def send_trade_entry_notification(trading_pair, entry_price, quantity, atr, vola
         quantity (float): Quantity traded
         atr (float): Average True Range
         volatility_stop (float): Stop loss price based on volatility
+        position_type (str): Position type ("long" or "short")
     """
-    subject = f"🟢 TRADE ENTERED: {trading_pair}"
+    # Use green for long positions, red for short positions
+    emoji = "🟢" if position_type == "long" else "🔴"
+    position_name = "LONG" if position_type == "long" else "SHORT"
+    subject = f"{emoji} {position_name} POSITION ENTERED: {trading_pair}"
     
     # Format the message
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     position_value = entry_price * quantity
     
     text_content = (
-        f"TRADE ENTERED: {trading_pair}\n"
+        f"{position_name} POSITION ENTERED: {trading_pair}\n"
         f"Time: {timestamp}\n"
         f"Price: ${entry_price:.2f}\n"
         f"Quantity: {quantity}\n"
