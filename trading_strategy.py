@@ -377,14 +377,14 @@ class AdaptiveStrategy(TradingStrategy):
         if len(self.prices) < 30 or self.current_atr is None:
             return False
         
-        # Check if ATR is above volatility threshold for adaptive filter
+        # Removed volatility threshold check
         last_price = self.prices[-1] if self.prices else 0
         if last_price == 0:
             return False
         
-        # Just a simplified check - detailed logic in calculate_signals
-        normalized_atr = self.current_atr / last_price
-        return normalized_atr > VOL_THRESHOLD and self.position is None
+        # Modified: Remove volatility threshold condition entirely
+        # Just check if we're not in a position
+        return self.position is None
     
     def should_sell(self) -> bool:
         """
@@ -461,7 +461,9 @@ class AdaptiveStrategy(TradingStrategy):
         
         # Normalized ATR for adaptive filter
         normalized_atr = atr_value / last['close'] if last['close'] != 0 else 0
-        adaptive_filter = normalized_atr > VOL_THRESHOLD
+        
+        # Modified: Setting adaptive_filter to True to remove volatility threshold condition
+        adaptive_filter = True
         
         # Calculate bullish and bearish conditions (from original code)
         ema_condition = last['EMA9'] > last['EMA21']
@@ -469,7 +471,7 @@ class AdaptiveStrategy(TradingStrategy):
         rsi_bearish_condition = 25 < last['RSI14'] < 55
         macd_condition = last['MACD'] > last['MACD_signal']
         adx_condition = last['ADX'] > 20
-        volatility_condition = adaptive_filter
+        volatility_condition = True  # Modified: Always True to remove this condition
         bollinger_upper_condition = last['close'] < last['bb_upper']
         bollinger_lower_condition = last['close'] > last['bb_lower']
         keltner_middle_condition_bull = last['close'] > last['kc_middle']
