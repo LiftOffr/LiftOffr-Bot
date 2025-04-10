@@ -445,12 +445,13 @@ class KrakenTradingBot:
             if self.last_candle_time is None or current_last_candle > self.last_candle_time:
                 self.last_candle_time = current_last_candle
                 
-                # Check for entry signals
+                # Check for entry signals ONLY
+                # Only enter positions based on signals, don't exit based on them
                 if self.position is None and buy_signal:
                     self._place_buy_order()
-                elif self.position == "long" and sell_signal:
-                    self._place_sell_order(exit_only=True)
-                # We could add short selling here, but keeping it simple for now
+                # We only exit positions based on trailing stops now, not signals
+                
+                # We could add short selling entry signals here, but keeping it simple for now
             
             # Update signal timestamp (even for test updates)
             self.last_signal_update = time.time()
