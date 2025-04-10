@@ -18,11 +18,22 @@ logging.basicConfig(
 API_KEY = os.getenv('KRAKEN_API_KEY', '')
 API_SECRET = os.getenv('KRAKEN_API_SECRET', '')
 
+# Notification settings
+SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY', '')
+NOTIFICATION_EMAIL = os.getenv('NOTIFICATION_EMAIL', 'cchapman.liftoffr@gmail.com')  # Default to email address
+NOTIFICATION_ENABLED = SENDGRID_API_KEY != ''
+
 # Log whether API keys are available
 if API_KEY and API_SECRET:
     logging.info("Kraken API credentials loaded successfully")
 else:
     logging.warning("Kraken API credentials not found - running in sandbox mode only")
+
+# Log whether notification is enabled
+if NOTIFICATION_ENABLED:
+    logging.info("Email notifications enabled")
+else:
+    logging.warning("SendGrid API key not found - email notifications disabled")
 
 # Kraken API URLs
 API_URL = "https://api.kraken.com"

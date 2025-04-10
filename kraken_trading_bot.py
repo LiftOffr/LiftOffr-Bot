@@ -9,6 +9,7 @@ from kraken_api import KrakenAPI
 from kraken_websocket import KrakenWebsocket
 from trading_strategy import get_strategy, TradingStrategy
 from utils import record_trade, parse_kraken_ohlc
+from notifications import send_trade_entry_notification, send_trade_exit_notification
 from config import (
     TRADING_PAIR, TRADE_QUANTITY, LOOP_INTERVAL, STRATEGY_TYPE,
     USE_SANDBOX, INITIAL_CAPITAL, LEVERAGE, MARGIN_PERCENT,
@@ -352,6 +353,17 @@ class KrakenTradingBot:
                     self.trailing_min_price = None
                     logger.info(f"LONG position entered at {self.entry_price}")
                     
+                    # Send trade entry notification
+                    if self.current_atr:
+                        stop_price = self.entry_price - (self.current_atr * 2.0)
+                        send_trade_entry_notification(
+                            self.trading_pair, 
+                            self.entry_price, 
+                            self.trade_quantity, 
+                            self.current_atr, 
+                            stop_price
+                        )
+                    
                 elif trade['type'] == 'sell':
                     self.position = "short" if self.position is None else None
                     
@@ -371,7 +383,22 @@ class KrakenTradingBot:
                         self.total_profit_percent = (self.total_profit / INITIAL_CAPITAL) * 100.0
                         self.trade_count += 1
                         
-                        logger.info(f"LONG position exited at {float(trade['price'])}, Profit=${trade_profit:.2f} ({profit_percent:.2f}%)")
+                        exit_price = float(trade['price'])
+                        logger.info(f"LONG position exited at {exit_price}, Profit=${trade_profit:.2f} ({profit_percent:.2f}%)")
+                        
+                        # Send trade exit notification
+                        send_trade_exit_notification(
+                            self.trading_pair, 
+                            exit_price, 
+                            self.entry_price, 
+                            float(trade['vol']), 
+                            trade_profit,
+                            profit_percent,
+                            self.portfolio_value,
+                            self.total_profit,
+                            self.total_profit_percent,
+                            self.trade_count
+                        )
                         
                         self.entry_price = None
                         self.trailing_max_price = None
@@ -599,6 +626,11 @@ class KrakenTradingBot:
         
         logger.info(f"【EXECUTE】 LONG - Buy order at ${self.current_price:.4f}")
         
+        # Calculate volatility stop price for notifications
+        stop_price = 0
+        if self.current_atr:
+            stop_price = self.current_price - (self.current_atr * 2.0)
+        
         # Calculate position size based on margin
         margin_amount = self.portfolio_value * MARGIN_PERCENT
         notional = margin_amount * LEVERAGE
@@ -626,6 +658,17 @@ class KrakenTradingBot:
                 # Record the trade
                 record_trade("buy", self.trading_pair, quantity, self.current_price, 
                             profit=None, profit_percent=None, position="long")
+                
+                # Send trade entry notification
+                if self.current_atr:
+                    stop_price = self.current_price - (self.current_atr * 2.0)
+                    send_trade_entry_notification(
+                        self.trading_pair, 
+                        self.current_price, 
+                        quantity, 
+                        self.current_atr, 
+                        stop_price
+                    )
             
             except Exception as e:
                 logger.error(f"Error executing buy order: {e}")
@@ -718,6 +761,20 @@ class KrakenTradingBot:
                 # Record the trade
                 record_trade("sell", self.trading_pair, quantity, self.current_price, 
                            profit=trade_profit, profit_percent=profit_percent, position="none")
+                
+                # Send trade exit notification in sandbox mode too
+                send_trade_exit_notification(
+                    self.trading_pair, 
+                    self.current_price, 
+                    self.entry_price, 
+                    quantity, 
+                    trade_profit,
+                    profit_percent,
+                    self.portfolio_value,
+                    self.total_profit,
+                    self.total_profit_percent,
+                    self.trade_count
+                )
         else:
             logger.warning("Sell order only supported for exit_only=True at this time")
     

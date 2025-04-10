@@ -16,4 +16,6 @@ dependencies = [
     "websocket>=0.2.1",
     "websockets>=15.0.1",
     "python-dotenv>=1.1.0",
+    "twilio>=9.5.2",
+    "sendgrid>=6.11.0",
 ]
