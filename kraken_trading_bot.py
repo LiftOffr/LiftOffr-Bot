@@ -445,13 +445,12 @@ class KrakenTradingBot:
             if self.last_candle_time is None or current_last_candle > self.last_candle_time:
                 self.last_candle_time = current_last_candle
                 
-                # Check for entry signals ONLY
-                # Only enter positions based on signals, don't exit based on them
+                # Check for entry signals and exit signals
                 if self.position is None and buy_signal:
                     self._place_buy_order()
-                # We only exit positions based on trailing stops now, not signals
-                
-                # We could add short selling entry signals here, but keeping it simple for now
+                elif self.position == "long" and sell_signal:
+                    self._place_sell_order(exit_only=True)
+                # We could add short selling here, but keeping it simple for now
             
             # Update signal timestamp (even for test updates)
             self.last_signal_update = time.time()
@@ -651,21 +650,37 @@ class KrakenTradingBot:
         # Execute order only if not in sandbox mode
         if not self.sandbox_mode:
             try:
-                order_result = self.api.place_order(
-                    pair=self.trading_pair,
-                    type_="buy",
-                    ordertype="market",
-                    volume=str(quantity)
-                )
+                # Use the price from the pending order if it exists, which is a limit price
+                # with the small ATR offset. Otherwise, use a market order at current price.
+                if self.pending_order and 'price' in self.pending_order:
+                    limit_price = self.pending_order['price']
+                    order_result = self.api.place_order(
+                        pair=self.trading_pair,
+                        type_="buy",
+                        ordertype="limit",
+                        price=str(limit_price),
+                        volume=str(quantity)
+                    )
+                    logger.info(f"Buy limit order placed at ${limit_price:.4f} with {ENTRY_ATR_MULTIPLIER} ATR offset")
+                else:
+                    # Fallback to market order if no pending order price
+                    order_result = self.api.place_order(
+                        pair=self.trading_pair,
+                        type_="buy",
+                        ordertype="market",
+                        volume=str(quantity)
+                    )
                 
                 logger.info(f"Buy order executed: {order_result}")
                 
                 # Update position status
+                # If we're using a limit order, the entry price will be the limit price, not current price
+                entry_price = self.pending_order['price'] if self.pending_order and 'price' in self.pending_order else self.current_price
                 self.position = "long"
-                self.entry_price = self.current_price
-                self.trailing_max_price = self.current_price
+                self.entry_price = entry_price
+                self.trailing_max_price = entry_price
                 self.trailing_min_price = None
-                self.strategy.update_position("long", self.current_price)
+                self.strategy.update_position("long", entry_price)
                 
                 # Record the trade
                 record_trade("buy", self.trading_pair, quantity, self.current_price, 
