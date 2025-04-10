@@ -1,79 +1,75 @@
 <!DOCTYPE html>
-<html lang="en">
+<html data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kraken Trading Bot</title>
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="container mt-5">
+    <div class="container my-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h1 class="h3 mb-0">Kraken Trading Bot</h1>
+                    </div>
+                    <div class="card-body">
+                        <p class="lead">A sophisticated trading bot for the Kraken exchange.</p>
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-success">API Connected</span>
+                            <span id="server-time" class="badge bg-info">Loading time...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h2 class="h5 mb-0">Configuration</h2>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <tr>
+                                <th>Trading Pair:</th>
+                                <td id="trading-pair">Loading...</td>
+                            </tr>
+                            <tr>
+                                <th>Trade Quantity:</th>
+                                <td id="trade-quantity">Loading...</td>
+                            </tr>
+                            <tr>
+                                <th>Strategy:</th>
+                                <td id="strategy-type">Loading...</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h2 class="h5 mb-0">Market Data</h2>
+                    </div>
+                    <div class="card-body">
+                        <div id="ticker-data">Loading market data...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-12">
-                <h1 class="mb-4">Kraken Trading Bot</h1>
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h4>Bot Configuration</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="tradingPair">Trading Pair</label>
-                                    <input type="text" class="form-control" id="tradingPair" readonly>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="tradeQuantity">Trade Quantity</label>
-                                    <input type="text" class="form-control" id="tradeQuantity" readonly>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="strategyType">Strategy Type</label>
-                                    <input type="text" class="form-control" id="strategyType" readonly>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h4>Market Data</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="card">
-                                    <div class="card-header">Server Time</div>
-                                    <div class="card-body" id="serverTime">Loading...</div>
-                                </div>
-                            </div>
-                            <div class="col-md-8">
-                                <div class="card">
-                                    <div class="card-header">Current Ticker</div>
-                                    <div class="card-body" id="ticker">Loading...</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="card">
                     <div class="card-header">
-                        <h4>Bot Control</h4>
+                        <h2 class="h5 mb-0">Price Chart</h2>
                     </div>
                     <div class="card-body">
-                        <p>To start the trading bot, run the following command:</p>
-                        <div class="bg-dark text-light p-3 rounded">
-                            <code>python main.py</code>
-                        </div>
-                        <p class="mt-3">For sandbox/test mode:</p>
-                        <div class="bg-dark text-light p-3 rounded">
-                            <code>python main.py --sandbox</code>
-                        </div>
+                        <canvas id="price-chart" height="300"></canvas>
                     </div>
                 </div>
             </div>
@@ -81,61 +77,81 @@
     </div>
 
     <script>
-        // Fetch configuration
-        fetch('/api/config')
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('tradingPair').value = data.tradingPair;
-                document.getElementById('tradeQuantity').value = data.tradeQuantity;
-                document.getElementById('strategyType').value = data.strategyType;
-            })
-            .catch(error => console.error('Error fetching config:', error));
-
         // Fetch server time
         fetch('/api/server-time')
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    const serverTimeElement = document.getElementById('serverTime');
-                    const unixtime = data.data.unixtime;
-                    const rfc1123 = data.data.rfc1123;
-                    
-                    serverTimeElement.innerHTML = `
-                        <p><strong>Unix Time:</strong> ${unixtime}</p>
-                        <p><strong>RFC1123:</strong> ${rfc1123}</p>
-                    `;
+                    document.getElementById('server-time').textContent = 
+                        'Server Time: ' + new Date(parseInt(data.data.result.unixtime) * 1000).toLocaleTimeString();
+                } else {
+                    document.getElementById('server-time').textContent = 'Error fetching time';
+                    document.getElementById('server-time').classList.replace('bg-info', 'bg-danger');
                 }
             })
-            .catch(error => console.error('Error fetching server time:', error));
-
-        // Fetch ticker data
-        fetch('/api/ticker')
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('server-time').textContent = 'Connection error';
+                document.getElementById('server-time').classList.replace('bg-info', 'bg-danger');
+            });
+        
+        // Fetch configuration
+        fetch('/api/config')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('trading-pair').textContent = data.tradingPair;
+                document.getElementById('trade-quantity').textContent = data.tradeQuantity;
+                document.getElementById('strategy-type').textContent = data.strategyType;
+                
+                // After getting the trading pair, fetch ticker data
+                return fetch('/api/ticker?pair=' + data.tradingPair);
+            })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    const tickerElement = document.getElementById('ticker');
-                    const pair = Object.keys(data.data)[0];
-                    const tickerData = data.data[pair];
+                    const pairKey = Object.keys(data.data.result)[0];
+                    const tickerData = data.data.result[pairKey];
                     
-                    tickerElement.innerHTML = `
-                        <div class="row">
-                            <div class="col-md-6">
-                                <p><strong>Pair:</strong> ${pair}</p>
-                                <p><strong>Ask:</strong> ${tickerData.a[0]}</p>
-                                <p><strong>Bid:</strong> ${tickerData.b[0]}</p>
-                                <p><strong>Last Trade:</strong> ${tickerData.c[0]}</p>
-                            </div>
-                            <div class="col-md-6">
-                                <p><strong>Volume (24h):</strong> ${tickerData.v[1]}</p>
-                                <p><strong>VWAP (24h):</strong> ${tickerData.p[1]}</p>
-                                <p><strong>Low (24h):</strong> ${tickerData.l[1]}</p>
-                                <p><strong>High (24h):</strong> ${tickerData.h[1]}</p>
-                            </div>
-                        </div>
-                    `;
+                    let html = '<table class="table">';
+                    html += `<tr><th>Last Price:</th><td>${parseFloat(tickerData.c[0]).toFixed(2)} USD</td></tr>`;
+                    html += `<tr><th>24h Volume:</th><td>${parseFloat(tickerData.v[1]).toFixed(2)}</td></tr>`;
+                    html += `<tr><th>24h High:</th><td>${parseFloat(tickerData.h[1]).toFixed(2)} USD</td></tr>`;
+                    html += `<tr><th>24h Low:</th><td>${parseFloat(tickerData.l[1]).toFixed(2)} USD</td></tr>`;
+                    html += '</table>';
+                    
+                    document.getElementById('ticker-data').innerHTML = html;
+                    
+                    // Create a simple chart
+                    const ctx = document.getElementById('price-chart').getContext('2d');
+                    const chart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: ['24h Open', 'Current'],
+                            datasets: [{
+                                label: 'Price (USD)',
+                                data: [parseFloat(tickerData.o[1]), parseFloat(tickerData.c[0])],
+                                borderColor: 'rgb(75, 192, 192)',
+                                tension: 0.1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: false
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    document.getElementById('ticker-data').innerHTML = '<div class="alert alert-danger">Error fetching ticker data</div>';
                 }
             })
-            .catch(error => console.error('Error fetching ticker:', error));
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('ticker-data').innerHTML = '<div class="alert alert-danger">Connection error</div>';
+            });
     </script>
 </body>
 </html>

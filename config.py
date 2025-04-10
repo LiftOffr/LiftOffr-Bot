@@ -52,7 +52,7 @@ RSI_OVERSOLD = int(os.getenv('RSI_OVERSOLD', '30'))
 
 # Advanced strategy parameters (from original code)
 VOL_THRESHOLD = float(os.getenv('VOL_THRESHOLD', '0.006'))  # Normalized ATR threshold
-ENTRY_ATR_MULTIPLIER = float(os.getenv('ENTRY_ATR_MULTIPLIER', '0.3'))  # Entry offset multiplier
+ENTRY_ATR_MULTIPLIER = float(os.getenv('ENTRY_ATR_MULTIPLIER', '0.01'))  # Entry offset multiplier for limit orders
 BREAKEVEN_PROFIT_TARGET = float(os.getenv('BREAKEVEN_PROFIT_TARGET', '1.0'))  # Profit target in ATR multiples
 ARIMA_LOOKBACK = int(os.getenv('ARIMA_LOOKBACK', '10'))  # Lookback period for linear regression forecast
 

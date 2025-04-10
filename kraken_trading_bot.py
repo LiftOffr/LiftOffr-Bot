@@ -458,13 +458,20 @@ class KrakenTradingBot:
         try:
             # Check if pending order is filled based on live price
             if self.pending_order is not None:
-                # Check for timeout
+                # If ENTRY_ATR_MULTIPLIER is 0, execute immediately as a market order
+                if ENTRY_ATR_MULTIPLIER == 0 and self.pending_order["type"] == "buy":
+                    logger.info(f"Executing market buy at current price ${self.current_price:.4f}")
+                    self._execute_buy()
+                    self.pending_order = None
+                    return
+                
+                # Check for timeout for limit orders
                 if time.time() - self.pending_order["time"] > ORDER_TIMEOUT_SECONDS:
                     logger.info(f"Pending {self.pending_order['type']} order timed out")
                     self.pending_order = None
                     return
                 
-                # Check if price conditions are met
+                # Check if price conditions are met for limit orders
                 if self.pending_order["type"] == "buy" and self.current_price <= self.pending_order["price"]:
                     logger.info(f"Buy limit order filled at {self.pending_order['price']:.4f}")
                     self._execute_buy()
@@ -521,8 +528,15 @@ class KrakenTradingBot:
             logger.info(f"Already in {self.position} position; skipping buy order")
             return
         
-        # Calculate limit price based on ATR (from original code)
-        limit_price = self.current_price - (self.current_atr * ENTRY_ATR_MULTIPLIER)
+        # Calculate price for buy order
+        if ENTRY_ATR_MULTIPLIER > 0:
+            # Use limit price based on ATR if multiplier is positive
+            limit_price = self.current_price - (self.current_atr * ENTRY_ATR_MULTIPLIER)
+            order_type = "limit"
+        else:
+            # Use current price if multiplier is 0 (no offset)
+            limit_price = self.current_price
+            order_type = "market"
         
         # Calculate position size and risk
         position_size_usd = self.trade_quantity * self.current_price
@@ -535,7 +549,7 @@ class KrakenTradingBot:
             "time": time.time()
         }
         
-        logger.info(f"【ORDER】 LONG - Placed buy limit order at ${limit_price:.4f}")
+        logger.info(f"【ORDER】 LONG - Placed buy {order_type} order at ${limit_price:.4f}")
         logger.info(f"【POSITION】 Size: {self.trade_quantity} ({position_size_usd:.2f} USD) | Leverage: {LEVERAGE}x | Risk: {account_risk_percent:.2f}%")
     
     def _place_sell_order(self, exit_only=False):
