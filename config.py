@@ -18,6 +18,9 @@ logging.basicConfig(
 API_KEY = os.getenv('KRAKEN_API_KEY', '')
 API_SECRET = os.getenv('KRAKEN_API_SECRET', '')
 
+# Status update interval in seconds
+STATUS_UPDATE_INTERVAL = 60  # Default to once per minute
+
 # Notification settings
 SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY', '')
 NOTIFICATION_EMAIL = os.getenv('NOTIFICATION_EMAIL', 'cchapman.liftoffr@gmail.com')  # Default to email address

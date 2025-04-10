@@ -1,6 +1,7 @@
 import logging
 import time
 import os
+import json
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Union, Any
@@ -479,6 +480,86 @@ class KrakenTradingBot:
             
         except Exception as e:
             logger.error(f"Error updating signals: {e}")
+    
+    def _check_portfolio_request(self):
+        """
+        Check if there's a request for portfolio value and respond accordingly
+        """
+        request_file = "portfolio_request.txt"
+        response_file = "portfolio_value.txt"
+        
+        if os.path.exists(request_file):
+            try:
+                # Get the request timestamp
+                with open(request_file, "r") as f:
+                    request_time = float(f.read().strip())
+                
+                # Only respond to requests that are less than 30 seconds old
+                if time.time() - request_time < 30:
+                    # Prepare portfolio data
+                    portfolio_data = {
+                        'value': self.portfolio_value,
+                        'profit': self.total_profit,
+                        'profit_percent': self.total_profit_percent,
+                        'trade_count': self.trade_count,
+                        'position': self.position,
+                        'entry_price': self.entry_price if self.entry_price else 0,
+                        'current_price': self.current_price if self.current_price else 0
+                    }
+                    
+                    # Write response
+                    with open(response_file, "w") as f:
+                        f.write(json.dumps(portfolio_data))
+                    
+                    logger.info("Portfolio value request detected - data written to file")
+                
+                # Remove the request file
+                os.remove(request_file)
+                
+            except Exception as e:
+                logger.error(f"Error processing portfolio request: {e}")
+                # Clean up the request file even if there was an error
+                if os.path.exists(request_file):
+                    os.remove(request_file)
+
+    def _check_portfolio_request(self):
+        """
+        Check if there's a request for portfolio value and respond accordingly
+        """
+        request_file = "portfolio_request.txt"
+        response_file = "portfolio_value.txt"
+        
+        if os.path.exists(request_file):
+            try:
+                # Get the request timestamp
+                with open(request_file, "r") as f:
+                    request_time = float(f.read().strip())
+                
+                # Only respond to requests that are less than 30 seconds old
+                if time.time() - request_time < 30:
+                    # Prepare portfolio data
+                    portfolio_data = {
+                        'value': self.portfolio_value,
+                        'profit': self.total_profit,
+                        'profit_percent': self.total_profit_percent,
+                        'trade_count': self.trade_count,
+                        'position': self.position,
+                        'entry_price': self.entry_price if self.entry_price else 0,
+                        'current_price': self.current_price if self.current_price else 0,
+                        'timestamp': time.time()
+                    }
+                    
+                    # Write response
+                    with open(response_file, "w") as f:
+                        f.write(json.dumps(portfolio_data))
+                    
+                    logger.info("Portfolio value request detected - data written to file")
+                
+                # Remove the request file
+                os.remove(request_file)
+                
+            except Exception as e:
+                logger.error(f"Error processing portfolio request: {e}")
     
     def _check_orders(self):
         """
@@ -1170,6 +1251,12 @@ class KrakenTradingBot:
                 elif int(time.time()) % 30 == 0:  # Force update every 30 seconds for testing
                     logger.info("Forcing signal update for testing...")
                     self._update_signals()
+                
+                # Directly log the portfolio value on each iteration
+                logger.info(f"【PORTFOLIO STATUS】 Current Value: ${self.portfolio_value:.2f} | Profit: ${self.total_profit:.2f} ({self.total_profit_percent:.2f}%) | Trades: {self.trade_count}")
+                
+                # Check for portfolio request
+                self._check_portfolio_request()
                 
                 # Display detailed status only every STATUS_UPDATE_INTERVAL seconds to avoid log spam
                 if time.time() - self.last_status_update >= STATUS_UPDATE_INTERVAL:
