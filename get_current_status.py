@@ -300,6 +300,10 @@ def pair_trades(trades):
     """
     Pair buy and sell trades to calculate P&L for each completed trade cycle
     Returns a list of paired trades with calculated P&L
+    
+    In a multi-strategy environment, strategies can interact with each other's positions:
+    - ARIMA can sell positions opened by ADAPTIVE
+    - Adaptive can sell positions opened by ARIMA
     """
     if not trades:
         return []
@@ -308,19 +312,22 @@ def pair_trades(trades):
     sorted_trades = sorted(trades, key=lambda x: x.get('timestamp', datetime.datetime.now()))
     
     paired_trades = []
-    open_positions = {}  # Track open positions by pair and strategy
+    open_long_positions = {}  # Track open long positions by pair
+    open_short_positions = {}  # Track open short positions by pair
     
     for trade in sorted_trades:
         pair = trade.get('pair', 'SOL/USD')
         trade_type = trade.get('type', '').upper()
         strategy = trade.get('strategy', 'UNKNOWN')
-        position_key = f"{pair}_{strategy}"
         
         if trade_type == 'BUY':
-            # Opening a long position or closing a short position
-            if position_key in open_positions and open_positions[position_key].get('type') == 'SELL':
-                # Closing a short position - pair with the open position
-                open_trade = open_positions[position_key]
+            # Check if we have an open short position for this pair that can be closed
+            if pair in open_short_positions and open_short_positions[pair]:
+                # Sort by oldest first
+                open_short_positions[pair].sort(key=lambda x: x.get('timestamp', datetime.datetime.now()))
+                
+                # Get the oldest short position
+                open_trade = open_short_positions[pair].pop(0)
                 
                 # Calculate P&L
                 entry_price = open_trade.get('price', 0)
@@ -332,6 +339,7 @@ def pair_trades(trades):
                     pnl = (entry_price - exit_price) * volume
                     pnl_percent = ((entry_price / exit_price) - 1) * 100
                     
+                    # Use the exit trade's strategy for attribution
                     paired_trades.append({
                         'entry_trade': open_trade,
                         'exit_trade': trade,
@@ -340,17 +348,23 @@ def pair_trades(trades):
                         'strategy': strategy
                     })
                 
-                # Remove the position from open positions
-                del open_positions[position_key]
+                # If we have no more short positions for this pair, clean up
+                if not open_short_positions[pair]:
+                    del open_short_positions[pair]
             else:
                 # Opening a long position
-                open_positions[position_key] = trade
+                if pair not in open_long_positions:
+                    open_long_positions[pair] = []
+                open_long_positions[pair].append(trade)
         
         elif trade_type == 'SELL':
-            # Opening a short position or closing a long position
-            if position_key in open_positions and open_positions[position_key].get('type') == 'BUY':
-                # Closing a long position - pair with the open position
-                open_trade = open_positions[position_key]
+            # Check if we have an open long position for this pair that can be closed
+            if pair in open_long_positions and open_long_positions[pair]:
+                # Sort by oldest first
+                open_long_positions[pair].sort(key=lambda x: x.get('timestamp', datetime.datetime.now()))
+                
+                # Get the oldest long position
+                open_trade = open_long_positions[pair].pop(0)
                 
                 # Calculate P&L
                 entry_price = open_trade.get('price', 0)
@@ -362,6 +376,7 @@ def pair_trades(trades):
                     pnl = (exit_price - entry_price) * volume
                     pnl_percent = ((exit_price / entry_price) - 1) * 100
                     
+                    # Use the exit trade's strategy for attribution 
                     paired_trades.append({
                         'entry_trade': open_trade,
                         'exit_trade': trade,
@@ -370,11 +385,14 @@ def pair_trades(trades):
                         'strategy': strategy
                     })
                 
-                # Remove the position from open positions
-                del open_positions[position_key]
+                # If we have no more long positions for this pair, clean up
+                if not open_long_positions[pair]:
+                    del open_long_positions[pair]
             else:
                 # Opening a short position
-                open_positions[position_key] = trade
+                if pair not in open_short_positions:
+                    open_short_positions[pair] = []
+                open_short_positions[pair].append(trade)
     
     return paired_trades
 
