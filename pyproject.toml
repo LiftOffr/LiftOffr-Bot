@@ -20,4 +20,5 @@ dependencies = [
     "sendgrid>=6.11.0",
     "statsmodels>=0.14.4",
     "scipy>=1.15.2",
+    "sqlalchemy>=2.0.40",
 ]
