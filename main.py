@@ -341,7 +341,8 @@ def main():
     primary_bot_id = bot_manager.add_bot(
         strategy_type=strategy_type,
         trading_pair=trading_pair,
-        trade_quantity=trade_quantity
+        trade_quantity=trade_quantity,
+        margin_percent=0.15  # Fixed 15% risk rate
     )
     
     # Check for multiple strategies from command line arguments
@@ -352,7 +353,8 @@ def main():
                 bot_manager.add_bot(
                     strategy_type=strategy.strip(),
                     trading_pair=trading_pair,
-                    trade_quantity=trade_quantity
+                    trade_quantity=trade_quantity,
+                    margin_percent=0.15  # Fixed 15% risk rate
                 )
     else:
         # Always add ARIMA strategy by default if not specified in command line
@@ -360,7 +362,8 @@ def main():
             bot_manager.add_bot(
                 strategy_type="arima",
                 trading_pair=trading_pair,
-                trade_quantity=trade_quantity
+                trade_quantity=trade_quantity,
+                margin_percent=0.15  # Fixed 15% risk rate
             )
             logger.info("Added default ARIMA strategy to run concurrently")
     
