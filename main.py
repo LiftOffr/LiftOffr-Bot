@@ -367,6 +367,22 @@ def main():
     # Start all bots in separate threads
     bot_manager.start_all()
     
+    # Initialize the portfolio monitor
+    from portfolio_monitor import PortfolioMonitor
+    
+    # Get update interval from environment or default to 60 seconds (1 minute)
+    monitor_update_interval = int(os.environ.get('MONITOR_UPDATE_INTERVAL', '60'))
+    logger.info(f"Creating portfolio monitor with update interval of {monitor_update_interval} seconds")
+    
+    # Create and start portfolio monitor directly
+    portfolio_monitor = PortfolioMonitor(bot_manager, update_interval=monitor_update_interval)
+    portfolio_monitor.start()
+    
+    # Display status immediately to confirm it's working
+    portfolio_monitor._display_portfolio_status()
+    
+    logger.info(f"Portfolio monitor started with update interval of {monitor_update_interval} seconds")
+    
     # Start web interface if requested
     if args.web:
         # Import and run the web app
@@ -379,6 +395,9 @@ def main():
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:
+            # Stop the portfolio monitor
+            portfolio_monitor.stop()
+            # Stop all trading bots
             bot_manager.stop_all()
             logger.info("Trading bot stopped by user")
 

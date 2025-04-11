@@ -16,6 +16,8 @@ A sophisticated Python trading bot designed for the Kraken US exchange, leveragi
 - Real-time portfolio tracking with detailed profit/loss metrics
 - Per-strategy performance breakdown
 - Email notifications for trades
+- Beautiful portfolio monitor with configurable update intervals
+- Web interface for visual portfolio monitoring (port 5001)
 
 ## Setup
 
@@ -100,6 +102,23 @@ This will display:
 ```bash
 ./start_live_trading.sh
 ```
+
+#### Web Interface
+
+```bash
+./start_web_server.sh
+```
+
+This starts the web-based interface for the trading bot on port 5001, which you can access at:
+http://localhost:5001
+
+#### Portfolio Monitor Configuration
+
+```bash
+python set_monitor_interval.py 30  # Update portfolio status every 30 seconds
+```
+
+See [PORTFOLIO_MONITOR.md](PORTFOLIO_MONITOR.md) for more details about the portfolio monitor feature.
 
 ## Configuration
 

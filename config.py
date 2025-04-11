@@ -76,5 +76,8 @@ SIGNAL_INTERVAL = int(os.getenv('SIGNAL_INTERVAL', '30'))  # Update signals ever
 LOOKBACK_HOURS = int(os.getenv('LOOKBACK_HOURS', '12'))  # Hours of historical data to fetch
 STATUS_UPDATE_INTERVAL = int(os.getenv('STATUS_UPDATE_INTERVAL', '10'))  # Status update every 10 seconds
 
+# Portfolio monitor update interval
+MONITOR_UPDATE_INTERVAL = int(os.getenv('MONITOR_UPDATE_INTERVAL', '60'))  # Display portfolio status every 60 seconds (1 minute)
+
 # Order execution settings
 ORDER_TIMEOUT_SECONDS = 2 * LOOP_INTERVAL  # Time before reconsidering a pending order

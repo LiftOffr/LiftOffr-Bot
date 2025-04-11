@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start the web server component of the Kraken trading bot
+# Start the web server interface for the Kraken Trading Bot
 
-echo "Starting Kraken Trading Bot Web Server..."
-python simple_web_server.py
+echo "Starting Kraken Trading Bot web interface on port 5001..."
+python web_app.py
