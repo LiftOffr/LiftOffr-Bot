@@ -67,7 +67,7 @@ class ARIMAStrategy(TradingStrategy):
     def __init__(self, 
                  symbol: str = "SOLUSD",
                  lookback_period=32,
-                 atr_trailing_multiplier=4.0,
+                 atr_trailing_multiplier=2.5,
                  entry_atr_multiplier=0.01,
                  leverage=30,
                  risk_buffer_multiplier=1.25,
