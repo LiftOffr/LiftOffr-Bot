@@ -5,3 +5,4 @@ time,type,pair,price,volume,cost,fee,txid
 2025-04-11 03:25:30,SOL/USD,BUY,1.50,115.25,,,adaptive
 2025-04-11 03:25:31,SOL/USD,SELL,1.25,115.35,,,arima
 2025-04-11 03:31:23,SOL/USD,BUY,1084.316447,115.28,,,long
+2025-04-11 03:35:24,SOL/USD,BUY,1084.975263,115.21,,,long
