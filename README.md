@@ -13,7 +13,8 @@ A sophisticated Python trading bot designed for the Kraken US exchange, leveragi
 - Comprehensive logging and error handling
 - Sandbox mode for safe testing
 - Margin trading support with configurable leverage
-- Real-time portfolio tracking
+- Real-time portfolio tracking with detailed profit/loss metrics
+- Per-strategy performance breakdown
 - Email notifications for trades
 
 ## Setup
@@ -78,8 +79,11 @@ Check the current status of the trading bot:
 
 This will display:
 - Current portfolio value
-- Profit/loss metrics
-- Active positions
+- Detailed profit/loss metrics (closed trades, open positions, total)
+- Breakdown of profitable and losing trades
+- Performance metrics by strategy (win rate, profitable/losing trades)
+- Active positions with unrealized profit/loss
+- Available and allocated capital
 - Recent trading signals
 - Recent actions
 

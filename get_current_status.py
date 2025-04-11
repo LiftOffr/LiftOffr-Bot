@@ -226,7 +226,12 @@ def get_portfolio_metrics():
             "pnl_percent": 0.0,
             "total_trades": 0,
             "profitable_trades": 0,
+            "losing_trades": 0,
             "win_rate": 0.0,
+            "strategies": {
+                "adaptive": {"total": 0, "profitable": 0, "losing": 0, "win_rate": 0.0},
+                "arima": {"total": 0, "profitable": 0, "losing": 0, "win_rate": 0.0}
+            },
             "last_updated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         
@@ -257,14 +262,39 @@ def get_portfolio_metrics():
                                 volume = trade.get("volume", 0)
                                 trade_pnl = price_diff * volume
                                 total_pnl += trade_pnl
+                                
+                                # Determine strategy type from trade notes or logs
+                                strategy = "adaptive"  # Default to adaptive
+                                if "strategy" in trade:
+                                    strategy = trade.get("strategy", "adaptive").lower()
+                                elif "arima" in str(trade.get("notes", "")).lower():
+                                    strategy = "arima"
+                                
+                                # Update strategy-specific metrics
+                                metrics["strategies"][strategy]["total"] += 1
+                                
                                 if trade_pnl > 0:
                                     metrics["profitable_trades"] += 1
+                                    metrics["strategies"][strategy]["profitable"] += 1
+                                else:
+                                    metrics["losing_trades"] += 1
+                                    metrics["strategies"][strategy]["losing"] += 1
                                 break
                 
                 metrics["pnl"] = total_pnl
                 metrics["pnl_percent"] = (total_pnl / INITIAL_PORTFOLIO_VALUE) * 100
+                
+                # Calculate win rates
                 if metrics["total_trades"] > 0:
                     metrics["win_rate"] = (metrics["profitable_trades"] / metrics["total_trades"]) * 100
+                
+                # Calculate strategy-specific win rates
+                for strategy in metrics["strategies"]:
+                    if metrics["strategies"][strategy]["total"] > 0:
+                        metrics["strategies"][strategy]["win_rate"] = (
+                            metrics["strategies"][strategy]["profitable"] / 
+                            metrics["strategies"][strategy]["total"] * 100
+                        )
             
             # Add current position's unrealized PnL
             position_pnl = 0.0
@@ -288,6 +318,12 @@ def get_portfolio_metrics():
             "pnl": 0.0,
             "pnl_percent": 0.0,
             "total_trades": 0,
+            "profitable_trades": 0,
+            "losing_trades": 0,
+            "strategies": {
+                "adaptive": {"total": 0, "profitable": 0, "losing": 0, "win_rate": 0.0},
+                "arima": {"total": 0, "profitable": 0, "losing": 0, "win_rate": 0.0}
+            },
             "last_updated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
 
@@ -332,11 +368,24 @@ def display_status():
     total_pnl_style = "\033[92m" if total_pnl >= 0 else "\033[91m"
     print(f"Total P&L: {total_pnl_style}{format_currency(total_pnl)} ({format_percentage(total_pnl_percent)})\033[0m")
     
-    # Trade statistics
+    # Trade statistics for all strategies
     print(f"Total Trades: {metrics['total_trades']}")
     if metrics['total_trades'] > 0:
         win_rate_style = "\033[92m" if metrics['win_rate'] >= 50 else "\033[93m" if metrics['win_rate'] >= 30 else "\033[91m"
         print(f"Win Rate: {win_rate_style}{format_percentage(metrics['win_rate'])}\033[0m")
+        print(f"Profitable Trades: \033[92m{metrics['profitable_trades']}\033[0m")
+        print(f"Losing Trades: \033[91m{metrics['losing_trades']}\033[0m")
+        
+        # Per-strategy breakdown
+        print("\n--- STRATEGY BREAKDOWN ---")
+        for strategy_name, strategy_data in metrics['strategies'].items():
+            if strategy_data['total'] > 0:
+                strategy_win_rate_style = "\033[92m" if strategy_data['win_rate'] >= 50 else "\033[93m" if strategy_data['win_rate'] >= 30 else "\033[91m"
+                print(f"{strategy_name.upper()} Strategy:")
+                print(f"  Total Trades: {strategy_data['total']}")
+                print(f"  Win Rate: {strategy_win_rate_style}{format_percentage(strategy_data['win_rate'])}\033[0m")
+                print(f"  Profitable Trades: \033[92m{strategy_data['profitable']}\033[0m")
+                print(f"  Losing Trades: \033[91m{strategy_data['losing']}\033[0m")
     
     # Calculate allocation and available funds
     allocated_capital = 0
