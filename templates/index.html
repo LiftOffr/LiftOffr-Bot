@@ -1,75 +1,193 @@
 <!DOCTYPE html>
-<html data-bs-theme="dark">
+<html lang="en" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kraken Trading Bot</title>
+    <title>Kraken Trading Bot Dashboard</title>
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+        .dashboard-header {
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--bs-secondary);
+        }
+        .dashboard-card {
+            height: 100%;
+            margin-bottom: 20px;
+        }
+        .value-positive {
+            color: #28a745;
+        }
+        .value-negative {
+            color: #dc3545;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .status-running {
+            background-color: #28a745;
+        }
+        .status-stopped {
+            background-color: #dc3545;
+        }
+        .status-paused {
+            background-color: #ffc107;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        .data-table {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .refresh-container {
+            margin-bottom: 20px;
+        }
+        #last-updated {
+            font-size: 0.8rem;
+            color: var(--bs-secondary);
+        }
+    </style>
 </head>
 <body>
-    <div class="container my-4">
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header bg-primary text-white">
-                        <h1 class="h3 mb-0">Kraken Trading Bot</h1>
-                    </div>
-                    <div class="card-body">
-                        <p class="lead">A sophisticated trading bot for the Kraken exchange.</p>
-                        <div class="d-flex gap-2">
-                            <span class="badge bg-success">API Connected</span>
-                            <span id="server-time" class="badge bg-info">Loading time...</span>
-                        </div>
-                    </div>
+    <div class="container">
+        <div class="dashboard-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1>Kraken Trading Bot Dashboard</h1>
+                    <p class="lead">Real-time monitoring and performance tracking</p>
                 </div>
-            </div>
-        </div>
-
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h2 class="h5 mb-0">Configuration</h2>
-                    </div>
-                    <div class="card-body">
-                        <table class="table">
-                            <tr>
-                                <th>Trading Pair:</th>
-                                <td id="trading-pair">Loading...</td>
-                            </tr>
-                            <tr>
-                                <th>Trade Quantity:</th>
-                                <td id="trade-quantity">Loading...</td>
-                            </tr>
-                            <tr>
-                                <th>Strategy:</th>
-                                <td id="strategy-type">Loading...</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h2 class="h5 mb-0">Market Data</h2>
-                    </div>
-                    <div class="card-body">
-                        <div id="ticker-data">Loading market data...</div>
+                <div class="col-md-4 text-end">
+                    <div class="refresh-container">
+                        <button id="refresh-btn" class="btn btn-outline-secondary">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                            </svg>
+                            Refresh Data
+                        </button>
+                        <div id="last-updated">Last updated: N/A</div>
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="h5 mb-0">Price Chart</h2>
-                    </div>
+            <div class="col-md-4">
+                <div class="card dashboard-card">
                     <div class="card-body">
-                        <canvas id="price-chart" height="300"></canvas>
+                        <h4 class="card-title">Bot Status</h4>
+                        <p class="card-text">
+                            <span id="status-indicator" class="status-indicator"></span>
+                            <span id="status-text">Loading...</span>
+                        </p>
+                        <div class="d-flex justify-content-between">
+                            <span>Strategy:</span>
+                            <span id="strategy-text">Loading...</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Trading Pair:</span>
+                            <span id="pair-text">Loading...</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Current Position:</span>
+                            <span id="position-text">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card dashboard-card">
+                    <div class="card-body">
+                        <h4 class="card-title">Portfolio Value</h4>
+                        <h2 id="portfolio-value">$0.00</h2>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Initial:</span>
+                            <span id="initial-value">$0.00</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Gain/Loss:</span>
+                            <span id="gain-loss">0.00%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card dashboard-card">
+                    <div class="card-body">
+                        <h4 class="card-title">Current Position</h4>
+                        <div class="d-flex justify-content-between">
+                            <span>Entry Price:</span>
+                            <span id="entry-price">$0.00</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Current Price:</span>
+                            <span id="current-price">$0.00</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Unrealized P&L:</span>
+                            <span id="position-pnl">$0.00 (0.00%)</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Quantity:</span>
+                            <span id="position-quantity">0.000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card dashboard-card">
+                    <div class="card-body">
+                        <h4 class="card-title">Portfolio History</h4>
+                        <div class="chart-container">
+                            <canvas id="portfolio-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card dashboard-card">
+                    <div class="card-body">
+                        <h4 class="card-title">Recent Trades</h4>
+                        <div class="data-table">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Date/Time</th>
+                                        <th>Type</th>
+                                        <th>Trading Pair</th>
+                                        <th>Price</th>
+                                        <th>Amount</th>
+                                        <th>Cost</th>
+                                        <th>Fee</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="trades-table-body">
+                                    <tr>
+                                        <td colspan="7" class="text-center">Loading trade data...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -77,81 +195,206 @@
     </div>
 
     <script>
-        // Fetch server time
-        fetch('/api/server-time')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById('server-time').textContent = 
-                        'Server Time: ' + new Date(parseInt(data.data.result.unixtime) * 1000).toLocaleTimeString();
-                } else {
-                    document.getElementById('server-time').textContent = 'Error fetching time';
-                    document.getElementById('server-time').classList.replace('bg-info', 'bg-danger');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('server-time').textContent = 'Connection error';
-                document.getElementById('server-time').classList.replace('bg-info', 'bg-danger');
-            });
+        // Global variables
+        let portfolioChart = null;
         
-        // Fetch configuration
-        fetch('/api/config')
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('trading-pair').textContent = data.tradingPair;
-                document.getElementById('trade-quantity').textContent = data.tradeQuantity;
-                document.getElementById('strategy-type').textContent = data.strategyType;
+        // Function to update the dashboard with fresh data
+        function updateDashboard() {
+            // Update last refresh time
+            const now = new Date();
+            document.getElementById('last-updated').textContent = `Last updated: ${now.toLocaleTimeString()}`;
+            
+            // Fetch bot status
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    // Update bot status indicators
+                    const statusIndicator = document.getElementById('status-indicator');
+                    const statusText = document.getElementById('status-text');
+                    
+                    if (data.status === 'running') {
+                        statusIndicator.className = 'status-indicator status-running';
+                        statusText.textContent = 'Running';
+                    } else if (data.status === 'stopped') {
+                        statusIndicator.className = 'status-indicator status-stopped';
+                        statusText.textContent = 'Stopped';
+                    } else if (data.status === 'paused') {
+                        statusIndicator.className = 'status-indicator status-paused';
+                        statusText.textContent = 'Paused';
+                    }
+                    
+                    // Update strategy and trading pair
+                    document.getElementById('strategy-text').textContent = data.strategy || 'N/A';
+                    document.getElementById('pair-text').textContent = data.trading_pair || 'N/A';
+                    document.getElementById('position-text').textContent = data.position || 'None';
+                    
+                    // Update portfolio value
+                    document.getElementById('portfolio-value').textContent = `$${data.portfolio_value.toFixed(2)}`;
+                    document.getElementById('initial-value').textContent = `$${data.initial_value.toFixed(2)}`;
+                    
+                    // Update gain/loss with appropriate color
+                    const gainLossElement = document.getElementById('gain-loss');
+                    const gainLossValue = data.gain_loss_pct;
+                    gainLossElement.textContent = `${gainLossValue >= 0 ? '+' : ''}${gainLossValue.toFixed(2)}%`;
+                    gainLossElement.className = gainLossValue >= 0 ? 'value-positive' : 'value-negative';
+                    
+                    // Update current position details
+                    document.getElementById('entry-price').textContent = `$${data.entry_price?.toFixed(2) || '0.00'}`;
+                    document.getElementById('current-price').textContent = `$${data.current_price?.toFixed(2) || '0.00'}`;
+                })
+                .catch(error => {
+                    console.error('Error fetching bot status:', error);
+                });
                 
-                // After getting the trading pair, fetch ticker data
-                return fetch('/api/ticker?pair=' + data.tradingPair);
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const pairKey = Object.keys(data.data.result)[0];
-                    const tickerData = data.data.result[pairKey];
+            // Fetch current position
+            fetch('/api/portfolio/current')
+                .then(response => response.json())
+                .then(data => {
+                    // Update position details
+                    document.getElementById('position-quantity').textContent = data.quantity?.toFixed(3) || '0.000';
                     
-                    let html = '<table class="table">';
-                    html += `<tr><th>Last Price:</th><td>${parseFloat(tickerData.c[0]).toFixed(2)} USD</td></tr>`;
-                    html += `<tr><th>24h Volume:</th><td>${parseFloat(tickerData.v[1]).toFixed(2)}</td></tr>`;
-                    html += `<tr><th>24h High:</th><td>${parseFloat(tickerData.h[1]).toFixed(2)} USD</td></tr>`;
-                    html += `<tr><th>24h Low:</th><td>${parseFloat(tickerData.l[1]).toFixed(2)} USD</td></tr>`;
-                    html += '</table>';
-                    
-                    document.getElementById('ticker-data').innerHTML = html;
-                    
-                    // Create a simple chart
-                    const ctx = document.getElementById('price-chart').getContext('2d');
-                    const chart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: ['24h Open', 'Current'],
-                            datasets: [{
-                                label: 'Price (USD)',
-                                data: [parseFloat(tickerData.o[1]), parseFloat(tickerData.c[0])],
-                                borderColor: 'rgb(75, 192, 192)',
-                                tension: 0.1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    beginAtZero: false
+                    // Update position P&L with appropriate color
+                    const positionPnlElement = document.getElementById('position-pnl');
+                    const pnlValue = data.pnl || 0;
+                    const pnlPercent = data.pnl_percent || 0;
+                    positionPnlElement.textContent = `$${pnlValue.toFixed(2)} (${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)`;
+                    positionPnlElement.className = pnlValue >= 0 ? 'value-positive' : 'value-negative';
+                })
+                .catch(error => {
+                    console.error('Error fetching current position:', error);
+                });
+                
+            // Fetch portfolio history for chart
+            fetch('/api/portfolio/history')
+                .then(response => response.json())
+                .then(data => {
+                    updatePortfolioChart(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching portfolio history:', error);
+                });
+                
+            // Fetch recent trades
+            fetch('/api/trades')
+                .then(response => response.json())
+                .then(data => {
+                    updateTradesTable(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching trades:', error);
+                });
+        }
+        
+        // Function to update the portfolio history chart
+        function updatePortfolioChart(data) {
+            const ctx = document.getElementById('portfolio-chart').getContext('2d');
+            
+            // Extract dates and values from data
+            const dates = data.map(item => item.date);
+            const values = data.map(item => item.value);
+            
+            // Destroy existing chart if it exists
+            if (portfolioChart) {
+                portfolioChart.destroy();
+            }
+            
+            // Create new chart
+            portfolioChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Portfolio Value ($)',
+                        data: values,
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toFixed(2);
                                 }
                             }
                         }
-                    });
-                } else {
-                    document.getElementById('ticker-data').innerHTML = '<div class="alert alert-danger">Error fetching ticker data</div>';
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const dataPoint = data[context.dataIndex];
+                                    const changePercent = dataPoint.change_percent;
+                                    return [
+                                        'Value: $' + value.toFixed(2),
+                                        'Change: ' + (changePercent >= 0 ? '+' : '') + changePercent.toFixed(2) + '%'
+                                    ];
+                                }
+                            }
+                        }
+                    }
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('ticker-data').innerHTML = '<div class="alert alert-danger">Connection error</div>';
             });
+        }
+        
+        // Function to update the trades table
+        function updateTradesTable(data) {
+            const tableBody = document.getElementById('trades-table-body');
+            
+            // Clear existing rows
+            tableBody.innerHTML = '';
+            
+            if (data.length === 0) {
+                // Show no trades message
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="7" class="text-center">No trades recorded yet</td>';
+                tableBody.appendChild(row);
+                return;
+            }
+            
+            // Add new rows
+            data.forEach(trade => {
+                const row = document.createElement('tr');
+                
+                // Format date/time
+                const tradeDate = new Date(trade.time * 1000).toLocaleString();
+                
+                // Determine if buy or sell for styling
+                const isBuy = trade.type === 'buy';
+                const typeClass = isBuy ? 'value-positive' : 'value-negative';
+                
+                row.innerHTML = `
+                    <td>${tradeDate}</td>
+                    <td class="${typeClass}">${trade.type.toUpperCase()}</td>
+                    <td>${trade.pair}</td>
+                    <td>$${parseFloat(trade.price).toFixed(2)}</td>
+                    <td>${parseFloat(trade.volume).toFixed(6)}</td>
+                    <td>$${parseFloat(trade.cost).toFixed(2)}</td>
+                    <td>$${parseFloat(trade.fee).toFixed(4)}</td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initial update
+            updateDashboard();
+            
+            // Set up refresh button
+            document.getElementById('refresh-btn').addEventListener('click', updateDashboard);
+            
+            // Auto-refresh every 30 seconds
+            setInterval(updateDashboard, 30000);
+        });
     </script>
 </body>
 </html>

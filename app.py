@@ -1,337 +1,372 @@
 import os
-import logging
-import sys
-import argparse
-from flask import Flask, render_template, request, jsonify
-from kraken_api import KrakenAPI
+import json
+import time
+from datetime import datetime, timedelta
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-logger = logging.getLogger(__name__)
+from flask import Flask, render_template, jsonify, request
+from models import db, Trade, PortfolioSnapshot
+from sqlalchemy import desc
+import pandas as pd
+import csv
 
-# Create the Flask app
+# Create the flask app
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "development-secret-key")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_recycle": 300,
+    "pool_pre_ping": True,
+}
+app.secret_key = os.environ.get("SESSION_SECRET", "dev_key_please_change")
 
-# Global bot manager instance
-bot_manager = None
+# Initialize the database
+db.init_app(app)
+
+# Create all tables
+with app.app_context():
+    db.create_all()
 
 @app.route('/')
 def index():
-    """
-    Main page for trading bot web interface
-    """
-    return """
-    <!DOCTYPE html>
-    <html data-bs-theme="dark">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Kraken Trading Bot</title>
-        <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <style>
-            .container { max-width: 1200px; }
-            .stats-card { min-height: 160px; }
-            .chart-container { height: 400px; }
-        </style>
-    </head>
-    <body>
-        <div class="container mt-4">
-            <div class="row mb-4">
-                <div class="col">
-                    <h1>Kraken Multi-Strategy Trading Bot</h1>
-                    <p class="lead">Advanced algorithmic trading system for cryptocurrency markets</p>
-                </div>
-            </div>
-            
-            <div class="row mb-4">
-                <!-- Market Stats Card -->
-                <div class="col-md-4 mb-3">
-                    <div class="card stats-card">
-                        <div class="card-header">Market Data</div>
-                        <div class="card-body">
-                            <h5 class="card-title" id="current-pair">Trading Pair: <span id="trading-pair">--</span></h5>
-                            <p class="card-text">Current Price: <span id="current-price">--</span></p>
-                            <p class="card-text">24h Change: <span id="price-change">--</span></p>
-                            <p class="card-text">24h Volume: <span id="volume">--</span></p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Bot Stats Card -->
-                <div class="col-md-4 mb-3">
-                    <div class="card stats-card">
-                        <div class="card-header">Bot Status</div>
-                        <div class="card-body">
-                            <h5 class="card-title">Active Strategies: <span id="strategy-count">--</span></h5>
-                            <div id="strategy-list">Loading strategies...</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Performance Card -->
-                <div class="col-md-4 mb-3">
-                    <div class="card stats-card">
-                        <div class="card-header">Performance</div>
-                        <div class="card-body">
-                            <h5 class="card-title">Portfolio: <span id="portfolio-value">--</span></h5>
-                            <p class="card-text">Total Profit: <span id="total-profit">--</span></p>
-                            <p class="card-text">ROI: <span id="roi-percent">--</span></p>
-                            <p class="card-text">Completed Trades: <span id="trade-count">--</span></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Price Chart -->
-            <div class="row mb-4">
-                <div class="col">
-                    <div class="card">
-                        <div class="card-header">Price Chart</div>
-                        <div class="card-body chart-container">
-                            <canvas id="price-chart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Active Strategies -->
-            <div class="row mb-4">
-                <div class="col">
-                    <div class="card">
-                        <div class="card-header">Active Trading Strategies</div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>Strategy</th>
-                                            <th>Pair</th>
-                                            <th>Position</th>
-                                            <th>Current Price</th>
-                                            <th>Entry Price</th>
-                                            <th>Profit/Loss</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="strategies-table">
-                                        <tr><td colspan="6" class="text-center">Loading strategies...</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Status Messages -->
-            <div class="row mb-4">
-                <div class="col">
-                    <div class="card">
-                        <div class="card-header">Status Messages</div>
-                        <div class="card-body">
-                            <div id="status-messages" class="small" style="max-height: 200px; overflow-y: scroll;">
-                                <div class="text-muted">Waiting for status updates...</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Set initial values
-                document.getElementById('trading-pair').innerText = 'Loading...';
-                document.getElementById('strategy-count').innerText = 'Loading...';
-                
-                // Function to update UI with bot status
-                function updateBotStatus() {
-                    fetch('/api/status')
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.error) {
-                                console.error('Error fetching bot status:', data.error);
-                                return;
-                            }
-                            
-                            // Update portfolio stats
-                            document.getElementById('portfolio-value').innerText = '$' + data.portfolio_value.toFixed(2);
-                            document.getElementById('total-profit').innerText = '$' + data.total_profit.toFixed(2);
-                            document.getElementById('roi-percent').innerText = data.total_profit_percent.toFixed(2) + '%';
-                            document.getElementById('trade-count').innerText = data.trade_count;
-                            
-                            // Update strategies table
-                            const strategiesTable = document.getElementById('strategies-table');
-                            let tableHTML = '';
-                            
-                            const bots = data.bots || {};
-                            const botIds = Object.keys(bots);
-                            document.getElementById('strategy-count').innerText = botIds.length;
-                            
-                            if (botIds.length === 0) {
-                                tableHTML = '<tr><td colspan="6" class="text-center">No active strategies</td></tr>';
-                            } else {
-                                for (const botId of botIds) {
-                                    const bot = bots[botId];
-                                    const position = bot.position || 'None';
-                                    const currentPrice = bot.current_price ? '$' + bot.current_price.toFixed(2) : '--';
-                                    const entryPrice = bot.entry_price ? '$' + bot.entry_price.toFixed(2) : '--';
-                                    
-                                    let profitLoss = '--';
-                                    if (bot.position && bot.current_price && bot.entry_price) {
-                                        const diff = bot.position === 'long' 
-                                            ? bot.current_price - bot.entry_price 
-                                            : bot.entry_price - bot.current_price;
-                                        const percent = (diff / bot.entry_price) * 100;
-                                        profitLoss = `${diff.toFixed(2)} (${percent.toFixed(2)}%)`;
-                                    }
-                                    
-                                    tableHTML += `
-                                    <tr>
-                                        <td>${bot.strategy_type}</td>
-                                        <td>${bot.trading_pair}</td>
-                                        <td>${position}</td>
-                                        <td>${currentPrice}</td>
-                                        <td>${entryPrice}</td>
-                                        <td>${profitLoss}</td>
-                                    </tr>
-                                    `;
-                                }
-                            }
-                            
-                            strategiesTable.innerHTML = tableHTML;
-                            
-                            // Update strategy list in stats card
-                            let strategyListHTML = '';
-                            for (const botId of botIds) {
-                                const bot = bots[botId];
-                                strategyListHTML += `<p>${bot.strategy_type} on ${bot.trading_pair}</p>`;
-                            }
-                            document.getElementById('strategy-list').innerHTML = strategyListHTML;
-                            
-                            // Add a status message
-                            const statusMessages = document.getElementById('status-messages');
-                            const timestamp = new Date().toLocaleTimeString();
-                            statusMessages.innerHTML = `<div>${timestamp} - Status updated: ${botIds.length} active strategies</div>` 
-                                + statusMessages.innerHTML;
-                        })
-                        .catch(error => {
-                            console.error('Error fetching bot status:', error);
-                        });
-                }
-                
-                // Initialize price chart (would be updated via API)
-                const ctx = document.getElementById('price-chart').getContext('2d');
-                const priceChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: ['Loading...'],
-                        datasets: [{
-                            label: 'Price',
-                            data: [0],
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 2,
-                            tension: 0.1,
-                            fill: false
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: false
-                            }
-                        }
-                    }
-                });
-                
-                // Update bot status immediately and then every 5 seconds
-                updateBotStatus();
-                setInterval(updateBotStatus, 5000);
-            });
-        </script>
-    </body>
-    </html>
-    """
+    """Main page for trading bot web interface"""
+    return render_template('index.html')
 
 @app.route('/api/status')
 def api_status():
-    """
-    API endpoint for getting bot status
-    """
-    global bot_manager
-    
-    # Check if bot_manager is set directly
-    if bot_manager:
-        return jsonify(bot_manager.get_status())
-    
-    # Check if bot_manager is set in app config
-    if 'BOT_MANAGER' in app.config and app.config['BOT_MANAGER']:
-        return jsonify(app.config['BOT_MANAGER'].get_status())
+    """API endpoint for getting bot status"""
+    # First try to get the most recent portfolio snapshot from our database
+    with app.app_context():
+        latest_snapshot = PortfolioSnapshot.query.order_by(desc(PortfolioSnapshot.timestamp)).first()
         
-    return jsonify({'error': 'Bot manager not initialized'})
-
-@app.route('/api/server-time', methods=['GET'])
-def get_server_time():
+        if latest_snapshot and (datetime.utcnow() - latest_snapshot.timestamp).total_seconds() < 60:
+            # We have recent data in the database
+            data = {
+                'value': latest_snapshot.total_value,
+                'profit': latest_snapshot.total_profit,
+                'profit_percent': latest_snapshot.total_profit_percent,
+                'trade_count': latest_snapshot.trade_count,
+                'position': latest_snapshot.current_position,
+                'entry_price': latest_snapshot.entry_price,
+                'current_price': latest_snapshot.current_price,
+                'data_source': 'database',
+                'timestamp': latest_snapshot.timestamp.isoformat()
+            }
+            return jsonify(data)
+    
+    # If we don't have database data, try to get the data from the bot directly
     try:
-        api = KrakenAPI()
-        server_time = api.get_server_time()
-        return jsonify({"success": True, "data": server_time})
+        # Check if there is a recent portfolio value response
+        response_file = "portfolio_value.txt"
+        if os.path.exists(response_file):
+            file_mtime = os.path.getmtime(response_file)
+            if time.time() - file_mtime < 60:  # Only use if less than 60 seconds old
+                with open(response_file, "r") as f:
+                    try:
+                        data = json.loads(f.read())
+                        data['data_source'] = 'file'
+                        return jsonify(data)
+                    except json.JSONDecodeError:
+                        pass
+        
+        # Create a new request for portfolio data
+        request_file = "portfolio_request.txt"
+        with open(request_file, "w") as f:
+            f.write(str(time.time()))
+        
+        # Wait briefly for a response
+        time.sleep(2)
+        
+        # Check if we got a response
+        if os.path.exists(response_file):
+            file_mtime = os.path.getmtime(response_file)
+            if time.time() - file_mtime < 3:  # Only use if it was just updated
+                with open(response_file, "r") as f:
+                    try:
+                        data = json.loads(f.read())
+                        data['data_source'] = 'fresh'
+                        return jsonify(data)
+                    except json.JSONDecodeError:
+                        pass
+        
+        # Fallback to checking the trades.csv file for portfolio value
+        # This is a legacy approach and may be less accurate
+        try:
+            # Try to get portfolio data from trades CSV
+            with open('trades.csv', 'r') as csvfile:
+                reader = csv.DictReader(csvfile)
+                rows = list(reader)
+                
+                if rows:
+                    # Get the last trade which should have final portfolio value
+                    latest_trade = rows[-1]
+                    if 'portfolio_value' in latest_trade:
+                        portfolio_value = float(latest_trade['portfolio_value'])
+                        # Estimate profit based on initial capital of $20,000
+                        profit = portfolio_value - 20000
+                        profit_percent = (profit / 20000) * 100
+                        
+                        data = {
+                            'value': portfolio_value,
+                            'profit': profit,
+                            'profit_percent': profit_percent,
+                            'trade_count': len(rows),
+                            'position': None,
+                            'entry_price': 0,
+                            'current_price': 0,
+                            'data_source': 'csv',
+                            'timestamp': datetime.utcnow().isoformat()
+                        }
+                        return jsonify(data)
+        except Exception as e:
+            print(f"Error reading trades.csv: {e}")
+    
     except Exception as e:
-        logger.error(f"Error getting server time: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route('/api/asset-info', methods=['GET'])
-def get_asset_info():
-    try:
-        api = KrakenAPI()
-        asset = request.args.get('asset')
-        assets = [asset] if asset else None
-        asset_info = api.get_asset_info(assets)
-        return jsonify({"success": True, "data": asset_info})
-    except Exception as e:
-        logger.error(f"Error getting asset info: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route('/api/ticker', methods=['GET'])
-def get_ticker():
-    try:
-        api = KrakenAPI()
-        from config import TRADING_PAIR
-        pair = request.args.get('pair', TRADING_PAIR)
-        ticker = api.get_ticker([pair])
-        return jsonify({"success": True, "data": ticker})
-    except Exception as e:
-        logger.error(f"Error getting ticker: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route('/api/config', methods=['GET'])
-def get_config():
-    from config import TRADING_PAIR, TRADE_QUANTITY, STRATEGY_TYPE
+        print(f"Error retrieving portfolio data: {e}")
+    
+    # Default response if all else fails
     return jsonify({
-        "tradingPair": TRADING_PAIR,
-        "tradeQuantity": TRADE_QUANTITY,
-        "strategyType": STRATEGY_TYPE
+        'value': 20000.00,
+        'profit': 0.00,
+        'profit_percent': 0.00,
+        'trade_count': 0,
+        'position': None,
+        'entry_price': 0,
+        'current_price': 0,
+        'data_source': 'default',
+        'timestamp': datetime.utcnow().isoformat()
     })
 
-def run_app_with_bot_manager(manager):
-    """
-    Run the Flask app with a bot manager
+@app.route('/api/trades')
+def get_trades():
+    """API endpoint for getting trade history"""
+    try:
+        # First try to get data from our database
+        with app.app_context():
+            trades = Trade.query.order_by(desc(Trade.timestamp)).limit(100).all()
+            
+            if trades:
+                trade_list = [{
+                    'id': trade.id,
+                    'timestamp': trade.timestamp.isoformat(),
+                    'trade_type': trade.trade_type,
+                    'symbol': trade.symbol,
+                    'quantity': trade.quantity,
+                    'price': trade.price,
+                    'position': trade.position,
+                    'profit': trade.profit,
+                    'profit_percent': trade.profit_percent,
+                    'exit_price': trade.exit_price,
+                    'exit_timestamp': trade.exit_timestamp.isoformat() if trade.exit_timestamp else None,
+                    'is_open': trade.is_open,
+                    'strategy': trade.strategy
+                } for trade in trades]
+                
+                return jsonify({
+                    'trades': trade_list,
+                    'data_source': 'database'
+                })
+        
+        # Fallback to CSV file if database is empty
+        try:
+            # Read from CSV file
+            trades = []
+            with open('trades.csv', 'r') as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    # Convert relevant fields to numbers
+                    for field in ['price', 'quantity', 'profit', 'profit_percent']:
+                        if field in row and row[field]:
+                            try:
+                                row[field] = float(row[field])
+                            except ValueError:
+                                row[field] = None
+                    
+                    trades.append(row)
+            
+            return jsonify({
+                'trades': trades,
+                'data_source': 'csv'
+            })
+        
+        except Exception as e:
+            print(f"Error reading trades from CSV: {e}")
+            return jsonify({
+                'trades': [],
+                'error': str(e),
+                'data_source': 'error'
+            })
     
-    Args:
-        manager: Bot manager instance
-    """
-    global bot_manager
-    bot_manager = manager
-    app.run(host='0.0.0.0', port=5000)
+    except Exception as e:
+        print(f"Error retrieving trades: {e}")
+        return jsonify({
+            'trades': [],
+            'error': str(e),
+            'data_source': 'error'
+        })
+
+@app.route('/api/current_position')
+def get_current_position():
+    """API endpoint for getting current position"""
+    try:
+        # First try to get the most recent portfolio snapshot from our database
+        with app.app_context():
+            latest_snapshot = PortfolioSnapshot.query.order_by(desc(PortfolioSnapshot.timestamp)).first()
+            
+            if latest_snapshot and (datetime.utcnow() - latest_snapshot.timestamp).total_seconds() < 60:
+                # We have recent data in the database
+                data = {
+                    'position': latest_snapshot.current_position,
+                    'entry_price': latest_snapshot.entry_price,
+                    'current_price': latest_snapshot.current_price,
+                    'timestamp': latest_snapshot.timestamp.isoformat(),
+                    'data_source': 'database'
+                }
+                
+                # Calculate unrealized profit if we have a position
+                if latest_snapshot.current_position and latest_snapshot.entry_price and latest_snapshot.current_price:
+                    if latest_snapshot.current_position == 'long':
+                        unrealized_profit = latest_snapshot.current_price - latest_snapshot.entry_price
+                    else:  # short
+                        unrealized_profit = latest_snapshot.entry_price - latest_snapshot.current_price
+                    
+                    # Calculate percentage based on a standard position size (this is an approximation)
+                    position_value = latest_snapshot.entry_price * 50  # Assuming quantity of 50
+                    unrealized_profit_percent = (unrealized_profit * 50 / position_value) * 100
+                    
+                    data['unrealized_profit'] = unrealized_profit * 50  # Multiply by quantity
+                    data['unrealized_profit_percent'] = unrealized_profit_percent
+                
+                return jsonify(data)
+        
+        # Fallback to checking the portfolio_value.txt file
+        response_file = "portfolio_value.txt"
+        if os.path.exists(response_file):
+            file_mtime = os.path.getmtime(response_file)
+            if time.time() - file_mtime < 60:  # Only use if less than 60 seconds old
+                with open(response_file, "r") as f:
+                    try:
+                        data = json.loads(f.read())
+                        
+                        position_data = {
+                            'position': data.get('position'),
+                            'entry_price': data.get('entry_price'),
+                            'current_price': data.get('current_price'),
+                            'timestamp': datetime.utcnow().isoformat(),
+                            'data_source': 'file'
+                        }
+                        
+                        # Calculate unrealized profit if we have a position
+                        if position_data['position'] and position_data['entry_price'] and position_data['current_price']:
+                            entry_price = float(position_data['entry_price'])
+                            current_price = float(position_data['current_price'])
+                            
+                            if position_data['position'] == 'long':
+                                unrealized_profit = current_price - entry_price
+                            else:  # short
+                                unrealized_profit = entry_price - current_price
+                            
+                            # Calculate percentage based on a standard position size (this is an approximation)
+                            position_value = entry_price * 50  # Assuming quantity of 50
+                            unrealized_profit_percent = (unrealized_profit * 50 / position_value) * 100
+                            
+                            position_data['unrealized_profit'] = unrealized_profit * 50  # Multiply by quantity
+                            position_data['unrealized_profit_percent'] = unrealized_profit_percent
+                        
+                        return jsonify(position_data)
+                    except json.JSONDecodeError:
+                        pass
+    
+    except Exception as e:
+        print(f"Error retrieving current position: {e}")
+    
+    # Default response if all else fails
+    return jsonify({
+        'position': None,
+        'entry_price': 0,
+        'current_price': 0,
+        'timestamp': datetime.utcnow().isoformat(),
+        'data_source': 'default'
+    })
+
+@app.route('/api/portfolio_history')
+def get_portfolio_history():
+    """API endpoint for getting historical portfolio values"""
+    try:
+        # First try to get data from our database
+        with app.app_context():
+            # Get snapshots from the last 7 days
+            start_date = datetime.utcnow() - timedelta(days=7)
+            snapshots = PortfolioSnapshot.query.filter(
+                PortfolioSnapshot.timestamp >= start_date
+            ).order_by(PortfolioSnapshot.timestamp).all()
+            
+            if snapshots:
+                history = [{
+                    'timestamp': snapshot.timestamp.isoformat(),
+                    'total_value': snapshot.total_value,
+                    'cash_value': snapshot.cash_value,
+                    'holdings_value': snapshot.holdings_value,
+                    'total_profit': snapshot.total_profit,
+                    'total_profit_percent': snapshot.total_profit_percent,
+                    'trade_count': snapshot.trade_count
+                } for snapshot in snapshots]
+                
+                return jsonify({
+                    'history': history,
+                    'data_source': 'database'
+                })
+    
+    except Exception as e:
+        print(f"Error retrieving portfolio history: {e}")
+    
+    # Default response if all else fails - create synthetic data
+    # Note: This is just for UI rendering until real data is available
+    history = []
+    end_date = datetime.utcnow()
+    start_date = end_date - timedelta(days=7)
+    
+    # Create a default history with the starting value of $20,000
+    history.append({
+        'timestamp': start_date.isoformat(),
+        'total_value': 20000.00,
+        'cash_value': 20000.00,
+        'holdings_value': 0.00,
+        'total_profit': 0.00,
+        'total_profit_percent': 0.00,
+        'trade_count': 0
+    })
+    
+    # Add current value based on status API
+    try:
+        response_file = "portfolio_value.txt"
+        if os.path.exists(response_file):
+            with open(response_file, "r") as f:
+                data = json.loads(f.read())
+                
+                history.append({
+                    'timestamp': datetime.utcnow().isoformat(),
+                    'total_value': data.get('value', 20000.00),
+                    'cash_value': data.get('value', 20000.00) - (data.get('position_value', 0) or 0),
+                    'holdings_value': data.get('position_value', 0) or 0,
+                    'total_profit': data.get('profit', 0.00),
+                    'total_profit_percent': data.get('profit_percent', 0.00),
+                    'trade_count': data.get('trade_count', 0)
+                })
+    except Exception:
+        # Add current with default values if we couldn't get real data
+        history.append({
+            'timestamp': end_date.isoformat(),
+            'total_value': 20000.00,
+            'cash_value': 20000.00,
+            'holdings_value': 0.00,
+            'total_profit': 0.00,
+            'total_profit_percent': 0.00,
+            'trade_count': 0
+        })
+    
+    return jsonify({
+        'history': history,
+        'data_source': 'default'
+    })
 
 if __name__ == '__main__':
-    # When running directly, just start the web server
-    # The bot manager will need to be provided separately
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)
