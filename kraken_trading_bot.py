@@ -761,20 +761,33 @@ class KrakenTradingBot:
             logger.info(f"Already in {self.position} position; skipping sell order")
             return
         
-        # For exit orders, use market price
-        price = self.current_price
+        # Use ATR offset for limit orders if ATR is available and not an exit order
+        if self.current_atr is not None and ENTRY_ATR_MULTIPLIER > 0 and not exit_only:
+            # For short entries, use a limit price slightly above the current price
+            limit_price = self.current_price + (self.current_atr * ENTRY_ATR_MULTIPLIER)
+            order_type = "limit"
+        else:
+            # For exit orders or if no ATR available, use current price
+            limit_price = self.current_price
+            order_type = "market" if exit_only else "limit"
         
-        # Create pending order for immediate execution
+        # Calculate position size and risk if entering a new position
+        if not exit_only:
+            position_size_usd = self.trade_quantity * self.current_price
+            account_risk_percent = (position_size_usd / self.portfolio_value) * 100
+            logger.info(f"【POSITION】 Size: {self.trade_quantity} ({position_size_usd:.2f} USD) | Leverage: {self.leverage}x | Risk: {account_risk_percent:.2f}%")
+        
+        # Create pending order
         self.pending_order = {
             "type": "sell",
-            "price": price,
+            "price": limit_price,
             "time": time.time(),
             "exit_only": exit_only
         }
         
-        logger.info(f"【ORDER】 {'EXIT LONG' if exit_only else 'SHORT'} - Placed sell {'exit' if exit_only else 'limit'} order at ${price:.4f}")
+        logger.info(f"【ORDER】 {'EXIT LONG' if exit_only else 'SHORT'} - Placed sell {order_type} order at ${limit_price:.4f}")
         
-        # Execute immediately
+        # Execute immediately for exit orders
         if exit_only:
             self._execute_sell(exit_only=True)
             self.pending_order = None
@@ -932,13 +945,28 @@ class KrakenTradingBot:
             # Execute order only if not in sandbox mode
             if not self.sandbox_mode:
                 try:
-                    order_result = self.api.place_order(
-                        pair=self.trading_pair,
-                        type_="sell",
-                        ordertype="market",
-                        volume=str(quantity),
-                        leverage=str(self.leverage)
-                    )
+                    # Use the price from the pending order if it exists, which is a limit price
+                    # with the small ATR offset. Otherwise, use a market order at current price.
+                    if self.pending_order and 'price' in self.pending_order:
+                        limit_price = self.pending_order['price']
+                        order_result = self.api.place_order(
+                            pair=self.trading_pair,
+                            type_="sell",
+                            ordertype="limit",
+                            price=str(limit_price),
+                            volume=str(quantity),
+                            leverage=str(self.leverage)
+                        )
+                        logger.info(f"Exit long limit order placed at ${limit_price:.4f} with {ENTRY_ATR_MULTIPLIER} ATR offset")
+                    else:
+                        # Fallback to market order if no pending order price
+                        order_result = self.api.place_order(
+                            pair=self.trading_pair,
+                            type_="sell",
+                            ordertype="market",
+                            volume=str(quantity),
+                            leverage=str(self.leverage)
+                        )
                     
                     logger.info(f"Sell order executed: {order_result}")
                     
