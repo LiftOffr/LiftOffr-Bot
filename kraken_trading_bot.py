@@ -45,6 +45,10 @@ class KrakenTradingBot:
         # Store strategy-specific settings
         self.margin_percent = margin_percent
         self.leverage = leverage
+        
+        # For portfolio management with multiple strategies
+        self.available_funds = INITIAL_CAPITAL
+        self.bot_manager = None  # Reference to BotManager, set when added to manager
         # Format the trading pair correctly for Kraken
         # Kraken WebSocket requires ISO 4217-A3 format with / (e.g. "SOL/USD")
         self.original_pair = trading_pair  # Keep original for REST API calls
@@ -793,9 +797,19 @@ class KrakenTradingBot:
         if self.current_atr:
             stop_price = self.current_price - (self.current_atr * 2.0)
         
-        # Calculate position size based on margin
-        margin_amount = self.portfolio_value * MARGIN_PERCENT
-        notional = margin_amount * LEVERAGE
+        # Calculate position size based on margin and available funds
+        # Always use available funds from bot_manager if available
+        if hasattr(self, 'available_funds') and self.available_funds > 0:
+            # Respect the available funds limit
+            funds_to_use = self.available_funds
+            logger.info(f"Using available funds: ${funds_to_use:.2f} for position sizing")
+        else:
+            funds_to_use = self.portfolio_value
+            logger.info(f"Using portfolio value: ${funds_to_use:.2f} for position sizing (available funds not set)")
+            
+        margin_amount = funds_to_use * self.margin_percent
+        notional = margin_amount * self.leverage
+        logger.info(f"Position sizing: Available funds: ${funds_to_use:.2f}, Margin: ${margin_amount:.2f}, Notional: ${notional:.2f}")
         quantity = notional / self.current_price
         
         # Execute order only if not in sandbox mode
@@ -826,6 +840,9 @@ class KrakenTradingBot:
                 
                 logger.info(f"Buy order executed: {order_result}")
                 
+                # Get previous position before updating
+                previous_position = self.position
+                
                 # Update position status
                 # If we're using a limit order, the entry price will be the limit price, not current price
                 entry_price = self.pending_order['price'] if self.pending_order and 'price' in self.pending_order else self.current_price
@@ -834,6 +851,18 @@ class KrakenTradingBot:
                 self.trailing_max_price = entry_price
                 self.trailing_min_price = None
                 self.strategy.update_position("long", entry_price)
+                
+                # Notify BotManager about position change
+                if self.bot_manager is not None:
+                    # Get strategy type and pair for bot ID
+                    bot_id = f"{self.strategy.__class__.__name__}-{self.original_pair}"
+                    self.bot_manager.track_position_change(
+                        bot_id=bot_id,
+                        new_position=self.position, 
+                        previous_position=previous_position,
+                        margin_percent=self.margin_percent
+                    )
+                    logger.info(f"Notified BotManager of position change: {previous_position} -> long")
                 
                 # Record the trade
                 record_trade("buy", self.trading_pair, quantity, self.current_price, 
@@ -856,11 +885,24 @@ class KrakenTradingBot:
             logger.info(f"SANDBOX MODE: Buy order for {quantity:.6f} units would be executed at {self.current_price:.4f}")
             
             # Simulate position status update in sandbox mode
+            previous_position = self.position
             self.position = "long"
             self.entry_price = self.current_price
             self.trailing_max_price = self.current_price
             self.trailing_min_price = None
             self.strategy.update_position("long", self.current_price)
+            
+            # Update bot manager about position change
+            if self.bot_manager is not None:
+                # Get strategy type and pair for bot ID
+                bot_id = f"{self.strategy.__class__.__name__}-{self.original_pair}"
+                self.bot_manager.track_position_change(
+                    bot_id=bot_id,
+                    new_position=self.position,
+                    previous_position=previous_position,
+                    margin_percent=self.margin_percent
+                )
+                logger.info(f"SANDBOX: Notified BotManager of position change: {previous_position} -> long")
             
             # Record the trade
             record_trade("buy", self.trading_pair, quantity, self.current_price, 
@@ -881,10 +923,11 @@ class KrakenTradingBot:
         
         # If exiting a long position
         if exit_only and self.position == "long":
-            # Calculate actual trade quantity based on entry
-            margin_amount = self.portfolio_value * MARGIN_PERCENT
-            notional = margin_amount * LEVERAGE
+            # Calculate actual trade quantity based on entry using strategy-specific settings
+            margin_amount = self.portfolio_value * self.margin_percent
+            notional = margin_amount * self.leverage
             quantity = notional / self.entry_price
+            logger.info(f"Position sizing for exit: Portfolio: ${self.portfolio_value:.2f}, Margin: ${margin_amount:.2f} ({self.margin_percent*100}%), Leverage: {self.leverage}x")
             
             # Calculate profit
             trade_profit = (self.current_price - self.entry_price) * quantity
@@ -909,6 +952,17 @@ class KrakenTradingBot:
                     self.total_profit_percent = (self.total_profit / INITIAL_CAPITAL) * 100.0
                     self.trade_count += 1
                     
+                    # Update shared portfolio via BotManager if available
+                    if self.bot_manager is not None:
+                        # Get strategy type and pair for bot ID
+                        bot_id = f"{self.strategy.__class__.__name__}-{self.original_pair}"
+                        self.bot_manager.update_portfolio(
+                            bot_id=bot_id,
+                            new_portfolio_value=self.portfolio_value,
+                            trade_profit=trade_profit
+                        )
+                        logger.info(f"Updated shared portfolio via BotManager, new value: ${self.portfolio_value:.2f}")
+                    
                     # Clear any trailing stop limit orders
                     if self.trailing_stop_limit_order_id is not None:
                         try:
@@ -917,6 +971,9 @@ class KrakenTradingBot:
                         except Exception as e:
                             logger.error(f"Error cancelling trailing stop order: {e}")
                     
+                    # Get previous position before updating
+                    previous_position = self.position
+                    
                     # Update position status
                     self.position = None
                     self.entry_price = None
@@ -924,6 +981,18 @@ class KrakenTradingBot:
                     self.trailing_min_price = None
                     self.trailing_stop_limit_order_id = None
                     self.strategy.update_position(None, None)
+                    
+                    # Notify BotManager about position change
+                    if self.bot_manager is not None:
+                        # Get strategy type and pair for bot ID
+                        bot_id = f"{self.strategy.__class__.__name__}-{self.original_pair}"
+                        self.bot_manager.track_position_change(
+                            bot_id=bot_id,
+                            new_position=self.position, 
+                            previous_position=previous_position,
+                            margin_percent=self.margin_percent
+                        )
+                        logger.info(f"Notified BotManager of position change: {previous_position} -> none")
                     
                     # Record the trade
                     record_trade("sell", self.trading_pair, quantity, self.current_price, 
@@ -941,6 +1010,20 @@ class KrakenTradingBot:
                 self.total_profit_percent = (self.total_profit / INITIAL_CAPITAL) * 100.0
                 self.trade_count += 1
                 
+                # Update shared portfolio via BotManager if available (in sandbox mode too)
+                if self.bot_manager is not None:
+                    # Get strategy type and pair for bot ID
+                    bot_id = f"{self.strategy.__class__.__name__}-{self.original_pair}"
+                    self.bot_manager.update_portfolio(
+                        bot_id=bot_id,
+                        new_portfolio_value=self.portfolio_value,
+                        trade_profit=trade_profit
+                    )
+                    logger.info(f"SANDBOX: Updated shared portfolio via BotManager, new value: ${self.portfolio_value:.2f}")
+                
+                # Get previous position before updating
+                previous_position = self.position
+                
                 # Update position status
                 self.position = None
                 self.entry_price = None
@@ -948,6 +1031,18 @@ class KrakenTradingBot:
                 self.trailing_min_price = None
                 self.trailing_stop_limit_order_id = None
                 self.strategy.update_position(None, None)
+                
+                # Notify BotManager about position change in sandbox mode
+                if self.bot_manager is not None:
+                    # Get strategy type and pair for bot ID
+                    bot_id = f"{self.strategy.__class__.__name__}-{self.original_pair}"
+                    self.bot_manager.track_position_change(
+                        bot_id=bot_id,
+                        new_position=self.position, 
+                        previous_position=previous_position,
+                        margin_percent=self.margin_percent
+                    )
+                    logger.info(f"SANDBOX: Notified BotManager of position change: {previous_position} -> none")
                 
                 # Record the trade
                 record_trade("sell", self.trading_pair, quantity, self.current_price, 
@@ -968,10 +1063,20 @@ class KrakenTradingBot:
                 )
         # Entering a short position
         elif not exit_only:
-            # Calculate position size based on margin
-            margin_amount = self.portfolio_value * MARGIN_PERCENT
-            notional = margin_amount * LEVERAGE
+            # Calculate position size based on margin and available funds
+            # Always use available funds from bot_manager if available
+            if hasattr(self, 'available_funds') and self.available_funds > 0:
+                # Respect the available funds limit
+                funds_to_use = self.available_funds
+                logger.info(f"Using available funds: ${funds_to_use:.2f} for position sizing")
+            else:
+                funds_to_use = self.portfolio_value
+                logger.info(f"Using portfolio value: ${funds_to_use:.2f} for position sizing (available funds not set)")
+                
+            margin_amount = funds_to_use * self.margin_percent
+            notional = margin_amount * self.leverage
             quantity = notional / self.current_price
+            logger.info(f"Position sizing: Available funds: ${funds_to_use:.2f}, Margin: ${margin_amount:.2f}, Notional: ${notional:.2f}")
             
             # Execute order only if not in sandbox mode
             if not self.sandbox_mode:
@@ -1032,11 +1137,24 @@ class KrakenTradingBot:
                 logger.info(f"SANDBOX MODE: Short sell order for {quantity:.6f} units would be executed at {self.current_price:.4f}")
                 
                 # Simulate position status update in sandbox mode
+                previous_position = self.position
                 self.position = "short"
                 self.entry_price = self.current_price
                 self.trailing_max_price = None
                 self.trailing_min_price = self.current_price
                 self.strategy.update_position("short", self.current_price)
+                
+                # Update bot manager about position change
+                if self.bot_manager is not None:
+                    # Get strategy type and pair for bot ID
+                    bot_id = f"{self.strategy.__class__.__name__}-{self.original_pair}"
+                    self.bot_manager.track_position_change(
+                        bot_id=bot_id,
+                        new_position=self.position,
+                        previous_position=previous_position,
+                        margin_percent=self.margin_percent
+                    )
+                    logger.info(f"SANDBOX: Notified BotManager of position change: {previous_position} -> short")
                 
                 # Record the trade
                 record_trade("sell", self.trading_pair, quantity, self.current_price, 
@@ -1058,8 +1176,9 @@ class KrakenTradingBot:
                 return
             
             # Calculate position size based on entry price
-            margin_amount = self.portfolio_value * MARGIN_PERCENT
-            notional = margin_amount * LEVERAGE
+            # Use self variables for margin and leverage to respect strategy-specific settings
+            margin_amount = self.portfolio_value * self.margin_percent
+            notional = margin_amount * self.leverage
             quantity = notional / self.entry_price
             
             # Place the stop limit order with a small offset for guaranteed execution
