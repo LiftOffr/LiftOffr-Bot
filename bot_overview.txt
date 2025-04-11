@@ -1,0 +1,54 @@
+# Kraken Trading Bot - Overview
+
+A sophisticated trading bot designed to work with the Kraken cryptocurrency exchange. This bot focuses on automated trading strategies with comprehensive monitoring and risk management.
+
+## Key Features
+
+* **Kraken API Integration** - Full integration with Kraken's REST API and websockets
+* **Multiple Strategy Support** - Can run different trading strategies in parallel
+* **ARIMA Forecasting** - Uses time series forecasting for market prediction
+* **Technical Indicators** - Incorporates RSI, MACD, EMA crossovers, and other indicators
+* **Risk Management** - Implements trailing stops and ATR-based position sizing
+* **Terminal Mode** - Runs primarily in the terminal with detailed logging
+* **Sandbox Mode** - Ability to test strategies without using real funds
+* **CURRENT Command** - Easy way to check portfolio status, positions, and trading activity
+* **Email Notifications** - Sends trade notifications with performance metrics
+
+## Usage
+
+1. To start the bot in sandbox mode: `python main.py --sandbox`
+2. To view current status: `./current`
+3. To run with ARIMA strategy only: `./start_arima_trading.sh`
+
+## Core Components
+
+This bot supports both long and short positions and adjusts position sizing based on market volatility. The "CURRENT" command provides a quick snapshot of portfolio metrics, active positions, and recent trading activity.
+
+### Strategy Types
+
+1. **ARIMA Strategy** - Pure forecasting-based trading approach
+   - Uses statistical time series forecasting for price prediction
+   - Implements ATR-based trailing stops
+   - Provides both long and short trading signals
+
+2. **Adaptive Strategy** - Multi-factor approach combining multiple technical indicators
+   - EMA crossovers for trend identification
+   - RSI for momentum confirmation
+   - MACD for signal confirmation
+   - Volatility filters to avoid choppy markets
+   - Bollinger Bands and Keltner Channels for range identification
+
+### Risk Management
+
+- ATR-based position sizing
+- Trailing stops for dynamic risk management
+- Maximum leverage controls
+- Real-time portfolio tracking
+
+### Status Reporting
+
+The CURRENT command displays:
+- Portfolio summary (initial value, current value, P&L, trades count)
+- Current position details (entry price, current price, unrealized P&L)
+- Recent trading signals and actions
+- All formatted with proper colors in the terminal

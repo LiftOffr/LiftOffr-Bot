@@ -4,123 +4,122 @@ A sophisticated Python trading bot designed for the Kraken US exchange, leveragi
 
 ## Features
 
-- Full Kraken US API integration for trading operations
-- Real-time market data via Kraken US WebSockets
-- Multiple advanced trading strategies:
-  - Simple Moving Average (SMA) crossover
-  - Relative Strength Index (RSI)
-  - Adaptive strategy with multiple indicators (EMA, MACD, ATR, Bollinger Bands)
-  - ARIMA time series forecasting
-  - Linear regression forecasting
-- Trailing stop implementation with ATR-based sizing
-- Intelligent position management
-- Sandbox/test mode for risk-free testing
-- Customizable trading pairs and position sizing
-- Robust error handling and automatic reconnection
-- Clean, informative logging with categorized output
+- Kraken API integration for real-time market data
+- Websocket real-time data streaming
+- Multiple trading strategies:
+  - ARIMA-based forecasting
+  - Technical indicators (RSI, MACD, EMA)
+  - Volatility analysis with ATR
+- Comprehensive logging and error handling
+- Sandbox mode for safe testing
+- Margin trading support with configurable leverage
+- Real-time portfolio tracking
+- Email notifications for trades
 
-## Requirements
+## Setup
 
-- Python 3.7+
-- Required packages:
-  - websocket-client
-  - requests
-  - numpy
-  - pandas
+### Requirements
 
-## Configuration
-
-The bot can be configured using environment variables or command line arguments:
+- Python 3.10+
+- A Kraken US API key and secret
+- (Optional) SendGrid API key for email notifications
 
 ### Environment Variables
 
-- `KRAKEN_API_KEY`: Your Kraken API key
-- `KRAKEN_API_SECRET`: Your Kraken API secret
-- `TRADING_PAIR`: Trading pair to use (default: 'XBTUSD')
-- `TRADE_QUANTITY`: Quantity to trade (default: 0.001)
-- `STRATEGY_TYPE`: Trading strategy to use (default: 'simple_moving_average')
-- `USE_SANDBOX`: Set to 'True' to run in sandbox/test mode (default: 'True')
-- `SMA_SHORT_PERIOD`: Short period for SMA strategy (default: 9)
-- `SMA_LONG_PERIOD`: Long period for SMA strategy (default: 21)
-- `RSI_PERIOD`: Period for RSI calculation (default: 14)
-- `RSI_OVERBOUGHT`: Overbought threshold for RSI (default: 70)
-- `RSI_OVERSOLD`: Oversold threshold for RSI (default: 30)
-- `LOOP_INTERVAL`: Sleep time between iterations in seconds (default: 60)
+Copy the `.env.example` file to `.env` and add your API keys:
 
-### Command Line Arguments
+```bash
+KRAKEN_API_KEY=your_api_key
+KRAKEN_API_SECRET=your_api_secret
+SENDGRID_API_KEY=your_sendgrid_api_key  # Optional
+```
 
-- `--pair`: Trading pair to use
-- `--quantity`: Quantity to trade
-- `--strategy`: Trading strategy to use
-- `--sandbox`: Run in sandbox/test mode
+### Installation
 
-## Trading Strategies
+Install the required packages:
 
-The bot supports several different trading strategies:
-
-### Simple Moving Average (SMA)
-- Uses crossovers between short and long moving averages to generate signals
-- Buy when short MA crosses above long MA, sell when it crosses below
-- Configurable periods for both moving averages
-
-### Relative Strength Index (RSI)
-- Uses RSI to identify overbought and oversold conditions
-- Buy when RSI crosses above oversold threshold, sell when it crosses below overbought threshold
-- Configurable period and thresholds
-
-### Adaptive Strategy
-- Combines multiple technical indicators (EMA, RSI, MACD, ADX, ATR)
-- Uses Bollinger Bands and Keltner Channels for volatility assessment
-- Applies dynamic risk management based on market conditions
-
-### ARIMA Strategy
-- Uses AutoRegressive Integrated Moving Average (ARIMA) forecasting
-- Predicts future price movements based on time series analysis
-- Generates buy signals when forecast is bullish, sell signals when forecast is bearish
-- Applies ATR-based trailing stops for risk management
-- Includes risk buffer multiplier to prevent liquidation
+```bash
+pip install -r requirements.txt
+```
 
 ## Usage
 
-1. Set your Kraken API key and secret as environment variables:
+### Running in Sandbox Mode
+
+For testing without real funds:
 
 ```bash
-export KRAKEN_API_KEY='your_api_key'
-export KRAKEN_API_SECRET='your_api_secret'
+python main.py --sandbox
 ```
 
-2. Run the trading bot with your desired configuration:
+### Running Live Trading
+
+**Warning**: This will use real funds if API keys are provided:
 
 ```bash
-python main.py --strategy adaptive --pair SOLUSD --sandbox
+python main.py --live
 ```
 
-3. For production use, remove the `--sandbox` flag (ensure you have your API keys set):
+### Using the ARIMA Strategy Only
+
+For ARIMA-based trading strategy:
 
 ```bash
-python main.py --strategy adaptive --pair SOLUSD
+python main.py --strategy arima --sandbox
 ```
 
-4. Alternatively, use the provided startup scripts:
+### Checking Current Status
+
+Check the current status of the trading bot:
 
 ```bash
-# To run with the ARIMA strategy in sandbox mode:
+./current
+```
+
+This will display:
+- Current portfolio value
+- Profit/loss metrics
+- Active positions
+- Recent trading signals
+- Recent actions
+
+### Start Scripts
+
+#### Testing with Sandbox
+
+```bash
 ./start_arima_trading.sh
+```
 
-# To run with the ARIMA strategy in live trading mode:
-./start_arima_trading.sh --live
+#### Live Trading
 
-# To run with the default adaptive strategy:
+```bash
 ./start_live_trading.sh
 ```
 
-5. To customize further, you can edit the environment variables in the `.env` file:
+## Configuration
 
-```bash
-# Example .env file
-KRAKEN_API_KEY=your_api_key
-KRAKEN_API_SECRET=your_api_secret
-TRADING_PAIR=SOLUSD
-STRATEGY_TYPE=arima
-SENDGRID_API_KEY=your_sendgrid_key  # For email notifications
-```
+You can modify the trading parameters in `config.py`:
+
+- `TRADING_PAIR`: The trading pair (default: "SOLUSD")
+- `TRADE_QUANTITY`: The amount to trade in USD
+- `INITIAL_PORTFOLIO_VALUE`: Starting portfolio value for metrics
+- `USE_SANDBOX`: Whether to use sandbox mode
+- `LEVERAGE`: Trading leverage (default: 5)
+
+## Advanced Strategy Parameters
+
+### ARIMA Strategy
+
+In `arima_strategy.py`:
+
+- `lookback_period`: Number of candles to analyze
+- `atr_trailing_multiplier`: ATR multiplier for trailing stops
+- `entry_atr_multiplier`: ATR multiplier for entry points
+- `leverage`: Trading leverage
+- `risk_buffer_multiplier`: Risk management buffer
+- `arima_order`: ARIMA model parameters (p,d,q)
+
+## Disclaimer
+
+This trading bot is provided for educational and informational purposes only. Trading cryptocurrency involves substantial risk of loss and is not suitable for all investors. Do not trade with money you cannot afford to lose.

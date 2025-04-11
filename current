@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# Execute the CURRENT command to display trading bot status
+python get_current_status.py
