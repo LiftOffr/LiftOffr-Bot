@@ -6,7 +6,8 @@ import threading
 from kraken_trading_bot import KrakenTradingBot
 from config import (
     INITIAL_CAPITAL, MARGIN_PERCENT, TRADE_QUANTITY,
-    TRADING_PAIR, LOOP_INTERVAL, STATUS_UPDATE_INTERVAL
+    TRADING_PAIR, LOOP_INTERVAL, STATUS_UPDATE_INTERVAL,
+    LEVERAGE
 )
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,8 @@ class BotManager:
         self.lock = threading.Lock()
         
     def add_bot(self, strategy_type: str, trading_pair: str = TRADING_PAIR, 
-                trade_quantity: float = TRADE_QUANTITY) -> str:
+                trade_quantity: float = TRADE_QUANTITY, margin_percent: float = MARGIN_PERCENT,
+                leverage: int = LEVERAGE) -> str:
         """
         Add a new trading bot with the specified strategy
         
@@ -42,6 +44,8 @@ class BotManager:
             strategy_type (str): Trading strategy type ('arima', 'adaptive', etc.)
             trading_pair (str): Trading pair to trade
             trade_quantity (float): Quantity to trade
+            margin_percent (float): Percentage of portfolio used as margin (default from config)
+            leverage (int): Leverage for trading (default from config)
         
         Returns:
             str: Bot ID (strategy_type-trading_pair)
@@ -52,7 +56,9 @@ class BotManager:
         bot = KrakenTradingBot(
             trading_pair=trading_pair,
             trade_quantity=trade_quantity,
-            strategy_type=strategy_type
+            strategy_type=strategy_type,
+            margin_percent=margin_percent,
+            leverage=leverage
         )
         
         # Set the shared portfolio
@@ -64,7 +70,7 @@ class BotManager:
         # Store the bot instance
         self.bots[bot_id] = bot
         
-        logger.info(f"Added bot with ID {bot_id} (strategy: {strategy_type}, pair: {trading_pair})")
+        logger.info(f"Added bot with ID {bot_id} (strategy: {strategy_type}, pair: {trading_pair}, margin: {margin_percent*100}%, leverage: {leverage}x)")
         return bot_id
     
     def start_bot(self, bot_id: str) -> bool:

@@ -27,7 +27,9 @@ class KrakenTradingBot:
     def __init__(self, api_key: str = None, api_secret: str = None, 
                  trading_pair: str = TRADING_PAIR, 
                  trade_quantity: float = TRADE_QUANTITY,
-                 strategy_type: str = STRATEGY_TYPE):
+                 strategy_type: str = STRATEGY_TYPE,
+                 margin_percent: float = MARGIN_PERCENT,
+                 leverage: int = LEVERAGE):
         """
         Initialize the trading bot
         
@@ -37,7 +39,12 @@ class KrakenTradingBot:
             trading_pair (str, optional): Trading pair to trade
             trade_quantity (float, optional): Quantity to trade
             strategy_type (str, optional): Type of trading strategy
+            margin_percent (float, optional): Percentage of portfolio used as margin
+            leverage (int, optional): Leverage for trading
         """
+        # Store strategy-specific settings
+        self.margin_percent = margin_percent
+        self.leverage = leverage
         # Format the trading pair correctly for Kraken
         # Kraken WebSocket requires ISO 4217-A3 format with / (e.g. "SOL/USD")
         self.original_pair = trading_pair  # Keep original for REST API calls
@@ -803,7 +810,8 @@ class KrakenTradingBot:
                         type_="buy",
                         ordertype="limit",
                         price=str(limit_price),
-                        volume=str(quantity)
+                        volume=str(quantity),
+                        leverage=str(self.leverage)
                     )
                     logger.info(f"Buy limit order placed at ${limit_price:.4f} with {ENTRY_ATR_MULTIPLIER} ATR offset")
                 else:
@@ -812,7 +820,8 @@ class KrakenTradingBot:
                         pair=self.trading_pair,
                         type_="buy",
                         ordertype="market",
-                        volume=str(quantity)
+                        volume=str(quantity),
+                        leverage=str(self.leverage)
                     )
                 
                 logger.info(f"Buy order executed: {order_result}")
@@ -888,7 +897,8 @@ class KrakenTradingBot:
                         pair=self.trading_pair,
                         type_="sell",
                         ordertype="market",
-                        volume=str(quantity)
+                        volume=str(quantity),
+                        leverage=str(self.leverage)
                     )
                     
                     logger.info(f"Sell order executed: {order_result}")
@@ -975,7 +985,8 @@ class KrakenTradingBot:
                             type_="sell",
                             ordertype="limit",
                             price=str(limit_price),
-                            volume=str(quantity)
+                            volume=str(quantity),
+                            leverage=str(self.leverage)
                         )
                         logger.info(f"Short sell limit order placed at ${limit_price:.4f} with {ENTRY_ATR_MULTIPLIER} ATR offset")
                     else:
@@ -984,7 +995,8 @@ class KrakenTradingBot:
                             pair=self.trading_pair,
                             type_="sell",
                             ordertype="market",
-                            volume=str(quantity)
+                            volume=str(quantity),
+                            leverage=str(self.leverage)
                         )
                     
                     logger.info(f"Short sell order executed: {order_result}")
@@ -1059,7 +1071,8 @@ class KrakenTradingBot:
                 type_="sell",
                 ordertype="stop-loss",  # Using stop-loss type for trailing stop
                 price=execution_price,  # Limit price
-                volume=str(quantity)    # Order volume
+                volume=str(quantity),   # Order volume
+                leverage=str(self.leverage)  # Using strategy-specific leverage
             )
             
             # Store the order ID for future reference
