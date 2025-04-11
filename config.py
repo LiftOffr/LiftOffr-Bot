@@ -81,3 +81,8 @@ MONITOR_UPDATE_INTERVAL = int(os.getenv('MONITOR_UPDATE_INTERVAL', '60'))  # Dis
 
 # Order execution settings
 ORDER_TIMEOUT_SECONDS = 2 * LOOP_INTERVAL  # Time before reconsidering a pending order
+
+# Cross-strategy exit configuration
+ENABLE_CROSS_STRATEGY_EXITS = os.getenv('ENABLE_CROSS_STRATEGY_EXITS', 'True').lower() in ['true', 't', 'yes', '1']  # Default to enabled
+CROSS_STRATEGY_EXIT_THRESHOLD = float(os.getenv('CROSS_STRATEGY_EXIT_THRESHOLD', '0.75'))  # Signal strength threshold (0.0 to 1.0)
+CROSS_STRATEGY_EXIT_CONFIRMATION_COUNT = int(os.getenv('CROSS_STRATEGY_EXIT_CONFIRMATION_COUNT', '3'))  # Number of confirmations needed

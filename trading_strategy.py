@@ -37,6 +37,11 @@ class TradingStrategy(ABC):
         
         # ATR value for position sizing and stop placement
         self.current_atr = None
+        
+        # For signal strength tracking
+        self.buy_strength = 0.0   # Signal strength for buy signals (0.0 to 1.0)
+        self.sell_strength = 0.0  # Signal strength for sell signals (0.0 to 1.0)
+        self.signal_type = "neutral"  # Current signal type: "buy", "sell", or "neutral"
     
     def update_ohlc(self, open_price: float, high_price: float, low_price: float, close_price: float):
         """
@@ -122,6 +127,23 @@ class TradingStrategy(ABC):
             Tuple[bool, bool, float]: (buy_signal, sell_signal, atr_value)
         """
         pass
+        
+    def get_status(self) -> Dict:
+        """
+        Get current strategy status and metrics
+        
+        Returns:
+            dict: Strategy status information
+        """
+        return {
+            "symbol": self.symbol,
+            "position": self.position,
+            "entry_price": self.entry_price,
+            "atr": self.current_atr,
+            "signal_type": self.signal_type,
+            "buy_strength": self.buy_strength,
+            "sell_strength": self.sell_strength
+        }
 
 class SimpleMovingAverageStrategy(TradingStrategy):
     """

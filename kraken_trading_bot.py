@@ -528,6 +528,52 @@ class KrakenTradingBot:
             # Display the ACTION line for decisions with strategy name
             logger.info(f"【ACTION】 {signal_emoji} {direction} | ATR: ${atr_value:.4f} | Volatility Stop: ${stop_price:.2f}")
             
+            # Set signal type and strength in strategy object
+            if buy_signal:
+                self.strategy.signal_type = "buy"
+                self.strategy.buy_strength = 0.8  # Strong buy signal
+                self.strategy.sell_strength = 0.0
+            elif sell_signal:
+                self.strategy.signal_type = "sell"
+                self.strategy.sell_strength = 0.8  # Strong sell signal
+                self.strategy.buy_strength = 0.0
+            else:
+                self.strategy.signal_type = "neutral"
+                self.strategy.buy_strength = 0.0
+                self.strategy.sell_strength = 0.0
+                
+            # Register signals with BotManager for cross-strategy coordination
+            if hasattr(self, 'bot_manager') and self.bot_manager:
+                bot_id = f"{strategy_name}-{self.trading_pair}"
+                signal_type = self.strategy.signal_type
+                
+                if signal_type == "buy":
+                    self.bot_manager.register_strategy_signal(bot_id, signal_type, self.strategy.buy_strength, self.trading_pair)
+                elif signal_type == "sell":
+                    self.bot_manager.register_strategy_signal(bot_id, signal_type, self.strategy.sell_strength, self.trading_pair)
+                elif signal_type == "neutral":
+                    self.bot_manager.register_strategy_signal(bot_id, signal_type, 0.3, self.trading_pair)
+                
+                # Check for cross-strategy exit signals if we have a position
+                strategy_position = self.strategy.get_status().get('position', None)
+                if strategy_position is not None:
+                    cross_strategy_exit = self.bot_manager.check_cross_strategy_exit(
+                        bot_id,
+                        strategy_position
+                    )
+                    
+                    if cross_strategy_exit:
+                        logger.info(f"Cross-strategy exit triggered for {strategy_name} by other strategies' opposing signals")
+                        
+                        # Exit long position
+                        if strategy_position == "long":
+                            logger.info(f"Executing cross-strategy exit for {strategy_name} LONG position")
+                            self._place_sell_order(exit_only=True, cross_strategy_exit=True)
+                        # Exit short position
+                        elif strategy_position == "short":
+                            logger.info(f"Executing cross-strategy exit for {strategy_name} SHORT position")
+                            self._place_buy_order(exit_only=True, cross_strategy_exit=True)
+            
         except Exception as e:
             logger.error(f"Error updating signals: {e}")
     
@@ -581,6 +627,16 @@ class KrakenTradingBot:
             return
         
         try:
+            # Check for cross-strategy exit signals if we have a position
+            if self.position and hasattr(self, 'bot_manager') and self.bot_manager:
+                bot_id = f"{self.strategy.__class__.__name__}-{self.trading_pair}"
+                if self.bot_manager.check_cross_strategy_exit(bot_id, self.position):
+                    logger.info(f"Cross-strategy exit signal detected for {self.position} position")
+                    if self.position == 'long':
+                        self._place_sell_order(exit_only=True, cross_strategy_exit=True)
+                    elif self.position == 'short':
+                        self._place_buy_order(exit_only=True, cross_strategy_exit=True)
+            
             # Check if pending order is filled based on live price
             if self.pending_order is not None:
                 # If ENTRY_ATR_MULTIPLIER is 0, execute immediately as a market order
@@ -611,28 +667,28 @@ class KrakenTradingBot:
             if self.position == "long" and self.trailing_stop_order is not None:
                 if self.current_price <= self.trailing_stop_order["price"] and self.trailing_stop_limit_order_id is None:
                     logger.info(f"Trailing stop triggered at {self.trailing_stop_order['price']:.4f}")
-                    self._place_sell_order(exit_only=True)
+                    self._place_sell_order(exit_only=True, cross_strategy_exit=False)
                     self.trailing_stop_order = None
             
             # Check breakeven exit for long position
             if self.position == "long" and self.breakeven_order is not None:
                 if self.current_price >= self.breakeven_order["price"]:
                     logger.info(f"Breakeven exit triggered at {self.breakeven_order['price']:.4f}")
-                    self._place_sell_order(exit_only=True)
+                    self._place_sell_order(exit_only=True, cross_strategy_exit=False)
                     self.breakeven_order = None
             
             # Check breakeven exit for short position
             if self.position == "short" and self.breakeven_order is not None:
                 if self.current_price <= self.breakeven_order["price"]:
                     logger.info(f"Short position breakeven exit triggered at {self.breakeven_order['price']:.4f}")
-                    self._place_buy_order(exit_only=True)
+                    self._place_buy_order(exit_only=True, cross_strategy_exit=False)
                     self.breakeven_order = None
             
             # Check trailing stop for short position (in-memory tracking only)
             if self.position == "short" and self.trailing_stop_order is not None:
                 if self.current_price >= self.trailing_stop_order["price"] and self.trailing_stop_limit_order_id is None:
                     logger.info(f"Short position trailing stop triggered at {self.trailing_stop_order['price']:.4f}")
-                    self._place_buy_order(exit_only=True)
+                    self._place_buy_order(exit_only=True, cross_strategy_exit=False)
                     self.trailing_stop_order = None
             
             # Update trailing stop based on current price for long position
@@ -692,12 +748,13 @@ class KrakenTradingBot:
         except Exception as e:
             logger.error(f"Error checking orders: {e}")
     
-    def _place_buy_order(self, exit_only=False):
+    def _place_buy_order(self, exit_only=False, cross_strategy_exit=False):
         """
         Place a buy limit order based on ATR
         
         Args:
             exit_only (bool): Whether this is just to exit a short position
+            cross_strategy_exit (bool): Whether this is triggered by a cross-strategy exit signal
         """
         if self.current_price is None or self.current_atr is None:
             logger.warning("Cannot place buy order: price or ATR unknown")
@@ -738,7 +795,7 @@ class KrakenTradingBot:
         
         # Execute immediately for exit orders
         if exit_only:
-            self._execute_buy(exit_only=True)
+            self._execute_buy(exit_only=True, cross_strategy_exit=cross_strategy_exit)
             self.pending_order = None
     
     def _place_short_order(self):
@@ -784,12 +841,13 @@ class KrakenTradingBot:
         self._execute_sell(exit_only=False)
         self.pending_order = None
     
-    def _place_sell_order(self, exit_only=False):
+    def _place_sell_order(self, exit_only=False, cross_strategy_exit=False):
         """
         Place a sell limit order
         
         Args:
             exit_only (bool): Whether this is just to exit a position
+            cross_strategy_exit (bool): Whether this is triggered by a cross-strategy exit signal
         """
         if self.current_price is None:
             logger.warning("Cannot place sell order: current price unknown")
@@ -831,15 +889,16 @@ class KrakenTradingBot:
         
         # Execute immediately for exit orders
         if exit_only:
-            self._execute_sell(exit_only=True)
+            self._execute_sell(exit_only=True, cross_strategy_exit=cross_strategy_exit)
             self.pending_order = None
     
-    def _execute_buy(self, exit_only=False):
+    def _execute_buy(self, exit_only=False, cross_strategy_exit=False):
         """
         Execute buy order
         
         Args:
             exit_only (bool): Whether this is just to exit a short position
+            cross_strategy_exit (bool): Whether this is triggered by a cross-strategy exit signal
         """
         if not self.current_price:
             logger.warning("Cannot execute buy: current price unknown")
@@ -989,12 +1048,13 @@ class KrakenTradingBot:
                 strategy=strategy_name
             )
     
-    def _execute_sell(self, exit_only=False):
+    def _execute_sell(self, exit_only=False, cross_strategy_exit=False):
         """
         Execute sell order
         
         Args:
             exit_only (bool): Whether this is just to exit a position
+            cross_strategy_exit (bool): Whether this is triggered by a cross-strategy exit signal
         """
         if not self.current_price:
             logger.warning("Cannot execute sell: current price unknown")

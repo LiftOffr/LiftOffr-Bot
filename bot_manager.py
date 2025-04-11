@@ -7,7 +7,8 @@ from kraken_trading_bot import KrakenTradingBot
 from config import (
     INITIAL_CAPITAL, MARGIN_PERCENT, TRADE_QUANTITY,
     TRADING_PAIR, LOOP_INTERVAL, STATUS_UPDATE_INTERVAL,
-    LEVERAGE
+    LEVERAGE, ENABLE_CROSS_STRATEGY_EXITS, CROSS_STRATEGY_EXIT_THRESHOLD,
+    CROSS_STRATEGY_EXIT_CONFIRMATION_COUNT
 )
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,13 @@ class BotManager:
         
         # For thread-safe access to shared resources
         self.lock = threading.Lock()
+        
+        # Cross-strategy exit tracking
+        self.cross_strategy_signals = {}  # Dict to track opposing signals from strategies
+        self.cross_strategy_exits = {}    # Dict to track cross-strategy exit events
+        self.enable_cross_exits = ENABLE_CROSS_STRATEGY_EXITS  # Config flag to enable/disable feature
+        self.exit_threshold = CROSS_STRATEGY_EXIT_THRESHOLD    # Threshold for signal strength to trigger exit
+        self.exit_confirmations = CROSS_STRATEGY_EXIT_CONFIRMATION_COUNT  # Required confirmations
         
     def add_bot(self, strategy_type: str, trading_pair: str = TRADING_PAIR, 
                 trade_quantity: float = TRADE_QUANTITY, margin_percent: float = MARGIN_PERCENT,
@@ -316,6 +324,147 @@ class BotManager:
             logger.info(f"[BotManager] Updated portfolio: Value=${self.portfolio_value:.2f}, Profit=${self.total_profit:.2f} ({self.total_profit_percent:.2f}%), Trades={self.trade_count}")
             logger.info(f"[BotManager] Available funds: ${self.available_funds:.2f}, Allocated capital: ${self.allocated_capital:.2f}")
     
+    def register_strategy_signal(self, bot_id: str, signal_type: str, signal_strength: float = 1.0, 
+                               trading_pair: str = None) -> None:
+        """
+        Register a strategy signal for cross-strategy coordination
+        
+        Args:
+            bot_id (str): ID of the bot sending the signal
+            signal_type (str): Type of signal ("buy", "sell", or "neutral")
+            signal_strength (float): Strength of the signal (0.0 to 1.0)
+            trading_pair (str): Trading pair the signal applies to (defaults to bot's pair)
+        """
+        if not self.enable_cross_exits:
+            return  # Cross-strategy exits disabled
+            
+        with self.lock:
+            # Get trading pair from bot if not specified
+            if trading_pair is None and bot_id in self.bots:
+                trading_pair = self.bots[bot_id].trading_pair
+            
+            # Skip if no trading pair available
+            if not trading_pair:
+                return
+                
+            # Initialize signal tracking for this pair if needed
+            if trading_pair not in self.cross_strategy_signals:
+                self.cross_strategy_signals[trading_pair] = {}
+                
+            # Update signal for this bot
+            self.cross_strategy_signals[trading_pair][bot_id] = {
+                "type": signal_type,
+                "strength": signal_strength,
+                "timestamp": time.time()
+            }
+            
+            # Log the signal
+            logger.info(f"[BotManager] Registered {signal_type.upper()} signal from {bot_id} with strength {signal_strength:.2f}")
+    
+    def check_cross_strategy_exit(self, bot_id: str, current_position: str) -> bool:
+        """
+        Check if a cross-strategy exit should be triggered based on signals from other strategies
+        
+        Args:
+            bot_id (str): ID of the bot to check for
+            current_position (str): Current position of the bot ("long", "short", or None)
+            
+        Returns:
+            bool: True if a cross-strategy exit should be triggered
+        """
+        if not self.enable_cross_exits or not current_position or bot_id not in self.bots:
+            return False
+            
+        trading_pair = self.bots[bot_id].trading_pair
+        
+        # Skip if no signals for this pair
+        if trading_pair not in self.cross_strategy_signals:
+            return False
+            
+        # Look for opposing signals from other strategies
+        opposing_signal_type = "sell" if current_position == "long" else "buy"
+        opposing_signals = []
+        
+        with self.lock:
+            # Get all opposing signals from other strategies for this pair
+            for other_bot_id, signal_data in self.cross_strategy_signals[trading_pair].items():
+                # Skip self and old signals (more than 5 minutes old)
+                if other_bot_id == bot_id or time.time() - signal_data["timestamp"] > 300:
+                    continue
+                    
+                # Check if signal type is opposing and strength exceeds threshold
+                if signal_data["type"] == opposing_signal_type and signal_data["strength"] >= self.exit_threshold:
+                    opposing_signals.append({
+                        "bot_id": other_bot_id,
+                        "strength": signal_data["strength"]
+                    })
+        
+        # Check if we have enough opposing signals to trigger an exit
+        if len(opposing_signals) >= self.exit_confirmations:
+            # Log the cross-strategy exit
+            logger.info(f"[BotManager] Cross-strategy exit triggered for {bot_id} ({current_position}) "
+                        f"based on opposing signals from {len(opposing_signals)} strategies")
+            
+            # Get the strongest opposing signal for attribution
+            strongest_signal = max(opposing_signals, key=lambda x: x["strength"])
+            
+            # Record the exit event for tracking and reporting
+            exit_key = f"{bot_id}_{int(time.time())}"
+            self.cross_strategy_exits[exit_key] = {
+                "bot_id": bot_id,
+                "position": current_position,
+                "trading_pair": trading_pair,
+                "exit_time": time.time(),
+                "opposing_signals": opposing_signals,
+                "exited_by": strongest_signal["bot_id"]
+            }
+            
+            return True
+        
+        return False
+            
+    def get_cross_strategy_stats(self) -> Dict:
+        """
+        Get statistics about cross-strategy exits
+        
+        Returns:
+            dict: Cross-strategy exit statistics
+        """
+        with self.lock:
+            stats = {
+                "enabled": self.enable_cross_exits,
+                "threshold": self.exit_threshold,
+                "confirmations_required": self.exit_confirmations,
+                "exit_count": len(self.cross_strategy_exits),
+                "exits_by_strategy": {},
+                "recent_exits": []
+            }
+            
+            # Calculate exits by strategy
+            for exit_data in self.cross_strategy_exits.values():
+                exited_by = exit_data["exited_by"]
+                if exited_by not in stats["exits_by_strategy"]:
+                    stats["exits_by_strategy"][exited_by] = 0
+                stats["exits_by_strategy"][exited_by] += 1
+            
+            # Get 5 most recent exits
+            recent_exits = sorted(
+                self.cross_strategy_exits.values(),
+                key=lambda x: x["exit_time"],
+                reverse=True
+            )[:5]
+            
+            for exit_data in recent_exits:
+                stats["recent_exits"].append({
+                    "bot_id": exit_data["bot_id"],
+                    "position": exit_data["position"],
+                    "trading_pair": exit_data["trading_pair"],
+                    "exit_time": exit_data["exit_time"],
+                    "exited_by": exit_data["exited_by"]
+                })
+            
+            return stats
+    
     def get_status(self) -> Dict:
         """
         Get status information for all bots
@@ -331,6 +480,10 @@ class BotManager:
             "allocated_capital": self.allocated_capital,
             "available_funds": self.available_funds,
             "allocation_percentage": (self.allocated_capital / self.portfolio_value * 100) if self.portfolio_value > 0 else 0,
+            "cross_strategy_exits": {
+                "enabled": self.enable_cross_exits,
+                "exit_count": len(self.cross_strategy_exits)
+            },
             "bots": {}
         }
         
