@@ -792,24 +792,20 @@ class KrakenTradingBot:
         
         logger.info(f"【EXECUTE】 {'EXIT SHORT' if exit_only else 'LONG'} - Buy order at ${self.current_price:.4f}")
         
-        # Calculate volatility stop price for notifications
+        # Calculate volatility stop price for notifications only
         stop_price = 0
         if self.current_atr:
             stop_price = self.current_price - (self.current_atr * 2.0)
         
-        # Calculate position size based on margin and available funds
-        # Always use available funds from bot_manager if available
-        if hasattr(self, 'available_funds') and self.available_funds > 0:
-            # Respect the available funds limit
-            funds_to_use = self.available_funds
-            logger.info(f"Using available funds: ${funds_to_use:.2f} for position sizing")
-        else:
-            funds_to_use = self.portfolio_value
-            logger.info(f"Using portfolio value: ${funds_to_use:.2f} for position sizing (available funds not set)")
+        # Use fixed allocation percentages for position sizing (25% for Adaptive, 10% for ARIMA)
+        # Always use portfolio value directly instead of available funds to ensure consistent allocation
+        funds_to_use = self.portfolio_value
+        logger.info(f"Using portfolio value: ${funds_to_use:.2f} with fixed margin percentage: {self.margin_percent*100}%")
             
+        # Calculate position size using fixed percentage of portfolio
         margin_amount = funds_to_use * self.margin_percent
         notional = margin_amount * self.leverage
-        logger.info(f"Position sizing: Available funds: ${funds_to_use:.2f}, Margin: ${margin_amount:.2f}, Notional: ${notional:.2f}")
+        logger.info(f"Position sizing (fixed): Portfolio: ${funds_to_use:.2f}, Margin: ${margin_amount:.2f} ({self.margin_percent*100}%), Leverage: {self.leverage}x")
         quantity = notional / self.current_price
         
         # Execute order only if not in sandbox mode
@@ -1063,20 +1059,16 @@ class KrakenTradingBot:
                 )
         # Entering a short position
         elif not exit_only:
-            # Calculate position size based on margin and available funds
-            # Always use available funds from bot_manager if available
-            if hasattr(self, 'available_funds') and self.available_funds > 0:
-                # Respect the available funds limit
-                funds_to_use = self.available_funds
-                logger.info(f"Using available funds: ${funds_to_use:.2f} for position sizing")
-            else:
-                funds_to_use = self.portfolio_value
-                logger.info(f"Using portfolio value: ${funds_to_use:.2f} for position sizing (available funds not set)")
+            # Use fixed allocation percentages for position sizing (25% for Adaptive, 10% for ARIMA)
+            # Always use portfolio value directly instead of available funds to ensure consistent allocation
+            funds_to_use = self.portfolio_value
+            logger.info(f"Using portfolio value: ${funds_to_use:.2f} with fixed margin percentage: {self.margin_percent*100}%")
                 
+            # Calculate position size using fixed percentage of portfolio
             margin_amount = funds_to_use * self.margin_percent
             notional = margin_amount * self.leverage
+            logger.info(f"Position sizing (fixed): Portfolio: ${funds_to_use:.2f}, Margin: ${margin_amount:.2f} ({self.margin_percent*100}%), Leverage: {self.leverage}x")
             quantity = notional / self.current_price
-            logger.info(f"Position sizing: Available funds: ${funds_to_use:.2f}, Margin: ${margin_amount:.2f}, Notional: ${notional:.2f}")
             
             # Execute order only if not in sandbox mode
             if not self.sandbox_mode:
@@ -1175,10 +1167,15 @@ class KrakenTradingBot:
                 logger.warning("Cannot place trailing stop: no long position exists")
                 return
             
-            # Calculate position size based on entry price
-            # Use self variables for margin and leverage to respect strategy-specific settings
-            margin_amount = self.portfolio_value * self.margin_percent
+            # Use fixed allocation percentages for position sizing (25% for Adaptive, 10% for ARIMA)
+            # Always use portfolio value directly to ensure consistent allocation
+            funds_to_use = self.portfolio_value
+            logger.info(f"Using portfolio value: ${funds_to_use:.2f} with fixed margin percentage: {self.margin_percent*100}%")
+            
+            # Calculate position size using fixed percentage of portfolio
+            margin_amount = funds_to_use * self.margin_percent
             notional = margin_amount * self.leverage
+            logger.info(f"Position sizing (fixed): Portfolio: ${funds_to_use:.2f}, Margin: ${margin_amount:.2f} ({self.margin_percent*100}%), Leverage: {self.leverage}x")
             quantity = notional / self.entry_price
             
             # Place the stop limit order with a small offset for guaranteed execution
