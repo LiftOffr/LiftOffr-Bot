@@ -620,6 +620,13 @@ class KrakenTradingBot:
                     self._place_sell_order(exit_only=True)
                     self.breakeven_order = None
             
+            # Check trailing stop for short position (in-memory tracking only)
+            if self.position == "short" and self.trailing_stop_order is not None:
+                if self.current_price >= self.trailing_stop_order["price"] and self.trailing_stop_limit_order_id is None:
+                    logger.info(f"Short position trailing stop triggered at {self.trailing_stop_order['price']:.4f}")
+                    self._place_buy_order(exit_only=True)
+                    self.trailing_stop_order = None
+            
             # Update trailing stop based on current price for long position
             if self.position == "long" and self.trailing_max_price is not None and self.current_atr is not None:
                 new_stop_price = self.trailing_max_price - (2.0 * self.current_atr)
@@ -642,6 +649,33 @@ class KrakenTradingBot:
                     old_price = self.trailing_stop_order["price"]
                     self.trailing_stop_order["price"] = new_stop_price
                     logger.info(f"Updated trailing stop from {old_price:.4f} to {new_stop_price:.4f}")
+                    
+                    # Update actual limit order in the exchange
+                    if not self.sandbox_mode and self.trailing_stop_limit_order_id is not None:
+                        self._update_trailing_stop_limit_order(new_stop_price)
+            
+            # Update trailing stop based on current price for short position
+            if self.position == "short" and self.trailing_min_price is not None and self.current_atr is not None:
+                new_stop_price = self.trailing_min_price + (2.0 * self.current_atr)
+                
+                # Initialize trailing stop if none exists
+                if self.trailing_stop_order is None:
+                    self.trailing_stop_order = {
+                        "type": "buy", 
+                        "price": new_stop_price, 
+                        "time": time.time()
+                    }
+                    logger.info(f"Setting short position trailing stop at {new_stop_price:.4f}")
+                    
+                    # Place actual trailing stop limit order if not in sandbox mode
+                    if not self.sandbox_mode:
+                        self._place_trailing_stop_limit_order(new_stop_price)
+                
+                # Only move stop down, never up
+                elif new_stop_price < self.trailing_stop_order["price"]:
+                    old_price = self.trailing_stop_order["price"]
+                    self.trailing_stop_order["price"] = new_stop_price
+                    logger.info(f"Updated short position trailing stop from {old_price:.4f} to {new_stop_price:.4f}")
                     
                     # Update actual limit order in the exchange
                     if not self.sandbox_mode and self.trailing_stop_limit_order_id is not None:
