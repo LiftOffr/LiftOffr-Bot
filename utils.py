@@ -259,7 +259,7 @@ def parse_kraken_ohlc(ohlc_data):
     
     return df
 
-def record_trade(order_type, symbol, quantity, price, profit=None, profit_percent=None, position=None):
+def record_trade(order_type, symbol, quantity, price, profit=None, profit_percent=None, position=None, strategy=None):
     """
     Record trade to log and CSV
     
@@ -271,16 +271,35 @@ def record_trade(order_type, symbol, quantity, price, profit=None, profit_percen
         profit (float, optional): Trade profit/loss
         profit_percent (float, optional): Trade profit/loss as percentage
         position (str, optional): New position after trade (long/short/none)
+        strategy (str, optional): Strategy that generated the trade (ARIMA, Adaptive, etc.)
     """
     import os
     import csv
+    import inspect
     from datetime import datetime
     
-    # Log the trade
+    # Try to determine the strategy from the caller's stack if not provided
+    if strategy is None:
+        # Get the calling frame
+        frame = inspect.currentframe().f_back
+        try:
+            # Look for a strategy in the caller's context
+            # Check if 'self.strategy.__class__.__name__' exists
+            if 'self' in frame.f_locals and hasattr(frame.f_locals['self'], 'strategy'):
+                strategy_obj = frame.f_locals['self'].strategy
+                if hasattr(strategy_obj, '__class__') and hasattr(strategy_obj.__class__, '__name__'):
+                    strategy = strategy_obj.__class__.__name__
+        except:
+            pass
+        finally:
+            del frame  # Cleanup to avoid reference cycles
+    
+    # Log the trade with strategy info
+    strategy_info = f"[{strategy}] " if strategy else ""
     if profit is not None:
-        logger.info(f"{order_type.upper()} {symbol}: {quantity:.6f} @ {price:.2f}, Profit: ${profit:.2f} ({profit_percent:.2f}%)")
+        logger.info(f"{strategy_info}{order_type.upper()} {symbol}: {quantity:.6f} @ {price:.2f}, Profit: ${profit:.2f} ({profit_percent:.2f}%)")
     else:
-        logger.info(f"{order_type.upper()} {symbol}: {quantity:.6f} @ {price:.2f}")
+        logger.info(f"{strategy_info}{order_type.upper()} {symbol}: {quantity:.6f} @ {price:.2f}")
     
     # Record to CSV
     filename = "trades.csv"
@@ -289,7 +308,7 @@ def record_trade(order_type, symbol, quantity, price, profit=None, profit_percen
     with open(filename, "a", newline="") as csvfile:
         fieldnames = [
             "timestamp", "symbol", "order_type", "quantity", "price", 
-            "profit", "profit_percent", "position"
+            "profit", "profit_percent", "position", "strategy"
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         
@@ -304,5 +323,6 @@ def record_trade(order_type, symbol, quantity, price, profit=None, profit_percen
             "price": f"{price:.2f}",
             "profit": f"{profit:.2f}" if profit is not None else "",
             "profit_percent": f"{profit_percent:.2f}" if profit_percent is not None else "",
-            "position": position if position is not None else ""
+            "position": position if position is not None else "",
+            "strategy": strategy if strategy is not None else ""
         })
