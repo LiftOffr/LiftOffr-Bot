@@ -307,17 +307,47 @@ def display_status():
     
     # Get portfolio metrics
     metrics = get_portfolio_metrics()
+    trades = get_trades_history()
+    position = get_current_position()
+    
     print("\n--- PORTFOLIO SUMMARY ---")
     print(f"Initial Value: {format_currency(metrics['initial_value'])}")
     print(f"Current Value: {format_currency(metrics['current_value'])}")
-    pnl_style = "\033[92m" if metrics['pnl'] >= 0 else "\033[91m"  # Green for positive, red for negative
-    print(f"Total P&L: {pnl_style}{format_currency(metrics['pnl'])} ({format_percentage(metrics['pnl_percent'])})\033[0m")
+    
+    # Calculate and display P&L for closed trades
+    closed_pnl = metrics['pnl']
+    closed_pnl_percent = (closed_pnl / metrics['initial_value']) * 100 if metrics['initial_value'] > 0 else 0
+    closed_pnl_style = "\033[92m" if closed_pnl >= 0 else "\033[91m"
+    print(f"Closed Trades P&L: {closed_pnl_style}{format_currency(closed_pnl)} ({format_percentage(closed_pnl_percent)})\033[0m")
+    
+    # Calculate and display P&L for open positions
+    open_pnl = position['pnl'] if position['position_type'] != "none" else 0
+    open_pnl_percent = position['pnl_percent'] if position['position_type'] != "none" else 0
+    open_pnl_style = "\033[92m" if open_pnl >= 0 else "\033[91m"
+    print(f"Open Position P&L: {open_pnl_style}{format_currency(open_pnl)} ({format_percentage(open_pnl_percent)})\033[0m")
+    
+    # Calculate and display total P&L (closed + open)
+    total_pnl = closed_pnl + open_pnl
+    total_pnl_percent = ((metrics['current_value'] / metrics['initial_value']) - 1) * 100 if metrics['initial_value'] > 0 else 0
+    total_pnl_style = "\033[92m" if total_pnl >= 0 else "\033[91m"
+    print(f"Total P&L: {total_pnl_style}{format_currency(total_pnl)} ({format_percentage(total_pnl_percent)})\033[0m")
+    
+    # Trade statistics
     print(f"Total Trades: {metrics['total_trades']}")
     if metrics['total_trades'] > 0:
-        print(f"Win Rate: {format_percentage(metrics['win_rate'])}")
+        win_rate_style = "\033[92m" if metrics['win_rate'] >= 50 else "\033[93m" if metrics['win_rate'] >= 30 else "\033[91m"
+        print(f"Win Rate: {win_rate_style}{format_percentage(metrics['win_rate'])}\033[0m")
+    
+    # Calculate allocation and available funds
+    allocated_capital = 0
+    if position['position_type'] != "none":
+        # Rough estimation based on the position size and leverage
+        allocated_capital = position['entry_price'] * position['quantity']
+    available_funds = metrics['current_value'] - allocated_capital
+    print(f"Allocated Capital: {format_currency(allocated_capital)}")
+    print(f"Available Funds: {format_currency(available_funds)}")
     
     # Get current position
-    position = get_current_position()
     print("\n--- CURRENT POSITION ---")
     if position['position_type'] == "none":
         print("No active position")
