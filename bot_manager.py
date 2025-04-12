@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from typing import Dict, List
 import threading
@@ -388,12 +389,13 @@ class BotManager:
         with self.lock:
             # Get all opposing signals from other strategies for this pair
             for other_bot_id, signal_data in self.cross_strategy_signals[trading_pair].items():
-                # Skip self and old signals (more than 5 minutes old)
-                if other_bot_id == bot_id or time.time() - signal_data["timestamp"] > 300:
+                # Skip self and old signals (more than 3 minutes old - reduced from 5 minutes for faster reaction)
+                if other_bot_id == bot_id or time.time() - signal_data["timestamp"] > 180:
                     continue
                     
+                # Lowered strength threshold (0.70 → 0.65) for more responsive exits
                 # Check if signal type is opposing and strength exceeds threshold
-                if signal_data["type"] == opposing_signal_type and signal_data["strength"] >= self.exit_threshold:
+                if signal_data["type"] == opposing_signal_type and signal_data["strength"] >= 0.65:
                     opposing_signals.append({
                         "bot_id": other_bot_id,
                         "strength": signal_data["strength"]
@@ -472,6 +474,33 @@ class BotManager:
         Returns:
             dict: Status information
         """
+        # Calculate current portfolio value and profit from trades.csv
+        total_pnl = 0.0
+        if os.path.exists("trades.csv"):
+            try:
+                with open("trades.csv", "r") as f:
+                    # Skip header
+                    next(f)
+                    for line in f:
+                        parts = line.strip().split(',')
+                        # Check if we have a PnL value (column 6)
+                        if len(parts) > 6 and parts[6] and parts[6] != "":
+                            try:
+                                pnl_value = float(parts[6])
+                                total_pnl += pnl_value
+                            except (ValueError, TypeError):
+                                pass
+                
+                # Update portfolio value with total P&L from trades
+                self.portfolio_value = INITIAL_CAPITAL + total_pnl
+                self.total_profit = total_pnl
+                
+                # Update profit percentage
+                if self.total_profit != 0:
+                    self.total_profit_percent = (self.total_profit / INITIAL_CAPITAL) * 100
+            except Exception as e:
+                logger.error(f"Error calculating portfolio value from trades: {e}")
+        
         status = {
             "portfolio_value": self.portfolio_value,
             "total_profit": self.total_profit,

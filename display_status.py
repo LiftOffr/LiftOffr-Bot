@@ -143,15 +143,26 @@ def get_trades_history():
                                 strategy = parts[7] if len(parts) > 7 else "unknown"
                                 
                                 # Create trade record
+                                # Check if we have PnL information (column 6)
+                                pnl = 0.0
+                                if len(parts) > 6 and parts[6] and parts[6] != "":
+                                    try:
+                                        pnl = float(parts[6])
+                                    except (ValueError, TypeError):
+                                        pass
+                                
+                                # Get strategy from column 8
+                                strategy_name = parts[8] if len(parts) > 8 else "unknown"
+                                
                                 trade = {
                                     "timestamp": timestamp,
                                     "pair": pair,
                                     "type": trade_type,
                                     "size": quantity,
                                     "price": price,
-                                    "profit_loss": 0.0,  # We don't have this information
+                                    "profit_loss": pnl,  # Use the PnL from column 6
                                     "profit_loss_percent": 0.0,
-                                    "strategy": strategy
+                                    "strategy": strategy_name
                                 }
                                 trades.append(trade)
                         except Exception as e:
@@ -210,6 +221,8 @@ def get_portfolio_metrics():
         strategy_trades = defaultdict(list)
         for trade in trades:
             strategy = trade.get("strategy", "").lower()
+            
+            # Check if the strategy column contains arima or adaptive
             if "arima" in strategy:
                 strategy_trades["arima"].append(trade)
             elif "adaptive" in strategy:

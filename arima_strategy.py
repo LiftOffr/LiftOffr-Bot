@@ -71,7 +71,8 @@ class ARIMAStrategy(TradingStrategy):
                  entry_atr_multiplier=0.01,
                  leverage=30,
                  risk_buffer_multiplier=1.25,
-                 arima_order=(1,1,0)):
+                 arima_order=(1,1,0),
+                 max_loss_percent=4.0):
         """
         Initialize the ARIMA strategy
         
@@ -83,6 +84,7 @@ class ARIMAStrategy(TradingStrategy):
             leverage (int): Leverage for trading
             risk_buffer_multiplier (float): ATR buffer multiplier for risk management
             arima_order (tuple): ARIMA model parameters (p,d,q)
+            max_loss_percent (float): Maximum allowed loss as percentage (4.0 = 4%)
         """
         # Call the parent class constructor to initialize common fields
         super().__init__(symbol)
@@ -94,6 +96,7 @@ class ARIMAStrategy(TradingStrategy):
         self.leverage = leverage
         self.risk_buffer_multiplier = risk_buffer_multiplier
         self.arima_order = arima_order
+        self.max_loss_percent = max_loss_percent
         
         # Additional data storage specific to ARIMA strategy
         self.ohlc_data = []
@@ -105,10 +108,13 @@ class ARIMAStrategy(TradingStrategy):
         # Technical indicators (some are already in the parent class)
         self.ema9 = None
         self.ema21 = None
+        self.ema50 = None  # Added for trend detection
+        self.ema100 = None # Added for trend detection
         self.rsi = None
         self.macd = None
         self.macd_signal = None
         self.adx = None
+        self.market_trend = "neutral"  # Overall market trend
         
         logger.info(f"ARIMA Strategy initialized with lookback={lookback_period}, trailing_mult={atr_trailing_multiplier}, symbol={symbol}")
     
@@ -175,6 +181,8 @@ class ARIMAStrategy(TradingStrategy):
         # Calculate EMA indicators
         df['ema9'] = df['close'].ewm(span=9, adjust=False).mean()
         df['ema21'] = df['close'].ewm(span=21, adjust=False).mean()
+        df['ema50'] = df['close'].ewm(span=50, adjust=False).mean()  # Added for trend detection
+        df['ema100'] = df['close'].ewm(span=100, adjust=False).mean()  # Added for trend detection
         
         # Calculate RSI (14 period)
         delta = df['close'].diff()
@@ -205,11 +213,32 @@ class ARIMAStrategy(TradingStrategy):
             latest = df.iloc[-1]
             self.ema9 = latest['ema9']
             self.ema21 = latest['ema21']
+            self.ema50 = latest['ema50'] if not pd.isna(latest['ema50']) else None
+            self.ema100 = latest['ema100'] if not pd.isna(latest['ema100']) else None
             self.rsi = latest['rsi']
             self.macd = latest['macd']
             self.macd_signal = latest['macd_signal']
             self.adx = latest['adx']
             self.atr = latest['atr14']
+            
+            # Detect market trend using EMAs
+            if self.ema50 is not None and self.ema100 is not None:
+                if self.ema50 > self.ema100 and self.ema9 > self.ema21:
+                    self.market_trend = "bullish"
+                elif self.ema50 < self.ema100 and self.ema9 < self.ema21:
+                    self.market_trend = "bearish"
+                else:
+                    self.market_trend = "neutral"
+                
+                logger.info(f"Market Trend: {self.market_trend.upper()} | EMA50 vs EMA100: {self.ema50:.2f} vs {self.ema100:.2f}")
+            else:
+                # Default to short-term trend if long-term EMAs not available
+                if self.ema9 > self.ema21:
+                    self.market_trend = "bullish"
+                elif self.ema9 < self.ema21:
+                    self.market_trend = "bearish"
+                else:
+                    self.market_trend = "neutral"
     
     def _calculate_arima_forecast(self):
         """
@@ -306,7 +335,7 @@ class ARIMAStrategy(TradingStrategy):
             
     def check_entry_signal(self, current_price):
         """
-        Check if there's an entry signal based on ARIMA forecast
+        Check if there's an entry signal based on ARIMA forecast and market trend
         
         Args:
             current_price (float): Current market price
@@ -336,24 +365,32 @@ class ARIMAStrategy(TradingStrategy):
         short_buffer = short_liquidation - short_entry_price
         min_buffer = self.risk_buffer_multiplier * self.atr
         
-        # Generate signals based on ARIMA forecast and risk checks
+        # Generate signals based on ARIMA forecast, market trend and risk checks
         if self.forecast_direction == "bullish" and self.position is None and long_buffer >= min_buffer:
-            buy_signal = True
-            entry_price = long_entry_price
-            logger.info(f"ARIMA BUY SIGNAL - Forecast: ${self.arima_forecast:.2f} > Current: ${current_price:.2f}")
-            logger.info(f"Entry price: ${entry_price:.2f} | ATR offset: ${self.entry_atr_multiplier * self.atr:.2f}")
+            # Only go long if we're not in a strongly bearish market
+            if self.market_trend != "bearish":
+                buy_signal = True
+                entry_price = long_entry_price
+                logger.info(f"ARIMA BUY SIGNAL - Forecast: ${self.arima_forecast:.2f} > Current: ${current_price:.2f}")
+                logger.info(f"Entry price: ${entry_price:.2f} | ATR offset: ${self.entry_atr_multiplier * self.atr:.2f} | Market Trend: {self.market_trend.upper()}")
+            else:
+                logger.info(f"ARIMA BUY SIGNAL SUPPRESSED - Market trend is BEARISH - avoiding counter-trend trade")
         
         elif self.forecast_direction == "bearish" and self.position is None and short_buffer >= min_buffer:
-            sell_signal = True
-            entry_price = short_entry_price
-            logger.info(f"ARIMA SELL SIGNAL - Forecast: ${self.arima_forecast:.2f} < Current: ${current_price:.2f}")
-            logger.info(f"Entry price: ${entry_price:.2f} | ATR offset: ${self.entry_atr_multiplier * self.atr:.2f}")
+            # Only go short if we're not in a strongly bullish market
+            if self.market_trend != "bullish":
+                sell_signal = True
+                entry_price = short_entry_price
+                logger.info(f"ARIMA SELL SIGNAL - Forecast: ${self.arima_forecast:.2f} < Current: ${current_price:.2f}")
+                logger.info(f"Entry price: ${entry_price:.2f} | ATR offset: ${self.entry_atr_multiplier * self.atr:.2f} | Market Trend: {self.market_trend.upper()}")
+            else:
+                logger.info(f"ARIMA SELL SIGNAL SUPPRESSED - Market trend is BULLISH - avoiding counter-trend trade")
         
         return buy_signal, sell_signal, entry_price
     
     def check_exit_signal(self, current_price):
         """
-        Check if there's an exit signal based on trailing stop or forecast reversal
+        Check if there's an exit signal based on trailing stop, forecast reversal, or max loss
         
         Args:
             current_price (float): Current market price
@@ -361,7 +398,7 @@ class ARIMAStrategy(TradingStrategy):
         Returns:
             bool: Whether to exit position
         """
-        if self.position is None or self.atr is None:
+        if self.position is None or self.atr is None or self.entry_price is None:
             return False
         
         exit_signal = False
@@ -392,6 +429,18 @@ class ARIMAStrategy(TradingStrategy):
         elif self.position == "short" and self.forecast_direction == "bullish":
             logger.info(f"FORECAST REVERSAL EXIT - Direction: {self.forecast_direction.upper()}")
             exit_signal = True
+        
+        # Check for maximum percentage loss
+        if self.position == "long":
+            current_loss_pct = ((current_price - self.entry_price) / self.entry_price) * 100
+            if current_loss_pct <= -self.max_loss_percent:
+                logger.info(f"MAXIMUM LOSS EXIT - Loss: {current_loss_pct:.2f}% exceeds limit of {self.max_loss_percent:.2f}%")
+                exit_signal = True
+        elif self.position == "short":
+            current_loss_pct = ((self.entry_price - current_price) / self.entry_price) * 100
+            if current_loss_pct <= -self.max_loss_percent:
+                logger.info(f"MAXIMUM LOSS EXIT - Loss: {current_loss_pct:.2f}% exceeds limit of {self.max_loss_percent:.2f}%")
+                exit_signal = True
         
         return exit_signal
     

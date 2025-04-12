@@ -200,8 +200,7 @@ class PortfolioMonitor:
             # Log the status with INFO level so it appears in the console
             logger.info(f"\n{output_str}")
             
-            # Also print to stdout for terminal display
-            print(output_str)
+            # Removed duplicate print to stdout to avoid duplicates in the logs
             
         except Exception as e:
             import traceback
