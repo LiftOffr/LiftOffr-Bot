@@ -9,7 +9,8 @@ from config import (
     INITIAL_CAPITAL, MARGIN_PERCENT, TRADE_QUANTITY,
     TRADING_PAIR, LOOP_INTERVAL, STATUS_UPDATE_INTERVAL,
     LEVERAGE, ENABLE_CROSS_STRATEGY_EXITS, CROSS_STRATEGY_EXIT_THRESHOLD,
-    CROSS_STRATEGY_EXIT_CONFIRMATION_COUNT
+    CROSS_STRATEGY_EXIT_CONFIRMATION_COUNT, STRONGER_SIGNAL_DOMINANCE,
+    SIGNAL_STRENGTH_ADVANTAGE, MIN_SIGNAL_STRENGTH
 )
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,11 @@ class BotManager:
         self.enable_cross_exits = ENABLE_CROSS_STRATEGY_EXITS  # Config flag to enable/disable feature
         self.exit_threshold = CROSS_STRATEGY_EXIT_THRESHOLD    # Threshold for signal strength to trigger exit
         self.exit_confirmations = CROSS_STRATEGY_EXIT_CONFIRMATION_COUNT  # Required confirmations
+        
+        # Signal strength arbitration configuration
+        self.stronger_signal_dominance = STRONGER_SIGNAL_DOMINANCE
+        self.signal_strength_advantage = SIGNAL_STRENGTH_ADVANTAGE
+        self.min_signal_strength = MIN_SIGNAL_STRENGTH
         
     def add_bot(self, strategy_type: str, trading_pair: str = TRADING_PAIR, 
                 trade_quantity: float = TRADE_QUANTITY, margin_percent: float = MARGIN_PERCENT,
@@ -386,29 +392,65 @@ class BotManager:
         opposing_signal_type = "sell" if current_position == "long" else "buy"
         opposing_signals = []
         
+        # Get current strategy's signal strength
+        current_bot_signal_strength = 0.0
+        current_bot_signal_data = None
+        
         with self.lock:
+            # Get current bot's signal strength if available
+            if bot_id in self.cross_strategy_signals[trading_pair]:
+                current_bot_signal_data = self.cross_strategy_signals[trading_pair][bot_id]
+                # Only consider signals less than 3 minutes old
+                if time.time() - current_bot_signal_data["timestamp"] <= 180:
+                    current_bot_signal_strength = current_bot_signal_data["strength"]
+            
             # Get all opposing signals from other strategies for this pair
             for other_bot_id, signal_data in self.cross_strategy_signals[trading_pair].items():
                 # Skip self and old signals (more than 3 minutes old - reduced from 5 minutes for faster reaction)
                 if other_bot_id == bot_id or time.time() - signal_data["timestamp"] > 180:
                     continue
                     
-                # Lowered strength threshold (0.70 → 0.65) for more responsive exits
-                # Check if signal type is opposing and strength exceeds threshold
-                if signal_data["type"] == opposing_signal_type and signal_data["strength"] >= 0.65:
-                    opposing_signals.append({
-                        "bot_id": other_bot_id,
-                        "strength": signal_data["strength"]
-                    })
+                # Check if signal type is opposing and strength exceeds minimum threshold
+                if signal_data["type"] == opposing_signal_type and signal_data["strength"] >= self.min_signal_strength:
+                    # If stronger signal dominance is enabled, check if this signal is strong enough
+                    if self.stronger_signal_dominance:
+                        # Calculate the strength advantage of this opposing signal
+                        strength_advantage = signal_data["strength"] - current_bot_signal_strength
+                        
+                        # Only include signals that have sufficient advantage over the current position
+                        if strength_advantage >= self.signal_strength_advantage:
+                            opposing_signals.append({
+                                "bot_id": other_bot_id,
+                                "strength": signal_data["strength"],
+                                "advantage": strength_advantage
+                            })
+                            logger.info(f"[BotManager] Signal arbitration: {other_bot_id} ({opposing_signal_type.upper()}, " 
+                                        f"strength: {signal_data['strength']:.2f}) has advantage of {strength_advantage:.2f} " 
+                                        f"over {bot_id} (strength: {current_bot_signal_strength:.2f})")
+                    else:
+                        # If stronger signal dominance is disabled, just use the minimum threshold
+                        opposing_signals.append({
+                            "bot_id": other_bot_id,
+                            "strength": signal_data["strength"],
+                            "advantage": signal_data["strength"] - current_bot_signal_strength
+                        })
         
         # Check if we have enough opposing signals to trigger an exit
         if len(opposing_signals) >= self.exit_confirmations:
-            # Log the cross-strategy exit
-            logger.info(f"[BotManager] Cross-strategy exit triggered for {bot_id} ({current_position}) "
-                        f"based on opposing signals from {len(opposing_signals)} strategies")
-            
             # Get the strongest opposing signal for attribution
             strongest_signal = max(opposing_signals, key=lambda x: x["strength"])
+            
+            # Log the cross-strategy exit with more detailed information
+            log_message = (f"[BotManager] Cross-strategy exit triggered for {bot_id} ({current_position}) "
+                          f"based on opposing signals from {len(opposing_signals)} strategies. ")
+            
+            if self.stronger_signal_dominance:
+                log_message += (f"Strongest signal from {strongest_signal['bot_id']} with strength {strongest_signal['strength']:.2f} "
+                               f"(advantage: {strongest_signal['advantage']:.2f})")
+            else:
+                log_message += f"Strongest signal from {strongest_signal['bot_id']} with strength {strongest_signal['strength']:.2f}"
+                
+            logger.info(log_message)
             
             # Record the exit event for tracking and reporting
             exit_key = f"{bot_id}_{int(time.time())}"
@@ -418,7 +460,10 @@ class BotManager:
                 "trading_pair": trading_pair,
                 "exit_time": time.time(),
                 "opposing_signals": opposing_signals,
-                "exited_by": strongest_signal["bot_id"]
+                "exited_by": strongest_signal["bot_id"],
+                "signal_strength": strongest_signal["strength"],
+                "current_bot_strength": current_bot_signal_strength,
+                "advantage": strongest_signal.get("advantage", 0.0)
             }
             
             return True
@@ -437,6 +482,9 @@ class BotManager:
                 "enabled": self.enable_cross_exits,
                 "threshold": self.exit_threshold,
                 "confirmations_required": self.exit_confirmations,
+                "stronger_signal_dominance": self.stronger_signal_dominance,
+                "min_signal_strength": self.min_signal_strength,
+                "signal_strength_advantage": self.signal_strength_advantage,
                 "exit_count": len(self.cross_strategy_exits),
                 "exits_by_strategy": {},
                 "recent_exits": []
@@ -457,13 +505,23 @@ class BotManager:
             )[:5]
             
             for exit_data in recent_exits:
-                stats["recent_exits"].append({
+                exit_stats = {
                     "bot_id": exit_data["bot_id"],
                     "position": exit_data["position"],
                     "trading_pair": exit_data["trading_pair"],
                     "exit_time": exit_data["exit_time"],
                     "exited_by": exit_data["exited_by"]
-                })
+                }
+                
+                # Add signal strength information if available
+                if "signal_strength" in exit_data:
+                    exit_stats["signal_strength"] = exit_data["signal_strength"]
+                if "current_bot_strength" in exit_data:
+                    exit_stats["current_bot_strength"] = exit_data["current_bot_strength"]
+                if "advantage" in exit_data:
+                    exit_stats["advantage"] = exit_data["advantage"]
+                
+                stats["recent_exits"].append(exit_stats)
             
             return stats
     
@@ -511,7 +569,10 @@ class BotManager:
             "allocation_percentage": (self.allocated_capital / self.portfolio_value * 100) if self.portfolio_value > 0 else 0,
             "cross_strategy_exits": {
                 "enabled": self.enable_cross_exits,
-                "exit_count": len(self.cross_strategy_exits)
+                "exit_count": len(self.cross_strategy_exits),
+                "stronger_signal_dominance": self.stronger_signal_dominance,
+                "min_signal_strength": self.min_signal_strength,
+                "signal_strength_advantage": self.signal_strength_advantage
             },
             "bots": {}
         }
