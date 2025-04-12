@@ -342,7 +342,7 @@ def main():
         strategy_type=strategy_type,
         trading_pair=trading_pair,
         trade_quantity=trade_quantity,
-        margin_percent=0.15  # Fixed 15% risk rate
+        margin_percent=0.20  # Fixed 20% risk rate
     )
     
     # Check for multiple strategies from command line arguments
@@ -354,7 +354,7 @@ def main():
                     strategy_type=strategy.strip(),
                     trading_pair=trading_pair,
                     trade_quantity=trade_quantity,
-                    margin_percent=0.15  # Fixed 15% risk rate
+                    margin_percent=0.20  # Fixed 20% risk rate
                 )
     else:
         # Always add ARIMA strategy by default if not specified in command line
@@ -363,7 +363,7 @@ def main():
                 strategy_type="arima",
                 trading_pair=trading_pair,
                 trade_quantity=trade_quantity,
-                margin_percent=0.15  # Fixed 15% risk rate
+                margin_percent=0.20  # Fixed 20% risk rate
             )
             logger.info("Added default ARIMA strategy to run concurrently")
     
