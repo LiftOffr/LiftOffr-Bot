@@ -112,6 +112,18 @@ class KrakenTradingBot:
             "lower_price": None,
             "created_time": None,
             "last_check_time": None,
+            "is_forecast_reversal": False,
+            "failsafe_timeout": 300
+        }
+        
+        # Dual limit order tracking for entries
+        self.entry_limit_orders = {
+            "upper_order_id": None,
+            "lower_order_id": None,
+            "upper_price": None,
+            "lower_price": None,
+            "created_time": None,
+            "last_check_time": None,
             "is_forecast_reversal": False,  # Flag to indicate if these are forecast reversal orders
             "failsafe_timeout": 300  # 5 minutes timeout for failsafe market order
         }
@@ -502,14 +514,26 @@ class KrakenTradingBot:
                         # Check if we have enough funds before entering
                         if self.available_funds >= (self.portfolio_value * self.margin_percent):
                             logger.info(f"Strategy {strategy_name} is signaling to enter LONG position")
-                            self._place_buy_order()  # Enter long position
+                            # Use dual limit orders for entries if enabled
+                            from config import ENABLE_DUAL_LIMIT_ENTRIES
+                            if ENABLE_DUAL_LIMIT_ENTRIES:
+                                logger.info(f"Using dual limit orders for LONG entry")
+                                self._place_dual_limit_orders_for_entry(entry_type="long")
+                            else:
+                                self._place_buy_order()  # Enter long position with standard method
                         else:
                             logger.info(f"Skipping {strategy_name} long signal - insufficient funds ({self.available_funds:.2f} < {self.portfolio_value * self.margin_percent:.2f})")
                     elif sell_signal:
                         # Check if we have enough funds before entering
                         if self.available_funds >= (self.portfolio_value * self.margin_percent):
                             logger.info(f"Strategy {strategy_name} is signaling to enter SHORT position")
-                            self._place_short_order()  # Enter short position
+                            # Use dual limit orders for entries if enabled
+                            from config import ENABLE_DUAL_LIMIT_ENTRIES
+                            if ENABLE_DUAL_LIMIT_ENTRIES:
+                                logger.info(f"Using dual limit orders for SHORT entry")
+                                self._place_dual_limit_orders_for_entry(entry_type="short")
+                            else:
+                                self._place_short_order()  # Enter short position with standard method
                         else:
                             logger.info(f"Skipping {strategy_name} short signal - insufficient funds ({self.available_funds:.2f} < {self.portfolio_value * self.margin_percent:.2f})")
                 elif strategy_position == "long" and sell_signal:
@@ -811,6 +835,163 @@ class KrakenTradingBot:
             
             self._clear_signal_reversal_orders()
     
+    def _place_dual_limit_orders_for_entry(self, entry_type="long"):
+        """
+        Place dual limit orders for entry - one order slightly above
+        and one slightly below the current price
+        
+        Args:
+            entry_type (str): Type of entry, "long" or "short"
+        """
+        from config import DUAL_LIMIT_ENTRY_PRICE_OFFSET, DUAL_LIMIT_ENTRY_FAILSAFE_TIMEOUT
+
+        if self.current_price is None:
+            logger.warning("Cannot place dual limit entry orders: current price unknown")
+            return False
+        
+        if self.position is not None:
+            logger.info(f"Already in {self.position} position; skipping dual limit entry orders")
+            return False
+        
+        # Set price offsets for the dual limit orders based on config
+        # These are small offsets to ensure at least one gets filled in volatile conditions
+        upper_price = self.current_price + DUAL_LIMIT_ENTRY_PRICE_OFFSET
+        lower_price = self.current_price - DUAL_LIMIT_ENTRY_PRICE_OFFSET
+        
+        # Calculate position size and risk
+        position_size_usd = self.trade_quantity * self.current_price
+        account_risk_percent = (position_size_usd / self.portfolio_value) * 100
+        
+        # Create tracking dictionary for the orders
+        self.entry_limit_orders = {
+            "upper_order_id": None,
+            "lower_order_id": None,
+            "upper_price": upper_price,
+            "lower_price": lower_price,
+            "created_time": time.time(),
+            "last_check_time": time.time(),
+            "entry_type": entry_type,
+            "failsafe_timeout": DUAL_LIMIT_ENTRY_FAILSAFE_TIMEOUT
+        }
+        
+        logger.info(f"【DUAL LIMIT ENTRY】 Placing dual limit {entry_type.upper()} orders at ${upper_price:.4f} (above) and ${lower_price:.4f} (below)")
+        logger.info(f"【POSITION】 Size: {self.trade_quantity} ({position_size_usd:.2f} USD) | Leverage: {LEVERAGE}x | Risk: {account_risk_percent:.2f}%")
+        
+        # In sandbox mode, we simulate the orders
+        if self.sandbox_mode:
+            self.entry_limit_orders["upper_order_id"] = "sandbox-upper-entry-" + str(int(time.time()))
+            self.entry_limit_orders["lower_order_id"] = "sandbox-lower-entry-" + str(int(time.time()))
+            return True
+        # For real trading, we would place the actual orders here with the exchange
+        else:
+            if entry_type == "long":
+                # For long entries, place buy orders at upper and lower prices
+                upper_result = self._place_limit_buy_order(upper_price)
+                lower_result = self._place_limit_buy_order(lower_price)
+            else:  # short entry
+                # For short entries, place sell orders at upper and lower prices
+                upper_result = self._place_limit_sell_order(upper_price)
+                lower_result = self._place_limit_sell_order(lower_price)
+            
+            if upper_result and lower_result:
+                self.entry_limit_orders["upper_order_id"] = upper_result
+                self.entry_limit_orders["lower_order_id"] = lower_result
+                return True
+            else:
+                logger.error("Failed to place one or both dual limit entry orders")
+                return False
+    
+    def _check_dual_entry_orders(self):
+        """
+        Check and manage the dual limit orders placed for entries
+        """
+        if not hasattr(self, 'entry_limit_orders') or not self.entry_limit_orders or not self.entry_limit_orders.get("created_time"):
+            return
+        
+        # Update the last check time
+        self.entry_limit_orders["last_check_time"] = time.time()
+        
+        # First, check if we're in sandbox mode
+        if self.sandbox_mode:
+            # In sandbox mode, simulate one of the orders being filled based on price
+            entry_type = self.entry_limit_orders.get("entry_type", "long")
+            
+            if entry_type == "long":
+                # For long entries, check if price crosses upper or lower price
+                if self.current_price >= self.entry_limit_orders["upper_price"]:
+                    logger.info(f"SANDBOX: Upper buy order filled at ${self.entry_limit_orders['upper_price']:.4f}")
+                    self._execute_buy()
+                    # Cancel the other order
+                    logger.info(f"SANDBOX: Cancelling lower buy order at ${self.entry_limit_orders['lower_price']:.4f}")
+                    self._clear_entry_limit_orders()
+                    return
+                elif self.current_price <= self.entry_limit_orders["lower_price"]:
+                    logger.info(f"SANDBOX: Lower buy order filled at ${self.entry_limit_orders['lower_price']:.4f}")
+                    self._execute_buy()
+                    # Cancel the other order
+                    logger.info(f"SANDBOX: Cancelling upper buy order at ${self.entry_limit_orders['upper_price']:.4f}")
+                    self._clear_entry_limit_orders()
+                    return
+            else:  # short entry
+                # For short entries, check if price crosses upper or lower price
+                if self.current_price >= self.entry_limit_orders["upper_price"]:
+                    logger.info(f"SANDBOX: Upper sell order filled at ${self.entry_limit_orders['upper_price']:.4f}")
+                    self._execute_sell()
+                    # Cancel the other order
+                    logger.info(f"SANDBOX: Cancelling lower sell order at ${self.entry_limit_orders['lower_price']:.4f}")
+                    self._clear_entry_limit_orders()
+                    return
+                elif self.current_price <= self.entry_limit_orders["lower_price"]:
+                    logger.info(f"SANDBOX: Lower sell order filled at ${self.entry_limit_orders['lower_price']:.4f}")
+                    self._execute_sell()
+                    # Cancel the other order
+                    logger.info(f"SANDBOX: Cancelling upper sell order at ${self.entry_limit_orders['upper_price']:.4f}")
+                    self._clear_entry_limit_orders()
+                    return
+        else:
+            # In real trading, check the order status from the exchange
+            # This would involve API calls to check if either order is filled
+            # If one is filled, cancel the other one
+            pass
+        
+        # Check for failsafe timeout - if orders are not filled within the timeout,
+        # cancel both and execute a market order
+        elapsed_time = time.time() - self.entry_limit_orders["created_time"]
+        if elapsed_time > self.entry_limit_orders["failsafe_timeout"]:
+            logger.warning(f"Entry orders failsafe timeout after {elapsed_time:.0f} seconds - executing market order")
+            
+            # Cancel both orders
+            if not self.sandbox_mode:
+                # Cancel the orders via exchange API
+                pass
+            
+            # Execute market order
+            entry_type = self.entry_limit_orders.get("entry_type", "long")
+            if entry_type == "long":
+                logger.info("Executing market buy order as failsafe for entry")
+                self._execute_buy()
+            else:  # short entry
+                logger.info("Executing market sell order as failsafe for entry")
+                self._execute_sell()
+            
+            self._clear_entry_limit_orders()
+            
+    def _clear_entry_limit_orders(self):
+        """
+        Clear the entry limit orders tracking
+        """
+        from config import DUAL_LIMIT_ENTRY_FAILSAFE_TIMEOUT
+        self.entry_limit_orders = {
+            "upper_order_id": None,
+            "lower_order_id": None,
+            "upper_price": None,
+            "lower_price": None,
+            "created_time": None,
+            "last_check_time": None,
+            "entry_type": None,
+            "failsafe_timeout": DUAL_LIMIT_ENTRY_FAILSAFE_TIMEOUT
+        }
+
     def _clear_signal_reversal_orders(self):
         """
         Clear the signal reversal orders tracking
@@ -877,6 +1058,11 @@ class KrakenTradingBot:
             if self.signal_reversal_orders.get("created_time") is not None:
                 self._check_dual_reversal_orders()
                 return  # Skip other checks if we have active reversal orders
+            
+            # Check dual entry orders next
+            if hasattr(self, 'entry_limit_orders') and self.entry_limit_orders and self.entry_limit_orders.get("created_time") is not None:
+                self._check_dual_entry_orders()
+                return  # Skip other checks if we have active entry orders
             
             # Check if pending order is filled based on live price
             if self.pending_order is not None:
