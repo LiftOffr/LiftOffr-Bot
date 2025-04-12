@@ -104,6 +104,18 @@ class KrakenTradingBot:
         self.breakeven_order = None
         self.liquidity_exit_order = None
         
+        # Dual limit order tracking for signal reversals
+        self.signal_reversal_orders = {
+            "upper_order_id": None,
+            "lower_order_id": None,
+            "upper_price": None,
+            "lower_price": None,
+            "created_time": None,
+            "last_check_time": None,
+            "is_forecast_reversal": False,  # Flag to indicate if these are forecast reversal orders
+            "failsafe_timeout": 300  # 5 minutes timeout for failsafe market order
+        }
+        
         # Signal timing
         self.last_signal_update = 0
         self.last_candle_time = None
@@ -502,10 +514,30 @@ class KrakenTradingBot:
                             logger.info(f"Skipping {strategy_name} short signal - insufficient funds ({self.available_funds:.2f} < {self.portfolio_value * self.margin_percent:.2f})")
                 elif strategy_position == "long" and sell_signal:
                     logger.info(f"Strategy {strategy_name} is signaling to exit LONG position")
-                    self._place_sell_order(exit_only=True)  # Exit long position
+                    # Use dual limit orders for signal reversal exits
+                    is_forecast_reversal = False
+                    if self.strategy.__class__.__name__ == 'ARIMAStrategy':
+                        # Only ARIMA strategy has forecast_direction property
+                        is_forecast_reversal = hasattr(self.strategy, 'forecast_direction') and self.strategy.forecast_direction == 'bearish'
+                    if is_forecast_reversal:
+                        logger.info(f"Using dual limit orders for forecast reversal exit from LONG position")
+                        self._place_dual_limit_orders_for_reversal()
+                    else:
+                        # Use regular exit for other cases
+                        self._place_sell_order(exit_only=True)
                 elif strategy_position == "short" and buy_signal:
                     logger.info(f"Strategy {strategy_name} is signaling to exit SHORT position")
-                    self._place_buy_order(exit_only=True)  # Exit short position
+                    # Use dual limit orders for signal reversal exits
+                    is_forecast_reversal = False
+                    if self.strategy.__class__.__name__ == 'ARIMAStrategy':
+                        # Only ARIMA strategy has forecast_direction property
+                        is_forecast_reversal = hasattr(self.strategy, 'forecast_direction') and self.strategy.forecast_direction == 'bullish'
+                    if is_forecast_reversal:
+                        logger.info(f"Using dual limit orders for forecast reversal exit from SHORT position")
+                        self._place_dual_limit_orders_for_reversal()
+                    else:
+                        # Use regular exit for other cases
+                        self._place_buy_order(exit_only=True)
             
             # Update signal timestamp (even for test updates)
             self.last_signal_update = time.time()
@@ -568,11 +600,31 @@ class KrakenTradingBot:
                         # Exit long position
                         if strategy_position == "long":
                             logger.info(f"Executing cross-strategy exit for {strategy_name} LONG position")
-                            self._place_sell_order(exit_only=True, cross_strategy_exit=True)
+                            # Use dual limit orders for signal reversal exits
+                            is_forecast_reversal = False
+                            if self.strategy.__class__.__name__ == 'ARIMAStrategy':
+                                # Only ARIMA strategy has forecast_direction property
+                                is_forecast_reversal = hasattr(self.strategy, 'forecast_direction') and self.strategy.forecast_direction == 'bearish'
+                            if is_forecast_reversal:
+                                logger.info(f"Using dual limit orders for cross-strategy forecast reversal exit from LONG position")
+                                self._place_dual_limit_orders_for_reversal()
+                            else:
+                                # Use regular exit for other cases
+                                self._place_sell_order(exit_only=True, cross_strategy_exit=True)
                         # Exit short position
                         elif strategy_position == "short":
                             logger.info(f"Executing cross-strategy exit for {strategy_name} SHORT position")
-                            self._place_buy_order(exit_only=True, cross_strategy_exit=True)
+                            # Use dual limit orders for signal reversal exits
+                            is_forecast_reversal = False
+                            if self.strategy.__class__.__name__ == 'ARIMAStrategy':
+                                # Only ARIMA strategy has forecast_direction property
+                                is_forecast_reversal = hasattr(self.strategy, 'forecast_direction') and self.strategy.forecast_direction == 'bullish'
+                            if is_forecast_reversal:
+                                logger.info(f"Using dual limit orders for cross-strategy forecast reversal exit from SHORT position")
+                                self._place_dual_limit_orders_for_reversal()
+                            else:
+                                # Use regular exit for other cases
+                                self._place_buy_order(exit_only=True, cross_strategy_exit=True)
             
         except Exception as e:
             logger.error(f"Error updating signals: {e}")
@@ -619,6 +671,178 @@ class KrakenTradingBot:
                 if os.path.exists(request_file):
                     os.remove(request_file)
     
+    def _place_dual_limit_orders_for_reversal(self):
+        """
+        Place dual limit orders for signal reversal exits - one order slightly above
+        and one slightly below the current price
+        """
+        if self.current_price is None:
+            logger.warning("Cannot place dual limit orders: current price unknown")
+            return False
+        
+        if self.position is None:
+            logger.info("No active position to exit; skipping dual limit orders")
+            return False
+        
+        # Set price offsets for the dual limit orders ($0.05 above and below current price)
+        # These are small offsets to ensure at least one gets filled in volatile conditions
+        upper_price = self.current_price + 0.05
+        lower_price = self.current_price - 0.05
+        
+        # Create tracking dictionary for the orders
+        self.signal_reversal_orders = {
+            "upper_order_id": None,
+            "lower_order_id": None,
+            "upper_price": upper_price,
+            "lower_price": lower_price,
+            "created_time": time.time(),
+            "last_check_time": time.time(),
+            "is_forecast_reversal": True,
+            "failsafe_timeout": 300  # 5 minutes timeout for failsafe market order
+        }
+        
+        logger.info(f"【FORECAST REVERSAL】 Placing dual limit orders at ${upper_price:.4f} (above) and ${lower_price:.4f} (below)")
+        
+        # In sandbox mode, we simulate the orders
+        if self.sandbox_mode:
+            self.signal_reversal_orders["upper_order_id"] = "sandbox-upper-" + str(int(time.time()))
+            self.signal_reversal_orders["lower_order_id"] = "sandbox-lower-" + str(int(time.time()))
+            return True
+        # For real trading, we would place the actual orders here with the exchange
+        else:
+            # Place upper price order
+            if self.position == "long":
+                # For long positions, sell at upper and lower prices
+                upper_result = self._place_limit_sell_order(upper_price)
+                lower_result = self._place_limit_sell_order(lower_price)
+            else:  # short position
+                # For short positions, buy at upper and lower prices
+                upper_result = self._place_limit_buy_order(upper_price)
+                lower_result = self._place_limit_buy_order(lower_price)
+            
+            if upper_result and lower_result:
+                self.signal_reversal_orders["upper_order_id"] = upper_result
+                self.signal_reversal_orders["lower_order_id"] = lower_result
+                return True
+            else:
+                logger.error("Failed to place one or both dual limit orders for reversal")
+                return False
+    
+    def _check_dual_reversal_orders(self):
+        """
+        Check and manage the dual limit orders placed for forecast reversals
+        """
+        if not self.signal_reversal_orders or not self.signal_reversal_orders.get("created_time"):
+            return
+        
+        # Update the last check time
+        self.signal_reversal_orders["last_check_time"] = time.time()
+        
+        # First, check if we're in sandbox mode
+        if self.sandbox_mode:
+            # In sandbox mode, simulate one of the orders being filled based on price
+            if self.position == "long":
+                # For long positions, check if price crosses upper or lower price
+                if self.current_price >= self.signal_reversal_orders["upper_price"]:
+                    logger.info(f"SANDBOX: Upper sell order filled at ${self.signal_reversal_orders['upper_price']:.4f}")
+                    self._execute_sell(exit_only=True)
+                    # Cancel the other order
+                    logger.info(f"SANDBOX: Cancelling lower sell order at ${self.signal_reversal_orders['lower_price']:.4f}")
+                    self._clear_signal_reversal_orders()
+                    return
+                elif self.current_price <= self.signal_reversal_orders["lower_price"]:
+                    logger.info(f"SANDBOX: Lower sell order filled at ${self.signal_reversal_orders['lower_price']:.4f}")
+                    self._execute_sell(exit_only=True)
+                    # Cancel the other order
+                    logger.info(f"SANDBOX: Cancelling upper sell order at ${self.signal_reversal_orders['upper_price']:.4f}")
+                    self._clear_signal_reversal_orders()
+                    return
+            else:  # short position
+                # For short positions, check if price crosses upper or lower price
+                if self.current_price >= self.signal_reversal_orders["upper_price"]:
+                    logger.info(f"SANDBOX: Upper buy order filled at ${self.signal_reversal_orders['upper_price']:.4f}")
+                    self._execute_buy(exit_only=True)
+                    # Cancel the other order
+                    logger.info(f"SANDBOX: Cancelling lower buy order at ${self.signal_reversal_orders['lower_price']:.4f}")
+                    self._clear_signal_reversal_orders()
+                    return
+                elif self.current_price <= self.signal_reversal_orders["lower_price"]:
+                    logger.info(f"SANDBOX: Lower buy order filled at ${self.signal_reversal_orders['lower_price']:.4f}")
+                    self._execute_buy(exit_only=True)
+                    # Cancel the other order
+                    logger.info(f"SANDBOX: Cancelling upper buy order at ${self.signal_reversal_orders['upper_price']:.4f}")
+                    self._clear_signal_reversal_orders()
+                    return
+        else:
+            # In real trading, check the order status from the exchange
+            # This would involve API calls to check if either order is filled
+            # If one is filled, cancel the other one
+            pass
+        
+        # Check for failsafe timeout - if orders are not filled within the timeout,
+        # cancel both and execute a market order
+        elapsed_time = time.time() - self.signal_reversal_orders["created_time"]
+        if elapsed_time > self.signal_reversal_orders["failsafe_timeout"]:
+            logger.warning(f"Reversal orders failsafe timeout after {elapsed_time:.0f} seconds - executing market order")
+            
+            # Cancel both orders
+            if not self.sandbox_mode:
+                # Cancel the orders via exchange API
+                pass
+            
+            # Execute market order
+            if self.position == "long":
+                logger.info("Executing market sell order as failsafe")
+                self._execute_sell(exit_only=True)
+            else:  # short position
+                logger.info("Executing market buy order as failsafe")
+                self._execute_buy(exit_only=True)
+            
+            self._clear_signal_reversal_orders()
+    
+    def _clear_signal_reversal_orders(self):
+        """
+        Clear the signal reversal orders tracking
+        """
+        self.signal_reversal_orders = {
+            "upper_order_id": None,
+            "lower_order_id": None,
+            "upper_price": None,
+            "lower_price": None,
+            "created_time": None,
+            "last_check_time": None,
+            "is_forecast_reversal": False,
+            "failsafe_timeout": 300
+        }
+    
+    def _place_limit_sell_order(self, price):
+        """
+        Place a limit sell order with the exchange
+        
+        Args:
+            price (float): Limit price for the order
+            
+        Returns:
+            str: Order ID if successful, None otherwise
+        """
+        # In a real implementation, this would call the exchange API
+        # For now, return a dummy order ID
+        return f"limit-sell-{int(time.time())}"
+    
+    def _place_limit_buy_order(self, price):
+        """
+        Place a limit buy order with the exchange
+        
+        Args:
+            price (float): Limit price for the order
+            
+        Returns:
+            str: Order ID if successful, None otherwise
+        """
+        # In a real implementation, this would call the exchange API
+        # For now, return a dummy order ID
+        return f"limit-buy-{int(time.time())}"
+    
     def _check_orders(self):
         """
         Check and manage pending orders and trailing stops
@@ -636,6 +860,11 @@ class KrakenTradingBot:
                         self._place_sell_order(exit_only=True, cross_strategy_exit=True)
                     elif self.position == 'short':
                         self._place_buy_order(exit_only=True, cross_strategy_exit=True)
+            
+            # Check dual reversal orders first
+            if self.signal_reversal_orders.get("created_time") is not None:
+                self._check_dual_reversal_orders()
+                return  # Skip other checks if we have active reversal orders
             
             # Check if pending order is filled based on live price
             if self.pending_order is not None:
