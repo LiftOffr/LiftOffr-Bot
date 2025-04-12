@@ -54,7 +54,7 @@ USE_SANDBOX = os.getenv('USE_SANDBOX', 'True').lower() in ['true', 't', 'yes', '
 # Position management
 INITIAL_CAPITAL = float(os.getenv('INITIAL_CAPITAL', '20000.0'))  # Starting portfolio value in USD
 LEVERAGE = int(os.getenv('LEVERAGE', '25'))  # Leverage for trading (25x by default)
-MARGIN_PERCENT = float(os.getenv('MARGIN_PERCENT', '0.15'))  # Percentage of portfolio used as margin (15% per trade)
+MARGIN_PERCENT = float(os.getenv('MARGIN_PERCENT', '0.20'))  # Percentage of portfolio used as margin (20% per trade)
 
 # Strategy configuration
 STRATEGY_TYPE = os.getenv('STRATEGY_TYPE', 'adaptive')  # Options: 'adaptive', 'simple_moving_average', 'rsi', 'arima'
