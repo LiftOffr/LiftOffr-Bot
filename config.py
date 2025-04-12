@@ -86,3 +86,8 @@ ORDER_TIMEOUT_SECONDS = 2 * LOOP_INTERVAL  # Time before reconsidering a pending
 ENABLE_CROSS_STRATEGY_EXITS = os.getenv('ENABLE_CROSS_STRATEGY_EXITS', 'True').lower() in ['true', 't', 'yes', '1']  # Default to enabled
 CROSS_STRATEGY_EXIT_THRESHOLD = float(os.getenv('CROSS_STRATEGY_EXIT_THRESHOLD', '0.65'))  # Signal strength threshold (0.0 to 1.0) - lowered from 0.75 to 0.65
 CROSS_STRATEGY_EXIT_CONFIRMATION_COUNT = int(os.getenv('CROSS_STRATEGY_EXIT_CONFIRMATION_COUNT', '2'))  # Number of confirmations needed - reduced from 3 to 2
+
+# Dual limit order configuration for signal reversals
+DUAL_LIMIT_ORDER_PRICE_OFFSET = float(os.getenv('DUAL_LIMIT_ORDER_PRICE_OFFSET', '0.05'))  # Price offset for dual limit orders (default $0.05)
+DUAL_LIMIT_ORDER_FAILSAFE_TIMEOUT = int(os.getenv('DUAL_LIMIT_ORDER_FAILSAFE_TIMEOUT', '300'))  # Timeout in seconds before executing market order failsafe (default 5 minutes)
+ENABLE_DUAL_LIMIT_ORDERS = os.getenv('ENABLE_DUAL_LIMIT_ORDERS', 'True').lower() in ['true', 't', 'yes', '1']  # Whether to use dual limit orders for signal reversals

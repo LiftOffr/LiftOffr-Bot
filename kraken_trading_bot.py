@@ -676,6 +676,17 @@ class KrakenTradingBot:
         Place dual limit orders for signal reversal exits - one order slightly above
         and one slightly below the current price
         """
+        from config import DUAL_LIMIT_ORDER_PRICE_OFFSET, DUAL_LIMIT_ORDER_FAILSAFE_TIMEOUT, ENABLE_DUAL_LIMIT_ORDERS
+        
+        # Skip if dual limit orders are disabled
+        if not ENABLE_DUAL_LIMIT_ORDERS:
+            logger.info("Dual limit orders are disabled in config; using regular exit instead")
+            if self.position == "long":
+                self._place_sell_order(exit_only=True)
+            elif self.position == "short":
+                self._place_buy_order(exit_only=True)
+            return False
+            
         if self.current_price is None:
             logger.warning("Cannot place dual limit orders: current price unknown")
             return False
@@ -684,10 +695,10 @@ class KrakenTradingBot:
             logger.info("No active position to exit; skipping dual limit orders")
             return False
         
-        # Set price offsets for the dual limit orders ($0.05 above and below current price)
+        # Set price offsets for the dual limit orders based on config
         # These are small offsets to ensure at least one gets filled in volatile conditions
-        upper_price = self.current_price + 0.05
-        lower_price = self.current_price - 0.05
+        upper_price = self.current_price + DUAL_LIMIT_ORDER_PRICE_OFFSET
+        lower_price = self.current_price - DUAL_LIMIT_ORDER_PRICE_OFFSET
         
         # Create tracking dictionary for the orders
         self.signal_reversal_orders = {
@@ -698,7 +709,7 @@ class KrakenTradingBot:
             "created_time": time.time(),
             "last_check_time": time.time(),
             "is_forecast_reversal": True,
-            "failsafe_timeout": 300  # 5 minutes timeout for failsafe market order
+            "failsafe_timeout": DUAL_LIMIT_ORDER_FAILSAFE_TIMEOUT
         }
         
         logger.info(f"【FORECAST REVERSAL】 Placing dual limit orders at ${upper_price:.4f} (above) and ${lower_price:.4f} (below)")
@@ -804,6 +815,7 @@ class KrakenTradingBot:
         """
         Clear the signal reversal orders tracking
         """
+        from config import DUAL_LIMIT_ORDER_FAILSAFE_TIMEOUT
         self.signal_reversal_orders = {
             "upper_order_id": None,
             "lower_order_id": None,
@@ -812,7 +824,7 @@ class KrakenTradingBot:
             "created_time": None,
             "last_check_time": None,
             "is_forecast_reversal": False,
-            "failsafe_timeout": 300
+            "failsafe_timeout": DUAL_LIMIT_ORDER_FAILSAFE_TIMEOUT
         }
     
     def _place_limit_sell_order(self, price):
