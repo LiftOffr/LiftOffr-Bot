@@ -92,6 +92,13 @@ STRONGER_SIGNAL_DOMINANCE = os.getenv('STRONGER_SIGNAL_DOMINANCE', 'True').lower
 SIGNAL_STRENGTH_ADVANTAGE = float(os.getenv('SIGNAL_STRENGTH_ADVANTAGE', '0.25'))  # Minimum difference to override (default 0.25)
 MIN_SIGNAL_STRENGTH = float(os.getenv('MIN_SIGNAL_STRENGTH', '0.65'))  # Minimum strength to be considered significant
 
+# Dynamic position sizing based on signal strength
+ENABLE_DYNAMIC_POSITION_SIZING = os.getenv('ENABLE_DYNAMIC_POSITION_SIZING', 'True').lower() in ['true', 't', 'yes', '1']  # Default to enabled
+BASE_MARGIN_PERCENT = float(os.getenv('BASE_MARGIN_PERCENT', str(MARGIN_PERCENT)))  # Base margin percentage (default to MARGIN_PERCENT)
+MAX_MARGIN_PERCENT = float(os.getenv('MAX_MARGIN_PERCENT', '0.40'))  # Maximum margin percentage for very strong signals (40%)
+STRONG_SIGNAL_THRESHOLD = float(os.getenv('STRONG_SIGNAL_THRESHOLD', '0.80'))  # Signals above this are considered strong
+VERY_STRONG_SIGNAL_THRESHOLD = float(os.getenv('VERY_STRONG_SIGNAL_THRESHOLD', '0.90'))  # Signals above this are considered very strong
+
 # Dual limit order configuration for signal reversals (exits)
 DUAL_LIMIT_ORDER_PRICE_OFFSET = float(os.getenv('DUAL_LIMIT_ORDER_PRICE_OFFSET', '0.05'))  # Price offset for dual limit orders (default $0.05)
 DUAL_LIMIT_ORDER_FAILSAFE_TIMEOUT = int(os.getenv('DUAL_LIMIT_ORDER_FAILSAFE_TIMEOUT', '300'))  # Timeout in seconds before executing market order failsafe (default 5 minutes)

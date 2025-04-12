@@ -15,7 +15,9 @@ from config import (
     TRADING_PAIR, TRADE_QUANTITY, LOOP_INTERVAL, STRATEGY_TYPE,
     USE_SANDBOX, INITIAL_CAPITAL, LEVERAGE, MARGIN_PERCENT,
     SIGNAL_INTERVAL, VOL_THRESHOLD, ENTRY_ATR_MULTIPLIER,
-    LOOKBACK_HOURS, ORDER_TIMEOUT_SECONDS, STATUS_UPDATE_INTERVAL
+    LOOKBACK_HOURS, ORDER_TIMEOUT_SECONDS, STATUS_UPDATE_INTERVAL,
+    ENABLE_DYNAMIC_POSITION_SIZING, BASE_MARGIN_PERCENT, MAX_MARGIN_PERCENT,
+    STRONG_SIGNAL_THRESHOLD, VERY_STRONG_SIGNAL_THRESHOLD
 )
 
 logger = logging.getLogger(__name__)
@@ -1319,13 +1321,29 @@ class KrakenTradingBot:
             self._execute_sell(exit_only=True, cross_strategy_exit=cross_strategy_exit)
             self.pending_order = None
     
-    def _execute_buy(self, exit_only=False, cross_strategy_exit=False):
+    def _calculate_dynamic_margin_percent(self, signal_strength=0.0):
+        """
+        Calculate dynamic margin percentage based on signal strength
+        
+        Args:
+            signal_strength (float): Strength of the signal (0.0 to 1.0)
+            
+        Returns:
+            float: Calculated margin percentage
+        """
+        from dynamic_position_sizing import calculate_dynamic_margin_percent
+        
+        # Use the centralized function from dynamic_position_sizing module
+        return calculate_dynamic_margin_percent(signal_strength, self.margin_percent)
+            
+    def _execute_buy(self, exit_only=False, cross_strategy_exit=False, signal_strength=0.0):
         """
         Execute buy order
         
         Args:
             exit_only (bool): Whether this is just to exit a short position
             cross_strategy_exit (bool): Whether this is triggered by a cross-strategy exit signal
+            signal_strength (float): Strength of the signal (0.0 to 1.0)
         """
         if not self.current_price:
             logger.warning("Cannot execute buy: current price unknown")
@@ -1346,10 +1364,11 @@ class KrakenTradingBot:
         funds_to_use = self.portfolio_value
         logger.info(f"Using portfolio value: ${funds_to_use:.2f} with fixed margin percentage: {self.margin_percent*100}%")
             
-        # Calculate position size using fixed percentage of portfolio
-        margin_amount = funds_to_use * self.margin_percent
+        # Calculate position size using dynamic margin percent based on signal strength
+        dynamic_margin_percent = self._calculate_dynamic_margin_percent(signal_strength)
+        margin_amount = funds_to_use * dynamic_margin_percent
         notional = margin_amount * self.leverage
-        logger.info(f"Position sizing (fixed): Portfolio: ${funds_to_use:.2f}, Margin: ${margin_amount:.2f} ({self.margin_percent*100}%), Leverage: {self.leverage}x")
+        logger.info(f"Position sizing (dynamic): Portfolio: ${funds_to_use:.2f}, Margin: ${margin_amount:.2f} ({dynamic_margin_percent*100:.1f}%), Leverage: {self.leverage}x")
         quantity = notional / self.current_price
         
         # Track strategy name in logs

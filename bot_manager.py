@@ -250,7 +250,7 @@ class BotManager:
                 
         logger.info("All bots stopped")
     
-    def track_position_change(self, bot_id: str, new_position: str, previous_position: str, margin_percent: float, funds_to_allocate: float = 0.0):
+    def track_position_change(self, bot_id: str, new_position: str, previous_position: str, margin_percent: float, funds_to_allocate: float = 0.0, signal_strength: float = 0.0):
         """
         Track position changes to update available funds
         
@@ -260,6 +260,7 @@ class BotManager:
             previous_position (str): Previous position ("long", "short", or None)
             margin_percent (float): Margin percentage for this strategy
             funds_to_allocate (float): Specific amount to allocate (if 0, calculated based on portfolio)
+            signal_strength (float): Strength of the signal that triggered the position change (0.0 to 1.0)
         """
         with self.lock:
             # Opening a new position - reduce available funds
