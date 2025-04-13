@@ -42,7 +42,7 @@ class MLEnhancedStrategy(TradingStrategy):
     """
     
     def __init__(self, trading_pair="SOL/USD", base_strategy=None, 
-                timeframe="1h", ml_influence=0.5, confidence_threshold=0.6, **kwargs):
+                timeframe="1h", ml_influence=0.65, confidence_threshold=0.6, **kwargs):
         """
         Initialize the ML-enhanced strategy
         

@@ -6,13 +6,18 @@ This script runs the ultra-aggressive SOL/USD backtest with parameters optimized
 maximum returns while maintaining high accuracy.
 
 Features:
-- Increased position sizing (48% vs 20% standard)
-- Lower ML confidence threshold (0.65 vs 0.7)
-- Reduced signal thresholds (0.15 vs 0.2) for more trading opportunities 
-- Increased maximum margin cap to 60% (from 50%)
-- Raised base leverage to 3.5x (from 3.0x)
-- Increased maximum leverage cap to 12x (from 10x)
-- Higher position size multiplier in normal trends
+- Increased position sizing (50% vs 20% standard)
+- Ultra-low ML confidence threshold (0.35 vs 0.7)
+- Extremely reduced signal thresholds (0.08 vs 0.2) for more frequent trading opportunities
+- Increased maximum margin cap to 65% (from 50%)
+- Massively increased base leverage to 35.0x (from 3.7x)
+- Extreme leverage cap increase to 125x (from 13x)
+- Minimum leverage floor set to 20x
+- Extremely aggressive regime factors for all market conditions
+- Higher position size multiplier in all market regimes
+- Maximum ML influence weight of 0.75 (from 0.5)
+- Ultra-aggressive limit order adjustments (70% of ATR)
+- Highly optimized volatility penalties to encourage more trading
 - More concurrent positions (5 vs 3 standard)
 - Tighter profit targets and stop losses
 - Advanced trailing stop logic with dynamic adjustments

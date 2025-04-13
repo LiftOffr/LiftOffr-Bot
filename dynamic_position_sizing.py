@@ -303,7 +303,7 @@ class DynamicPositionSizer:
         except Exception as e:
             logger.error(f"Error saving configuration: {e}")
 
-def calculate_dynamic_margin_percent(ml_confidence, signal_strength, market_volatility=None, base_margin=0.2):
+def calculate_dynamic_margin_percent(ml_confidence, signal_strength, market_volatility=None, base_margin=0.22):
     """
     Calculate an optimal margin percentage based on ML model confidence
     
@@ -315,7 +315,7 @@ def calculate_dynamic_margin_percent(ml_confidence, signal_strength, market_vola
         ml_confidence (float): ML model prediction confidence (0.0 to 1.0)
         signal_strength (float): Signal strength from strategy (0.0 to 1.0)
         market_volatility (float, optional): Market volatility metric
-        base_margin (float): Base margin percentage (default: 0.2 or 20%)
+        base_margin (float): Base margin percentage (default: 0.22 or 22%)
         
     Returns:
         float: Dynamic margin percentage (0.0 to 1.0)
@@ -323,16 +323,16 @@ def calculate_dynamic_margin_percent(ml_confidence, signal_strength, market_vola
     # Start with base margin
     margin_pct = base_margin
     
-    # Even more aggressive - adjust margin with even lower confidence threshold (0.65)
-    if ml_confidence >= 0.65:  # Reduced from 0.7 to 0.65
-        # Scale from 0.65-1.0 confidence to 0.0-1.0 adjustment factor
-        confidence_factor = (ml_confidence - 0.65) * 2.86  # Adjusted scaling factor
+    # Extremely aggressive - adjust margin with even lower confidence threshold (0.6)
+    if ml_confidence >= 0.6:  # Reduced from 0.65 to 0.6
+        # Scale from 0.6-1.0 confidence to 0.0-1.0 adjustment factor
+        confidence_factor = (ml_confidence - 0.6) * 2.5  # Adjusted scaling factor
         
-        # Higher confidence allows for up to 60% more margin (increased from 50%)
-        confidence_adjustment = confidence_factor * 0.6 * base_margin
+        # Higher confidence allows for up to 65% more margin (increased from 60%)
+        confidence_adjustment = confidence_factor * 0.65 * base_margin
         
-        # Signal strength provides an additional factor - increased weight to 35%
-        signal_adjustment = signal_strength * 0.35 * base_margin
+        # Signal strength provides an additional factor - increased weight to 40%
+        signal_adjustment = signal_strength * 0.4 * base_margin
         
         # Combine adjustments
         margin_pct += confidence_adjustment + signal_adjustment
@@ -340,15 +340,15 @@ def calculate_dynamic_margin_percent(ml_confidence, signal_strength, market_vola
         # If market volatility is provided, adjust margin inversely
         if market_volatility is not None and market_volatility > 0:
             # Less penalization for volatility - minimum factor increased
-            volatility_factor = max(0.6, min(1.0, 1.0 / (market_volatility * 4.5)))
+            volatility_factor = max(0.65, min(1.0, 1.0 / (market_volatility * 4.0)))
             margin_pct *= volatility_factor
     
-    # Increased margin cap (10%-60%)
-    margin_pct = max(0.1, min(0.6, margin_pct))
+    # Increased margin cap (12%-65%)
+    margin_pct = max(0.12, min(0.65, margin_pct))
     
     return margin_pct
 
-def calculate_dynamic_leverage(ml_confidence, market_regime, atr_value=None, base_leverage=3.5):
+def calculate_dynamic_leverage(ml_confidence, market_regime, atr_value=None, base_leverage=35.0):
     """
     Calculate an optimal leverage level based on ML model confidence and market conditions
     
@@ -358,27 +358,27 @@ def calculate_dynamic_leverage(ml_confidence, market_regime, atr_value=None, bas
         ml_confidence (float): ML model prediction confidence (0.0 to 1.0)
         market_regime (str): Current market regime
         atr_value (float, optional): Current ATR value
-        base_leverage (float): Base leverage level (default increased to 3.5)
+        base_leverage (float): Base leverage level (default increased to 35.0)
         
     Returns:
         float: Dynamic leverage level
     """
-    # Start with base leverage (increased from 3.0 to 3.5)
+    # Start with much higher base leverage (increased from 3.7 to 35.0)
     leverage = base_leverage
     
-    # Even more aggressive - lower minimum confidence threshold to 0.65 (from 0.7)
-    if ml_confidence >= 0.65:
+    # Extremely aggressive - lower minimum confidence threshold to 0.6 (from 0.65)
+    if ml_confidence >= 0.6:
         # Adjusted scaling factor for lower threshold
-        confidence_adjustment = (ml_confidence - 0.65) * 2.9 * base_leverage
+        confidence_adjustment = (ml_confidence - 0.6) * 2.5 * base_leverage
         leverage += confidence_adjustment
     
-    # Modified regime factors to be more aggressive in trending markets
+    # Extremely aggressive regime factors for maximizing leverage in all market conditions
     regime_factors = {
-        'volatile_trending_up': 0.75,    # Less reduction in volatile up markets
-        'volatile_trending_down': 0.65,  # Less reduction in volatile down markets
-        'normal_trending_up': 1.3,       # More increase in normal uptrends (from 1.2)
-        'normal_trending_down': 0.85,    # Less reduction in normal downtrends (from 0.8)
-        'neutral': 1.05                  # Slight increase in neutral markets (from 1.0)
+        'volatile_trending_up': 1.2,     # Increase leverage in volatile up markets
+        'volatile_trending_down': 0.9,   # Slight reduction in volatile down markets
+        'normal_trending_up': 1.8,       # Significant increase in normal uptrends
+        'normal_trending_down': 1.2,     # Increase even in normal downtrends
+        'neutral': 1.4                   # Strong increase in neutral markets
     }
     
     regime_factor = regime_factors.get(market_regime, 1.0)
@@ -390,11 +390,11 @@ def calculate_dynamic_leverage(ml_confidence, market_regime, atr_value=None, bas
         base_atr = 0.2
         if atr_value > base_atr:
             # Higher ATR = reduce leverage, but less aggressively
-            atr_factor = max(0.7, base_atr / atr_value)  # Increased minimum factor from 0.6 to 0.7
+            atr_factor = max(0.75, base_atr / atr_value)  # Increased minimum factor from 0.7 to 0.75
             leverage *= atr_factor
     
-    # Increased maximum leverage cap to 12x (from 10x)
-    leverage = max(1.0, min(12.0, round(leverage, 1)))
+    # Extreme leverage cap increase to 125x (from 13x)
+    leverage = max(20.0, min(125.0, round(leverage, 1)))
     
     return leverage
 
@@ -402,7 +402,7 @@ def adjust_limit_order_price(base_price, direction, ml_confidence, price_predict
     """
     Adjust limit order prices based on ML predictions
     
-    This function can modify limit order prices to optimize execution probability
+    This function modifies limit order prices to optimize execution probability
     based on ML predictions of price movements.
     
     Args:
@@ -415,18 +415,18 @@ def adjust_limit_order_price(base_price, direction, ml_confidence, price_predict
     Returns:
         float: Adjusted limit order price
     """
-    # Even more aggressive - lower minimum confidence threshold to 0.65 (from 0.7)
-    if price_prediction is None or ml_confidence < 0.65:
+    # Extremely aggressive - lower minimum confidence threshold to 0.6 (from 0.65)
+    if price_prediction is None or ml_confidence < 0.6:
         return base_price
     
     # Calculate basic price adjustment
     # Higher confidence = more aggressive adjustment toward the predicted price
     # More aggressive scaling with lower threshold
-    confidence_factor = (ml_confidence - 0.65) * 2.86  # Scale 0.65-1.0 to 0-1.0
+    confidence_factor = (ml_confidence - 0.6) * 2.5  # Scale 0.6-1.0 to 0-1.0
     
     # Determine how much to adjust based on ATR
-    # Default to 0.15% of price if ATR not available (increased from 0.1%)
-    adjustment_basis = atr_value if atr_value is not None else (base_price * 0.0015)
+    # Default to 0.2% of price if ATR not available (increased from 0.15%)
+    adjustment_basis = atr_value if atr_value is not None else (base_price * 0.002)
     
     # Determine adjustment direction based on order direction and prediction
     price_diff = price_prediction - base_price
@@ -435,12 +435,14 @@ def adjust_limit_order_price(base_price, direction, ml_confidence, price_predict
     # For sell orders: if prediction is lower, we can be more aggressive (higher price)
     if (direction == 1 and price_diff > 0) or (direction == -1 and price_diff < 0):
         # Predicted price movement favorable to our order
-        # More aggressive with our limit price - 65% of ATR (from 50%)
-        max_adjustment = adjustment_basis * 0.65
+        # Ultra-aggressive with our limit price - 70% of ATR (from 65%)
+        trailing_stop_factor = 0.70  # Ultra-aggressive setting
+        max_adjustment = adjustment_basis * trailing_stop_factor
     else:
         # Predicted price movement unfavorable to our order
-        # Still slightly more aggressive - 30% of ATR (from 25%)
-        max_adjustment = adjustment_basis * 0.3
+        # Still more aggressive - 35% of ATR (from 30%)
+        atr_factor = 0.35  # Ultra-aggressive setting
+        max_adjustment = adjustment_basis * atr_factor
     
     # Calculate actual adjustment
     actual_adjustment = max_adjustment * confidence_factor * direction * -1
