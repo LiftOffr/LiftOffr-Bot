@@ -1,0 +1,919 @@
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $131.13 → Target: $130.86
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 55.50  | MACD < Signal | ADX = 44.85 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0055 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (131.11 vs 131.14) | RSI = 55.50  | MACD < Signal (0.0229 vs 0.0960) | ADX = 44.85 ✓ | Volatility = 0.0055 ✓ (threshold: 0.006) | Price < Upper BB (131.13 vs 132.14) | Price > Lower BB (131.13 vs 129.14) | Price vs KC Middle: 131.13 vs 130.27
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $130.96 → Target: $130.72
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 75.02 ✓ | MACD < Signal | ADX = 29.31 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0035 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (131.41 vs 130.56) | RSI = 75.02 ✓ | MACD < Signal (-0.0904 vs -0.0334) | ADX = 29.31 ✓ | Volatility = 0.0035 ✓ (threshold: 0.006) | Price < Upper BB (130.96 vs 133.63) | Price > Lower BB (130.96 vs 129.31) | Price vs KC Middle: 130.96 vs 130.27
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.1932 | Volatility Stop: $131.25
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.99, RSI=0.65, MACD=0.84, ADX=0.81, ARIMA=0.64
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.67 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $131.02 → Target: $131.22
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 54.39  | MACD > Signal | ADX = 22.86 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0027 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (131.47 vs 132.30) | RSI = 54.39  | MACD > Signal (0.0502 vs -0.0035) | ADX = 22.86 ✓ | Volatility = 0.0027 ✓ (threshold: 0.006) | Price < Upper BB (131.02 vs 132.73) | Price > Lower BB (131.02 vs 128.12) | Price vs KC Middle: 131.02 vs 131.55
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2485 | Volatility Stop: $131.39
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.83, RSI=0.99, MACD=0.91, ADX=0.91, ARIMA=0.50
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.92 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $130.88 → Target: $131.00
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 70.94 ✓ | MACD > Signal | ADX = 28.96 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0068  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (131.47 vs 130.31) | RSI = 70.94 ✓ | MACD > Signal (0.0644 vs -0.0982) | ADX = 28.96 ✓ | Volatility = 0.0068  (threshold: 0.006) | Price < Upper BB (130.88 vs 132.51) | Price > Lower BB (130.88 vs 128.87) | Price vs KC Middle: 130.88 vs 131.33
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2048 | Volatility Stop: $130.57
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.86, RSI=0.74, MACD=0.64, ADX=0.52, ARIMA=0.90
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.89 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $130.97 → Target: $130.89
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 41.81  | MACD < Signal | ADX = 38.91 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0024 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.94 vs 130.95) | RSI = 41.81  | MACD < Signal (-0.0880 vs 0.0359) | ADX = 38.91 ✓ | Volatility = 0.0024 ✓ (threshold: 0.006) | Price < Upper BB (130.97 vs 133.33) | Price > Lower BB (130.97 vs 128.15) | Price vs KC Middle: 130.97 vs 130.86
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.1882 | Volatility Stop: $131.25
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.62, RSI=0.84, MACD=0.84, ADX=0.88, ARIMA=0.84
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.76 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $130.73 → Target: $130.88
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 27.14 ✓ | MACD < Signal | ADX = 28.56 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0081  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (131.04 vs 130.79) | RSI = 27.14 ✓ | MACD < Signal (-0.0873 vs -0.0064) | ADX = 28.56 ✓ | Volatility = 0.0081  (threshold: 0.006) | Price < Upper BB (130.73 vs 133.64) | Price > Lower BB (130.73 vs 127.81) | Price vs KC Middle: 130.73 vs 130.41
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.1852 | Volatility Stop: $131.01
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.62, RSI=0.55, MACD=0.92, ADX=0.83, ARIMA=0.80
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.78 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $131.19 → Target: $131.41
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 67.37  | MACD > Signal | ADX = 17.55 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0051 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (132.08 vs 130.89) | RSI = 67.37  | MACD > Signal (0.0749 vs -0.0464) | ADX = 17.55  | Volatility = 0.0051 ✓ (threshold: 0.006) | Price < Upper BB (131.19 vs 132.35) | Price > Lower BB (131.19 vs 128.98) | Price vs KC Middle: 131.19 vs 130.42
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $131.42 → Target: $131.26
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 71.36 ✓ | MACD < Signal | ADX = 22.25 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0045 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (131.70 vs 132.01) | RSI = 71.36 ✓ | MACD < Signal (-0.0138 vs 0.0114) | ADX = 22.25 ✓ | Volatility = 0.0045 ✓ (threshold: 0.006) | Price < Upper BB (131.42 vs 132.87) | Price > Lower BB (131.42 vs 128.48) | Price vs KC Middle: 131.42 vs 132.04
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2182 | Volatility Stop: $131.09
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.53, RSI=0.94, MACD=0.57, ADX=0.83, ARIMA=0.88
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.80 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $131.25 → Target: $130.99
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 43.55  | MACD > Signal | ADX = 17.76 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0076  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (131.30 vs 132.37) | RSI = 43.55  | MACD > Signal (0.0936 vs 0.0364) | ADX = 17.76  | Volatility = 0.0076  (threshold: 0.006) | Price < Upper BB (131.25 vs 132.47) | Price > Lower BB (131.25 vs 130.16) | Price vs KC Middle: 131.25 vs 131.44
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $131.64 → Target: $131.90
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 58.72  | MACD > Signal | ADX = 17.70 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0091  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (132.54 vs 130.44) | RSI = 58.72  | MACD > Signal (-0.0317 vs -0.0654) | ADX = 17.70  | Volatility = 0.0091  (threshold: 0.006) | Price < Upper BB (131.64 vs 134.14) | Price > Lower BB (131.64 vs 129.22) | Price vs KC Middle: 131.64 vs 131.44
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2166 | Volatility Stop: $131.31
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.94, RSI=0.97, MACD=0.80, ADX=0.80, ARIMA=0.59
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.74 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $131.24 → Target: $131.37
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 47.39  | MACD > Signal | ADX = 44.23 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0078  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (130.66 vs 130.61) | RSI = 47.39  | MACD > Signal (-0.0057 vs -0.0311) | ADX = 44.23 ✓ | Volatility = 0.0078  (threshold: 0.006) | Price < Upper BB (131.24 vs 132.44) | Price > Lower BB (131.24 vs 128.97) | Price vs KC Middle: 131.24 vs 131.84
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2232 | Volatility Stop: $130.91
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.76, RSI=0.56, MACD=0.61, ADX=0.62, ARIMA=0.97
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.72 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $131.24 → Target: $131.05
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 38.66  | MACD < Signal | ADX = 24.02 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0083  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (131.87 vs 130.03) | RSI = 38.66  | MACD < Signal (0.0020 vs 0.0121) | ADX = 24.02 ✓ | Volatility = 0.0083  (threshold: 0.006) | Price < Upper BB (131.24 vs 133.38) | Price > Lower BB (131.24 vs 129.73) | Price vs KC Middle: 131.24 vs 131.59
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2461 | Volatility Stop: $130.87
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.69, RSI=0.84, MACD=0.60, ADX=0.54, ARIMA=0.98
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.70 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $130.85 → Target: $130.95
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 21.86 ✓ | MACD < Signal | ADX = 18.93 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0045 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.45 vs 131.74) | RSI = 21.86 ✓ | MACD < Signal (-0.0936 vs 0.0454) | ADX = 18.93  | Volatility = 0.0045 ✓ (threshold: 0.006) | Price < Upper BB (130.85 vs 132.16) | Price > Lower BB (130.85 vs 128.16) | Price vs KC Middle: 130.85 vs 130.45
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2000 | Volatility Stop: $131.15
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.98, RSI=0.99, MACD=0.52, ADX=0.99, ARIMA=0.61
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.89 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $130.65 → Target: $130.76
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 22.45 ✓ | MACD < Signal | ADX = 29.02 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0011 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.18 vs 130.40) | RSI = 22.45 ✓ | MACD < Signal (-0.0947 vs -0.0832) | ADX = 29.02 ✓ | Volatility = 0.0011 ✓ (threshold: 0.006) | Price < Upper BB (130.65 vs 132.62) | Price > Lower BB (130.65 vs 128.93) | Price vs KC Middle: 130.65 vs 131.29
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $130.25 → Target: $130.06
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 41.50  | MACD > Signal | ADX = 43.51 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0089  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (130.14 vs 129.63) | RSI = 41.50  | MACD > Signal (-0.0802 vs -0.0826) | ADX = 43.51 ✓ | Volatility = 0.0089  (threshold: 0.006) | Price < Upper BB (130.25 vs 131.68) | Price > Lower BB (130.25 vs 127.57) | Price vs KC Middle: 130.25 vs 129.50
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $129.78 → Target: $129.63
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 26.49 ✓ | MACD > Signal | ADX = 16.34 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0078  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (129.39 vs 130.54) | RSI = 26.49 ✓ | MACD > Signal (-0.0395 vs -0.0617) | ADX = 16.34  | Volatility = 0.0078  (threshold: 0.006) | Price < Upper BB (129.78 vs 132.73) | Price > Lower BB (129.78 vs 128.35) | Price vs KC Middle: 129.78 vs 128.79
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2067 | Volatility Stop: $130.09
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.90, RSI=0.56, MACD=0.59, ADX=0.68, ARIMA=0.97
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.72 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $129.96 → Target: $130.17
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 52.72  | MACD < Signal | ADX = 37.70 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0065  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (129.25 vs 128.50) | RSI = 52.72  | MACD < Signal (-0.0830 vs -0.0254) | ADX = 37.70 ✓ | Volatility = 0.0065  (threshold: 0.006) | Price < Upper BB (129.96 vs 131.67) | Price > Lower BB (129.96 vs 128.47) | Price vs KC Middle: 129.96 vs 130.53
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.1844 | Volatility Stop: $130.24
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.81, RSI=0.76, MACD=0.61, ADX=0.98, ARIMA=0.89
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.67 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $129.79 → Target: $129.53
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 45.23  | MACD > Signal | ADX = 42.29 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0085  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (130.55 vs 129.32) | RSI = 45.23  | MACD > Signal (-0.0096 vs -0.0592) | ADX = 42.29 ✓ | Volatility = 0.0085  (threshold: 0.006) | Price < Upper BB (129.79 vs 132.07) | Price > Lower BB (129.79 vs 128.30) | Price vs KC Middle: 129.79 vs 130.29
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.1988 | Volatility Stop: $129.49
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.89, RSI=0.59, MACD=0.92, ADX=0.67, ARIMA=0.76
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.76 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $130.19 → Target: $130.24
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 79.51 ✓ | MACD > Signal | ADX = 30.85 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0064  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (131.09 vs 129.25) | RSI = 79.51 ✓ | MACD > Signal (0.0951 vs -0.0896) | ADX = 30.85 ✓ | Volatility = 0.0064  (threshold: 0.006) | Price < Upper BB (130.19 vs 133.01) | Price > Lower BB (130.19 vs 128.26) | Price vs KC Middle: 130.19 vs 129.81
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2314 | Volatility Stop: $130.54
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.70, RSI=0.58, MACD=0.77, ADX=0.88, ARIMA=0.90
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.67 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $130.51 → Target: $130.29
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 35.32  | MACD < Signal | ADX = 34.00 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0065  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (131.02 vs 130.44) | RSI = 35.32  | MACD < Signal (-0.0328 vs -0.0162) | ADX = 34.00 ✓ | Volatility = 0.0065  (threshold: 0.006) | Price < Upper BB (130.51 vs 132.44) | Price > Lower BB (130.51 vs 129.08) | Price vs KC Middle: 130.51 vs 130.29
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2240 | Volatility Stop: $130.84
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.86, RSI=0.64, MACD=0.67, ADX=0.58, ARIMA=0.57
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.82 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $130.15 → Target: $130.42
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 57.57  | MACD > Signal | ADX = 42.84 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0062  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (130.26 vs 129.03) | RSI = 57.57  | MACD > Signal (-0.0211 vs -0.0302) | ADX = 42.84 ✓ | Volatility = 0.0062  (threshold: 0.006) | Price < Upper BB (130.15 vs 132.94) | Price > Lower BB (130.15 vs 128.27) | Price vs KC Middle: 130.15 vs 130.66
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.1838 | Volatility Stop: $130.43
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.56, RSI=0.95, MACD=0.90, ADX=0.78, ARIMA=0.63
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.94 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $130.15 → Target: $130.02
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 64.86  | MACD < Signal | ADX = 34.25 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0058 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (130.80 vs 129.24) | RSI = 64.86  | MACD < Signal (-0.0828 vs -0.0176) | ADX = 34.25 ✓ | Volatility = 0.0058 ✓ (threshold: 0.006) | Price < Upper BB (130.15 vs 133.12) | Price > Lower BB (130.15 vs 128.23) | Price vs KC Middle: 130.15 vs 129.43
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $129.76 → Target: $129.97
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 49.28  | MACD < Signal | ADX = 43.47 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0070  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (129.91 vs 130.43) | RSI = 49.28  | MACD < Signal (-0.0425 vs -0.0083) | ADX = 43.47 ✓ | Volatility = 0.0070  (threshold: 0.006) | Price < Upper BB (129.76 vs 132.60) | Price > Lower BB (129.76 vs 127.09) | Price vs KC Middle: 129.76 vs 130.58
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2253 | Volatility Stop: $129.42
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.67, RSI=0.82, MACD=0.58, ADX=0.61, ARIMA=0.84
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.78 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $129.41 → Target: $129.52
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 39.07  | MACD < Signal | ADX = 36.11 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0051 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (128.46 vs 130.74) | RSI = 39.07  | MACD < Signal (-0.0995 vs -0.0380) | ADX = 36.11 ✓ | Volatility = 0.0051 ✓ (threshold: 0.006) | Price < Upper BB (129.41 vs 130.96) | Price > Lower BB (129.41 vs 127.47) | Price vs KC Middle: 129.41 vs 129.46
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $129.79 → Target: $129.96
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 60.23  | MACD < Signal | ADX = 23.36 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0024 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.34 vs 130.49) | RSI = 60.23  | MACD < Signal (-0.0238 vs -0.0184) | ADX = 23.36 ✓ | Volatility = 0.0024 ✓ (threshold: 0.006) | Price < Upper BB (129.79 vs 131.87) | Price > Lower BB (129.79 vs 128.43) | Price vs KC Middle: 129.79 vs 129.86
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2227 | Volatility Stop: $129.46
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.58, RSI=0.56, MACD=0.51, ADX=0.61, ARIMA=0.54
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.79 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $129.90 → Target: $129.60
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 22.89 ✓ | MACD < Signal | ADX = 44.10 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0063  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (129.36 vs 128.56) | RSI = 22.89 ✓ | MACD < Signal (0.0069 vs 0.0761) | ADX = 44.10 ✓ | Volatility = 0.0063  (threshold: 0.006) | Price < Upper BB (129.90 vs 131.97) | Price > Lower BB (129.90 vs 127.32) | Price vs KC Middle: 129.90 vs 130.39
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2321 | Volatility Stop: $130.24
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.57, RSI=0.81, MACD=0.61, ADX=0.54, ARIMA=0.89
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.77 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $129.46 → Target: $129.59
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 43.77  | MACD > Signal | ADX = 20.16 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0059 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (129.03 vs 128.52) | RSI = 43.77  | MACD > Signal (0.0056 vs -0.0763) | ADX = 20.16 ✓ | Volatility = 0.0059 ✓ (threshold: 0.006) | Price < Upper BB (129.46 vs 131.13) | Price > Lower BB (129.46 vs 127.17) | Price vs KC Middle: 129.46 vs 128.95
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.1905 | Volatility Stop: $129.17
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.87, RSI=0.67, MACD=0.73, ADX=0.96, ARIMA=0.67
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.70 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $128.99 → Target: $128.79
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 39.40  | MACD < Signal | ADX = 33.45 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0065  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (129.48 vs 128.49) | RSI = 39.40  | MACD < Signal (-0.0695 vs 0.0124) | ADX = 33.45 ✓ | Volatility = 0.0065  (threshold: 0.006) | Price < Upper BB (128.99 vs 131.13) | Price > Lower BB (128.99 vs 127.71) | Price vs KC Middle: 128.99 vs 128.84
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2364 | Volatility Stop: $129.35
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.58, RSI=0.89, MACD=0.51, ADX=0.54, ARIMA=0.75
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.84 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $129.02 → Target: $129.14
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 77.60 ✓ | MACD > Signal | ADX = 17.03 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0047 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (129.09 vs 128.81) | RSI = 77.60 ✓ | MACD > Signal (0.0742 vs 0.0681) | ADX = 17.03  | Volatility = 0.0047 ✓ (threshold: 0.006) | Price < Upper BB (129.02 vs 130.79) | Price > Lower BB (129.02 vs 128.01) | Price vs KC Middle: 129.02 vs 129.09
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.1843 | Volatility Stop: $129.30
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.78, RSI=0.56, MACD=0.78, ADX=0.69, ARIMA=0.99
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.89 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $128.85 → Target: $129.13
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 51.69  | MACD > Signal | ADX = 42.10 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0079  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (127.94 vs 129.22) | RSI = 51.69  | MACD > Signal (-0.0149 vs -0.0895) | ADX = 42.10 ✓ | Volatility = 0.0079  (threshold: 0.006) | Price < Upper BB (128.85 vs 131.39) | Price > Lower BB (128.85 vs 127.11) | Price vs KC Middle: 128.85 vs 129.64
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2039 | Volatility Stop: $129.16
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.68, RSI=0.74, MACD=0.72, ADX=0.82, ARIMA=0.72
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.91 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $129.22 → Target: $128.92
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 36.00  | MACD > Signal | ADX = 42.70 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0025 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (128.71 vs 130.50) | RSI = 36.00  | MACD > Signal (0.0539 vs -0.0188) | ADX = 42.70 ✓ | Volatility = 0.0025 ✓ (threshold: 0.006) | Price < Upper BB (129.22 vs 131.50) | Price > Lower BB (129.22 vs 127.80) | Price vs KC Middle: 129.22 vs 129.39
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2038 | Volatility Stop: $129.53
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.85, RSI=0.58, MACD=0.55, ADX=0.92, ARIMA=0.84
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.69 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $129.66 → Target: $129.55
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 25.99 ✓ | MACD < Signal | ADX = 35.96 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0021 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (130.53 vs 130.50) | RSI = 25.99 ✓ | MACD < Signal (-0.0858 vs 0.0704) | ADX = 35.96 ✓ | Volatility = 0.0021 ✓ (threshold: 0.006) | Price < Upper BB (129.66 vs 131.84) | Price > Lower BB (129.66 vs 127.76) | Price vs KC Middle: 129.66 vs 129.76
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $129.44 → Target: $129.32
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 41.29  | MACD < Signal | ADX = 18.10 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0097  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (129.83 vs 129.79) | RSI = 41.29  | MACD < Signal (-0.0762 vs -0.0165) | ADX = 18.10  | Volatility = 0.0097  (threshold: 0.006) | Price < Upper BB (129.44 vs 132.29) | Price > Lower BB (129.44 vs 127.67) | Price vs KC Middle: 129.44 vs 129.98
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2379 | Volatility Stop: $129.79
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.68, RSI=0.77, MACD=0.57, ADX=0.71, ARIMA=0.82
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.86 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $129.04 → Target: $129.11
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 51.54  | MACD > Signal | ADX = 26.46 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0098  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (129.03 vs 128.85) | RSI = 51.54  | MACD > Signal (0.0655 vs -0.0173) | ADX = 26.46 ✓ | Volatility = 0.0098  (threshold: 0.006) | Price < Upper BB (129.04 vs 130.71) | Price > Lower BB (129.04 vs 126.78) | Price vs KC Middle: 129.04 vs 129.55
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.1986 | Volatility Stop: $129.34
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.69, RSI=0.67, MACD=0.94, ADX=0.96, ARIMA=0.60
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.69 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $129.23 → Target: $129.10
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 57.40  | MACD < Signal | ADX = 19.11 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0054 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (129.36 vs 130.11) | RSI = 57.40  | MACD < Signal (-0.0362 vs 0.0502) | ADX = 19.11  | Volatility = 0.0054 ✓ (threshold: 0.006) | Price < Upper BB (129.23 vs 131.99) | Price > Lower BB (129.23 vs 126.96) | Price vs KC Middle: 129.23 vs 129.82
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2391 | Volatility Stop: $129.59
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.66, RSI=0.69, MACD=0.95, ADX=0.85, ARIMA=0.52
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.67 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $128.98 → Target: $128.74
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 34.24  | MACD < Signal | ADX = 32.33 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0081  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (129.42 vs 128.31) | RSI = 34.24  | MACD < Signal (-0.0383 vs 0.0910) | ADX = 32.33 ✓ | Volatility = 0.0081  (threshold: 0.006) | Price < Upper BB (128.98 vs 130.38) | Price > Lower BB (128.98 vs 126.50) | Price vs KC Middle: 128.98 vs 128.21
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2007 | Volatility Stop: $129.28
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.97, RSI=0.68, MACD=0.94, ADX=0.71, ARIMA=0.66
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.89 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $129.31 → Target: $129.14
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 68.58  | MACD > Signal | ADX = 37.28 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0018 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (129.80 vs 129.95) | RSI = 68.58  | MACD > Signal (0.0216 vs -0.0866) | ADX = 37.28 ✓ | Volatility = 0.0018 ✓ (threshold: 0.006) | Price < Upper BB (129.31 vs 131.45) | Price > Lower BB (129.31 vs 126.80) | Price vs KC Middle: 129.31 vs 129.65
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2003 | Volatility Stop: $129.01
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.83, RSI=0.93, MACD=0.61, ADX=0.51, ARIMA=0.69
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.71 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $129.31 → Target: $129.16
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 67.74  | MACD > Signal | ADX = 36.63 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0082  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (129.16 vs 129.78) | RSI = 67.74  | MACD > Signal (0.0887 vs 0.0213) | ADX = 36.63 ✓ | Volatility = 0.0082  (threshold: 0.006) | Price < Upper BB (129.31 vs 131.87) | Price > Lower BB (129.31 vs 127.18) | Price vs KC Middle: 129.31 vs 129.16
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2407 | Volatility Stop: $129.67
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.80, RSI=0.98, MACD=0.87, ADX=0.86, ARIMA=0.79
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.76 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $129.23 → Target: $129.39
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 65.75  | MACD < Signal | ADX = 36.65 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0021 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (128.45 vs 129.27) | RSI = 65.75  | MACD < Signal (0.0422 vs 0.0794) | ADX = 36.65 ✓ | Volatility = 0.0021 ✓ (threshold: 0.006) | Price < Upper BB (129.23 vs 130.71) | Price > Lower BB (129.23 vs 126.75) | Price vs KC Middle: 129.23 vs 129.14
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2064 | Volatility Stop: $129.54
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.94, RSI=0.61, MACD=0.88, ADX=0.76, ARIMA=0.51
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.67 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $128.76 → Target: $128.85
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 24.38 ✓ | MACD > Signal | ADX = 42.06 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0065  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (129.63 vs 127.76) | RSI = 24.38 ✓ | MACD > Signal (0.0753 vs -0.0069) | ADX = 42.06 ✓ | Volatility = 0.0065  (threshold: 0.006) | Price < Upper BB (128.76 vs 131.00) | Price > Lower BB (128.76 vs 127.66) | Price vs KC Middle: 128.76 vs 128.98
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2063 | Volatility Stop: $128.45
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.69, RSI=0.69, MACD=0.95, ADX=0.55, ARIMA=0.86
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.67 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $128.57 → Target: $128.30
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 44.85  | MACD > Signal | ADX = 23.61 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0031 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (128.43 vs 128.89) | RSI = 44.85  | MACD > Signal (-0.0871 vs -0.0951) | ADX = 23.61 ✓ | Volatility = 0.0031 ✓ (threshold: 0.006) | Price < Upper BB (128.57 vs 130.53) | Price > Lower BB (128.57 vs 126.03) | Price vs KC Middle: 128.57 vs 129.05
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.1813 | Volatility Stop: $128.30
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.63, RSI=0.82, MACD=0.62, ADX=0.83, ARIMA=0.55
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.87 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $128.29 → Target: $128.06
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 79.54 ✓ | MACD > Signal | ADX = 37.22 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0018 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (129.06 vs 128.71) | RSI = 79.54 ✓ | MACD > Signal (0.0500 vs 0.0257) | ADX = 37.22 ✓ | Volatility = 0.0018 ✓ (threshold: 0.006) | Price < Upper BB (128.29 vs 130.20) | Price > Lower BB (128.29 vs 126.69) | Price vs KC Middle: 128.29 vs 128.82
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2436 | Volatility Stop: $127.93
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.79, RSI=0.61, MACD=0.69, ADX=0.66, ARIMA=0.96
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.91 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $128.19 → Target: $128.47
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 67.35  | MACD < Signal | ADX = 36.82 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0025 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (127.35 vs 127.19) | RSI = 67.35  | MACD < Signal (0.0405 vs 0.0631) | ADX = 36.82 ✓ | Volatility = 0.0025 ✓ (threshold: 0.006) | Price < Upper BB (128.19 vs 129.37) | Price > Lower BB (128.19 vs 126.45) | Price vs KC Middle: 128.19 vs 127.56
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2483 | Volatility Stop: $128.56
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.91, RSI=0.78, MACD=0.69, ADX=0.59, ARIMA=0.96
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.94 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $128.53 → Target: $128.63
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 40.65  | MACD < Signal | ADX = 31.69 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0093  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (127.95 vs 129.71) | RSI = 40.65  | MACD < Signal (-0.0580 vs 0.0745) | ADX = 31.69 ✓ | Volatility = 0.0093  (threshold: 0.006) | Price < Upper BB (128.53 vs 130.55) | Price > Lower BB (128.53 vs 125.64) | Price vs KC Middle: 128.53 vs 127.56
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2477 | Volatility Stop: $128.16
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.84, RSI=1.00, MACD=0.97, ADX=0.76, ARIMA=0.67
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.78 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $128.91 → Target: $128.63
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 63.83  | MACD < Signal | ADX = 19.06 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0028 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (128.27 vs 127.89) | RSI = 63.83  | MACD < Signal (-0.0152 vs 0.0065) | ADX = 19.06  | Volatility = 0.0028 ✓ (threshold: 0.006) | Price < Upper BB (128.91 vs 131.11) | Price > Lower BB (128.91 vs 127.74) | Price vs KC Middle: 128.91 vs 129.48
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2173 | Volatility Stop: $129.24
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.82, RSI=0.80, MACD=0.81, ADX=0.87, ARIMA=0.79
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.81 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $129.19 → Target: $129.29
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 66.23  | MACD > Signal | ADX = 17.28 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0085  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (128.86 vs 129.26) | RSI = 66.23  | MACD > Signal (0.0980 vs -0.0641) | ADX = 17.28  | Volatility = 0.0085  (threshold: 0.006) | Price < Upper BB (129.19 vs 130.79) | Price > Lower BB (129.19 vs 127.04) | Price vs KC Middle: 129.19 vs 129.42
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2420 | Volatility Stop: $128.83
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.68, RSI=0.96, MACD=0.57, ADX=0.96, ARIMA=0.66
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.68 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $129.61 → Target: $129.79
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 50.56  | MACD < Signal | ADX = 34.57 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0038 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (129.50 vs 130.96) | RSI = 50.56  | MACD < Signal (0.0823 vs 0.0908) | ADX = 34.57 ✓ | Volatility = 0.0038 ✓ (threshold: 0.006) | Price < Upper BB (129.61 vs 131.76) | Price > Lower BB (129.61 vs 127.67) | Price vs KC Middle: 129.61 vs 130.24
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2286 | Volatility Stop: $129.27
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.69, RSI=0.95, MACD=0.96, ADX=0.77, ARIMA=0.76
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.90 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $129.82 → Target: $130.08
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 21.36 ✓ | MACD < Signal | ADX = 27.78 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0030 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.31 vs 130.59) | RSI = 21.36 ✓ | MACD < Signal (-0.0317 vs 0.0975) | ADX = 27.78 ✓ | Volatility = 0.0030 ✓ (threshold: 0.006) | Price < Upper BB (129.82 vs 131.45) | Price > Lower BB (129.82 vs 128.64) | Price vs KC Middle: 129.82 vs 129.81
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $129.77 → Target: $129.65
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 67.21  | MACD > Signal | ADX = 15.51 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0036 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.48 vs 130.83) | RSI = 67.21  | MACD > Signal (0.0685 vs 0.0034) | ADX = 15.51  | Volatility = 0.0036 ✓ (threshold: 0.006) | Price < Upper BB (129.77 vs 131.06) | Price > Lower BB (129.77 vs 126.89) | Price vs KC Middle: 129.77 vs 130.71
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $129.97 → Target: $130.09
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 39.61  | MACD > Signal | ADX = 21.26 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0047 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (129.90 vs 129.80) | RSI = 39.61  | MACD > Signal (0.0823 vs 0.0672) | ADX = 21.26 ✓ | Volatility = 0.0047 ✓ (threshold: 0.006) | Price < Upper BB (129.97 vs 131.49) | Price > Lower BB (129.97 vs 128.22) | Price vs KC Middle: 129.97 vs 130.61
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $130.10 → Target: $130.24
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 61.01  | MACD < Signal | ADX = 38.75 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0013 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (129.84 vs 131.01) | RSI = 61.01  | MACD < Signal (-0.0783 vs 0.0892) | ADX = 38.75 ✓ | Volatility = 0.0013 ✓ (threshold: 0.006) | Price < Upper BB (130.10 vs 132.59) | Price > Lower BB (130.10 vs 128.09) | Price vs KC Middle: 130.10 vs 129.28
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $129.68 → Target: $129.51
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 28.58 ✓ | MACD > Signal | ADX = 36.66 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0040 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (129.38 vs 128.54) | RSI = 28.58 ✓ | MACD > Signal (0.0054 vs -0.0378) | ADX = 36.66 ✓ | Volatility = 0.0040 ✓ (threshold: 0.006) | Price < Upper BB (129.68 vs 132.24) | Price > Lower BB (129.68 vs 127.30) | Price vs KC Middle: 129.68 vs 129.99
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.1968 | Volatility Stop: $129.38
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.93, RSI=0.68, MACD=0.77, ADX=0.67, ARIMA=0.81
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.92 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $130.15 → Target: $130.08
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 69.33  | MACD > Signal | ADX = 18.03 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0042 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (129.20 vs 130.63) | RSI = 69.33  | MACD > Signal (0.0317 vs -0.0981) | ADX = 18.03  | Volatility = 0.0042 ✓ (threshold: 0.006) | Price < Upper BB (130.15 vs 132.19) | Price > Lower BB (130.15 vs 129.13) | Price vs KC Middle: 130.15 vs 131.11
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.1888 | Volatility Stop: $129.86
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.69, RSI=0.59, MACD=0.92, ADX=0.82, ARIMA=0.64
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.86 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $130.43 → Target: $130.33
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 62.93  | MACD > Signal | ADX = 30.69 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0086  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.78 vs 131.79) | RSI = 62.93  | MACD > Signal (0.0131 vs -0.0400) | ADX = 30.69 ✓ | Volatility = 0.0086  (threshold: 0.006) | Price < Upper BB (130.43 vs 131.73) | Price > Lower BB (130.43 vs 128.19) | Price vs KC Middle: 130.43 vs 130.11
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $130.33 → Target: $130.51
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 52.52  | MACD > Signal | ADX = 41.56 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0013 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (129.43 vs 129.21) | RSI = 52.52  | MACD > Signal (0.0241 vs -0.0921) | ADX = 41.56 ✓ | Volatility = 0.0013 ✓ (threshold: 0.006) | Price < Upper BB (130.33 vs 131.84) | Price > Lower BB (130.33 vs 128.15) | Price vs KC Middle: 130.33 vs 130.33
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2396 | Volatility Stop: $129.97
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.69, RSI=0.89, MACD=0.53, ADX=0.53, ARIMA=0.52
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.89 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $130.70 → Target: $130.98
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 61.11  | MACD < Signal | ADX = 37.51 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0064  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (131.67 vs 131.69) | RSI = 61.11  | MACD < Signal (-0.0759 vs -0.0519) | ADX = 37.51 ✓ | Volatility = 0.0064  (threshold: 0.006) | Price < Upper BB (130.70 vs 132.79) | Price > Lower BB (130.70 vs 128.93) | Price vs KC Middle: 130.70 vs 130.49
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2041 | Volatility Stop: $131.01
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.57, RSI=0.56, MACD=0.93, ADX=0.87, ARIMA=0.64
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.78 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $130.67 → Target: $130.56
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 55.32  | MACD > Signal | ADX = 15.42 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0054 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.12 vs 131.62) | RSI = 55.32  | MACD > Signal (0.0679 vs -0.0085) | ADX = 15.42  | Volatility = 0.0054 ✓ (threshold: 0.006) | Price < Upper BB (130.67 vs 131.79) | Price > Lower BB (130.67 vs 129.13) | Price vs KC Middle: 130.67 vs 129.77
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2326 | Volatility Stop: $130.32
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.57, RSI=0.69, MACD=0.87, ADX=0.69, ARIMA=0.97
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.84 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $130.71 → Target: $130.55
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 38.41  | MACD > Signal | ADX = 18.64 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0097  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (130.63 vs 130.59) | RSI = 38.41  | MACD > Signal (0.0374 vs -0.0400) | ADX = 18.64  | Volatility = 0.0097  (threshold: 0.006) | Price < Upper BB (130.71 vs 132.70) | Price > Lower BB (130.71 vs 128.58) | Price vs KC Middle: 130.71 vs 130.08
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2265 | Volatility Stop: $131.05
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.56, RSI=0.93, MACD=0.83, ADX=0.88, ARIMA=0.70
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.74 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $130.83 → Target: $131.06
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 56.13  | MACD > Signal | ADX = 22.23 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0066  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.38 vs 131.91) | RSI = 56.13  | MACD > Signal (0.0978 vs 0.0066) | ADX = 22.23 ✓ | Volatility = 0.0066  (threshold: 0.006) | Price < Upper BB (130.83 vs 132.34) | Price > Lower BB (130.83 vs 128.19) | Price vs KC Middle: 130.83 vs 130.20
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2385 | Volatility Stop: $131.19
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=1.00, RSI=0.85, MACD=0.86, ADX=0.64, ARIMA=0.74
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.81 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $131.01 → Target: $130.84
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 57.31  | MACD < Signal | ADX = 22.45 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0066  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (131.27 vs 130.19) | RSI = 57.31  | MACD < Signal (-0.0547 vs -0.0391) | ADX = 22.45 ✓ | Volatility = 0.0066  (threshold: 0.006) | Price < Upper BB (131.01 vs 133.22) | Price > Lower BB (131.01 vs 129.29) | Price vs KC Middle: 131.01 vs 130.37
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $131.23 → Target: $131.42
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 48.21  | MACD > Signal | ADX = 32.41 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0013 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (132.09 vs 129.89) | RSI = 48.21  | MACD > Signal (0.0812 vs 0.0674) | ADX = 32.41 ✓ | Volatility = 0.0013 ✓ (threshold: 0.006) | Price < Upper BB (131.23 vs 132.29) | Price > Lower BB (131.23 vs 128.78) | Price vs KC Middle: 131.23 vs 131.68
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2018 | Volatility Stop: $130.93
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.97, RSI=0.52, MACD=0.78, ADX=0.74, ARIMA=0.67
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.84 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $131.25 → Target: $131.44
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 61.79  | MACD > Signal | ADX = 19.56 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0088  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.66 vs 130.88) | RSI = 61.79  | MACD > Signal (0.0117 vs -0.0076) | ADX = 19.56  | Volatility = 0.0088  (threshold: 0.006) | Price < Upper BB (131.25 vs 132.41) | Price > Lower BB (131.25 vs 129.31) | Price vs KC Middle: 131.25 vs 132.09
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2225 | Volatility Stop: $131.58
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.72, RSI=0.70, MACD=0.79, ADX=0.94, ARIMA=0.80
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.74 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $131.71 → Target: $131.81
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 26.07 ✓ | MACD < Signal | ADX = 34.94 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0038 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (131.94 vs 131.52) | RSI = 26.07 ✓ | MACD < Signal (-0.0272 vs -0.0046) | ADX = 34.94 ✓ | Volatility = 0.0038 ✓ (threshold: 0.006) | Price < Upper BB (131.71 vs 133.25) | Price > Lower BB (131.71 vs 129.61) | Price vs KC Middle: 131.71 vs 132.57
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.1856 | Volatility Stop: $131.99
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.73, RSI=0.95, MACD=0.56, ADX=0.97, ARIMA=0.85
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.69 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $132.01 → Target: $132.30
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 71.77 ✓ | MACD > Signal | ADX = 31.69 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0068  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (132.79 vs 131.29) | RSI = 71.77 ✓ | MACD > Signal (-0.0404 vs -0.0649) | ADX = 31.69 ✓ | Volatility = 0.0068  (threshold: 0.006) | Price < Upper BB (132.01 vs 134.78) | Price > Lower BB (132.01 vs 129.67) | Price vs KC Middle: 132.01 vs 131.57
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.1853 | Volatility Stop: $132.29
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.50, RSI=0.82, MACD=0.85, ADX=0.94, ARIMA=0.59
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.86 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $131.76 → Target: $131.60
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 23.37 ✓ | MACD < Signal | ADX = 28.32 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0075  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.77 vs 131.96) | RSI = 23.37 ✓ | MACD < Signal (-0.0860 vs 0.0041) | ADX = 28.32 ✓ | Volatility = 0.0075  (threshold: 0.006) | Price < Upper BB (131.76 vs 133.46) | Price > Lower BB (131.76 vs 129.62) | Price vs KC Middle: 131.76 vs 131.69
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2371 | Volatility Stop: $132.11
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.66, RSI=0.69, MACD=0.69, ADX=0.89, ARIMA=0.74
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.82 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $131.53 → Target: $131.65
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 72.63 ✓ | MACD < Signal | ADX = 23.02 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0063  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.66 vs 132.38) | RSI = 72.63 ✓ | MACD < Signal (-0.0465 vs 0.0508) | ADX = 23.02 ✓ | Volatility = 0.0063  (threshold: 0.006) | Price < Upper BB (131.53 vs 133.27) | Price > Lower BB (131.53 vs 129.83) | Price vs KC Middle: 131.53 vs 131.45
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2354 | Volatility Stop: $131.88
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.68, RSI=0.79, MACD=0.75, ADX=0.76, ARIMA=0.95
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.86 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $131.47 → Target: $131.54
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 70.97 ✓ | MACD < Signal | ADX = 26.90 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0013 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (131.61 vs 132.70) | RSI = 70.97 ✓ | MACD < Signal (0.0194 vs 0.0525) | ADX = 26.90 ✓ | Volatility = 0.0013 ✓ (threshold: 0.006) | Price < Upper BB (131.47 vs 133.56) | Price > Lower BB (131.47 vs 129.24) | Price vs KC Middle: 131.47 vs 131.48
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2187 | Volatility Stop: $131.80
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.99, RSI=0.58, MACD=0.90, ADX=0.56, ARIMA=0.53
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.91 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $131.53 → Target: $131.62
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 36.70  | MACD < Signal | ADX = 43.81 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0036 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (131.64 vs 132.11) | RSI = 36.70  | MACD < Signal (-0.0038 vs 0.0338) | ADX = 43.81 ✓ | Volatility = 0.0036 ✓ (threshold: 0.006) | Price < Upper BB (131.53 vs 132.77) | Price > Lower BB (131.53 vs 128.70) | Price vs KC Middle: 131.53 vs 131.87
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $131.62 → Target: $131.41
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 52.73  | MACD < Signal | ADX = 32.41 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0013 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (132.59 vs 130.84) | RSI = 52.73  | MACD < Signal (-0.0755 vs -0.0164) | ADX = 32.41 ✓ | Volatility = 0.0013 ✓ (threshold: 0.006) | Price < Upper BB (131.62 vs 132.85) | Price > Lower BB (131.62 vs 129.18) | Price vs KC Middle: 131.62 vs 131.77
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $131.67 → Target: $131.41
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 78.32 ✓ | MACD < Signal | ADX = 43.03 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0023 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (132.20 vs 132.77) | RSI = 78.32 ✓ | MACD < Signal (0.0226 vs 0.0642) | ADX = 43.03 ✓ | Volatility = 0.0023 ✓ (threshold: 0.006) | Price < Upper BB (131.67 vs 133.54) | Price > Lower BB (131.67 vs 130.21) | Price vs KC Middle: 131.67 vs 132.59
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2092 | Volatility Stop: $131.36
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.89, RSI=0.98, MACD=0.77, ADX=0.99, ARIMA=0.75
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.92 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $131.80 → Target: $131.75
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 55.64  | MACD > Signal | ADX = 26.35 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0085  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (132.08 vs 130.58) | RSI = 55.64  | MACD > Signal (-0.0843 vs -0.0860) | ADX = 26.35 ✓ | Volatility = 0.0085  (threshold: 0.006) | Price < Upper BB (131.80 vs 134.30) | Price > Lower BB (131.80 vs 130.20) | Price vs KC Middle: 131.80 vs 130.87
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2314 | Volatility Stop: $132.15
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.54, RSI=0.93, MACD=0.89, ADX=0.54, ARIMA=0.81
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.65 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $131.49 → Target: $131.58
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 44.18  | MACD > Signal | ADX = 32.82 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0044 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (131.02 vs 131.10) | RSI = 44.18  | MACD > Signal (-0.0141 vs -0.0224) | ADX = 32.82 ✓ | Volatility = 0.0044 ✓ (threshold: 0.006) | Price < Upper BB (131.49 vs 133.93) | Price > Lower BB (131.49 vs 130.06) | Price vs KC Middle: 131.49 vs 131.41
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $131.85 → Target: $131.91
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 65.96  | MACD < Signal | ADX = 16.70 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0016 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (131.29 vs 132.05) | RSI = 65.96  | MACD < Signal (-0.0498 vs -0.0451) | ADX = 16.70  | Volatility = 0.0016 ✓ (threshold: 0.006) | Price < Upper BB (131.85 vs 133.27) | Price > Lower BB (131.85 vs 128.91) | Price vs KC Middle: 131.85 vs 131.34
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $131.90 → Target: $131.80
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 69.95  | MACD < Signal | ADX = 44.30 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0041 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (131.78 vs 131.99) | RSI = 69.95  | MACD < Signal (-0.0610 vs 0.0458) | ADX = 44.30 ✓ | Volatility = 0.0041 ✓ (threshold: 0.006) | Price < Upper BB (131.90 vs 133.83) | Price > Lower BB (131.90 vs 129.95) | Price vs KC Middle: 131.90 vs 132.07
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2343 | Volatility Stop: $131.55
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.83, RSI=0.68, MACD=0.78, ADX=0.95, ARIMA=0.88
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.76 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $132.38 → Target: $132.11
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 21.94 ✓ | MACD < Signal | ADX = 21.61 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0062  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (131.42 vs 131.54) | RSI = 21.94 ✓ | MACD < Signal (-0.0874 vs -0.0766) | ADX = 21.61 ✓ | Volatility = 0.0062  (threshold: 0.006) | Price < Upper BB (132.38 vs 134.58) | Price > Lower BB (132.38 vs 131.00) | Price vs KC Middle: 132.38 vs 133.12
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $132.75 → Target: $132.47
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 59.58  | MACD > Signal | ADX = 21.41 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0038 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (133.67 vs 131.43) | RSI = 59.58  | MACD > Signal (-0.0415 vs -0.0435) | ADX = 21.41 ✓ | Volatility = 0.0038 ✓ (threshold: 0.006) | Price < Upper BB (132.75 vs 135.29) | Price > Lower BB (132.75 vs 130.54) | Price vs KC Middle: 132.75 vs 133.20
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.1921 | Volatility Stop: $132.46
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.79, RSI=0.99, MACD=0.94, ADX=0.71, ARIMA=0.60
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.83 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $132.59 → Target: $132.85
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 71.32 ✓ | MACD > Signal | ADX = 19.48 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0074  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (131.78 vs 133.65) | RSI = 71.32 ✓ | MACD > Signal (0.0543 vs -0.0833) | ADX = 19.48  | Volatility = 0.0074  (threshold: 0.006) | Price < Upper BB (132.59 vs 135.12) | Price > Lower BB (132.59 vs 129.72) | Price vs KC Middle: 132.59 vs 133.49
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.1847 | Volatility Stop: $132.31
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.76, RSI=0.83, MACD=0.51, ADX=0.84, ARIMA=0.97
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.67 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $132.91 → Target: $132.85
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 21.73 ✓ | MACD > Signal | ADX = 25.50 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0058 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (132.66 vs 133.71) | RSI = 21.73 ✓ | MACD > Signal (0.0949 vs 0.0698) | ADX = 25.50 ✓ | Volatility = 0.0058 ✓ (threshold: 0.006) | Price < Upper BB (132.91 vs 135.27) | Price > Lower BB (132.91 vs 131.87) | Price vs KC Middle: 132.91 vs 132.31
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2307 | Volatility Stop: $132.57
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.61, RSI=0.92, MACD=0.93, ADX=0.62, ARIMA=0.51
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.88 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $132.79 → Target: $132.74
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 44.85  | MACD < Signal | ADX = 25.55 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0071  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (133.46 vs 132.12) | RSI = 44.85  | MACD < Signal (0.0657 vs 0.0851) | ADX = 25.55 ✓ | Volatility = 0.0071  (threshold: 0.006) | Price < Upper BB (132.79 vs 134.60) | Price > Lower BB (132.79 vs 131.62) | Price vs KC Middle: 132.79 vs 132.89
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2277 | Volatility Stop: $133.13
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.87, RSI=0.52, MACD=0.75, ADX=0.84, ARIMA=0.65
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.90 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $132.66 → Target: $132.75
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 43.01  | MACD > Signal | ADX = 22.06 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0055 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (132.46 vs 132.18) | RSI = 43.01  | MACD > Signal (0.0750 vs 0.0413) | ADX = 22.06 ✓ | Volatility = 0.0055 ✓ (threshold: 0.006) | Price < Upper BB (132.66 vs 135.32) | Price > Lower BB (132.66 vs 129.74) | Price vs KC Middle: 132.66 vs 132.82
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $132.48 → Target: $132.55
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 78.05 ✓ | MACD > Signal | ADX = 17.62 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0056 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (132.47 vs 131.09) | RSI = 78.05 ✓ | MACD > Signal (0.0071 vs -0.0968) | ADX = 17.62  | Volatility = 0.0056 ✓ (threshold: 0.006) | Price < Upper BB (132.48 vs 134.21) | Price > Lower BB (132.48 vs 131.01) | Price vs KC Middle: 132.48 vs 131.66
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2175 | Volatility Stop: $132.15
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.95, RSI=0.66, MACD=0.77, ADX=0.94, ARIMA=0.77
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.93 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $131.99 → Target: $131.87
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 73.46 ✓ | MACD < Signal | ADX = 31.23 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0087  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (132.79 vs 130.94) | RSI = 73.46 ✓ | MACD < Signal (-0.0341 vs -0.0053) | ADX = 31.23 ✓ | Volatility = 0.0087  (threshold: 0.006) | Price < Upper BB (131.99 vs 134.56) | Price > Lower BB (131.99 vs 129.80) | Price vs KC Middle: 131.99 vs 132.37
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $132.06 → Target: $131.99
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 38.85  | MACD > Signal | ADX = 15.75 
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0040 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (132.63 vs 133.07) | RSI = 38.85  | MACD > Signal (0.0754 vs -0.0218) | ADX = 15.75  | Volatility = 0.0040 ✓ (threshold: 0.006) | Price < Upper BB (132.06 vs 134.44) | Price > Lower BB (132.06 vs 130.39) | Price vs KC Middle: 132.06 vs 131.24
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $132.15 → Target: $132.44
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 69.10  | MACD < Signal | ADX = 35.77 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0037 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (131.91 vs 132.24) | RSI = 69.10  | MACD < Signal (0.0123 vs 0.0728) | ADX = 35.77 ✓ | Volatility = 0.0037 ✓ (threshold: 0.006) | Price < Upper BB (132.15 vs 133.88) | Price > Lower BB (132.15 vs 130.73) | Price vs KC Middle: 132.15 vs 132.58
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2297 | Volatility Stop: $132.49
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.88, RSI=0.51, MACD=0.97, ADX=0.56, ARIMA=0.66
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.65 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $131.73 → Target: $131.60
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 76.47 ✓ | MACD > Signal | ADX = 29.98 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0053 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (131.48 vs 131.24) | RSI = 76.47 ✓ | MACD > Signal (-0.0191 vs -0.0289) | ADX = 29.98 ✓ | Volatility = 0.0053 ✓ (threshold: 0.006) | Price < Upper BB (131.73 vs 134.32) | Price > Lower BB (131.73 vs 129.33) | Price vs KC Middle: 131.73 vs 131.51
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2349 | Volatility Stop: $131.37
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.84, RSI=0.53, MACD=0.87, ADX=0.83, ARIMA=0.94
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.67 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $131.44 → Target: $131.38
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 26.91 ✓ | MACD < Signal | ADX = 38.84 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0016 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.92 vs 131.46) | RSI = 26.91 ✓ | MACD < Signal (-0.0152 vs 0.0534) | ADX = 38.84 ✓ | Volatility = 0.0016 ✓ (threshold: 0.006) | Price < Upper BB (131.44 vs 134.20) | Price > Lower BB (131.44 vs 128.97) | Price vs KC Middle: 131.44 vs 131.83
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $131.08 → Target: $130.83
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 35.21  | MACD < Signal | ADX = 22.99 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0020 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (131.84 vs 130.29) | RSI = 35.21  | MACD < Signal (-0.0567 vs 0.0712) | ADX = 22.99 ✓ | Volatility = 0.0020 ✓ (threshold: 0.006) | Price < Upper BB (131.08 vs 132.96) | Price > Lower BB (131.08 vs 128.14) | Price vs KC Middle: 131.08 vs 130.68
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2311 | Volatility Stop: $131.42
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.52, RSI=0.88, MACD=0.75, ADX=0.97, ARIMA=0.86
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.65 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $131.57 → Target: $131.41
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 56.07  | MACD < Signal | ADX = 30.53 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0099  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (132.37 vs 131.60) | RSI = 56.07  | MACD < Signal (-0.0787 vs 0.0880) | ADX = 30.53 ✓ | Volatility = 0.0099  (threshold: 0.006) | Price < Upper BB (131.57 vs 133.09) | Price > Lower BB (131.57 vs 129.78) | Price vs KC Middle: 131.57 vs 131.26
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $131.32 → Target: $131.51
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 73.19 ✓ | MACD > Signal | ADX = 28.49 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0020 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.45 vs 130.93) | RSI = 73.19 ✓ | MACD > Signal (0.0634 vs -0.0470) | ADX = 28.49 ✓ | Volatility = 0.0020 ✓ (threshold: 0.006) | Price < Upper BB (131.32 vs 133.27) | Price > Lower BB (131.32 vs 128.36) | Price vs KC Middle: 131.32 vs 131.73
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2270 | Volatility Stop: $130.97
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.70, RSI=0.69, MACD=0.69, ADX=0.66, ARIMA=0.89
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.87 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $130.90 → Target: $131.14
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 22.64 ✓ | MACD < Signal | ADX = 43.81 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0087  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.18 vs 130.28) | RSI = 22.64 ✓ | MACD < Signal (-0.0918 vs 0.0374) | ADX = 43.81 ✓ | Volatility = 0.0087  (threshold: 0.006) | Price < Upper BB (130.90 vs 132.20) | Price > Lower BB (130.90 vs 129.05) | Price vs KC Middle: 130.90 vs 131.04
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2495 | Volatility Stop: $130.53
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.76, RSI=0.75, MACD=0.64, ADX=0.64, ARIMA=0.77
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.88 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $130.67 → Target: $130.42
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 73.62 ✓ | MACD > Signal | ADX = 22.26 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0040 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.32 vs 130.34) | RSI = 73.62 ✓ | MACD > Signal (0.0995 vs -0.0151) | ADX = 22.26 ✓ | Volatility = 0.0040 ✓ (threshold: 0.006) | Price < Upper BB (130.67 vs 133.63) | Price > Lower BB (130.67 vs 129.30) | Price vs KC Middle: 130.67 vs 131.20
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.1992 | Volatility Stop: $130.37
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.88, RSI=0.83, MACD=0.69, ADX=0.90, ARIMA=0.58
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.81 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $130.95 → Target: $130.80
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 20.53 ✓ | MACD < Signal | ADX = 41.39 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0017 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.77 vs 131.31) | RSI = 20.53 ✓ | MACD < Signal (-0.0532 vs 0.0652) | ADX = 41.39 ✓ | Volatility = 0.0017 ✓ (threshold: 0.006) | Price < Upper BB (130.95 vs 133.46) | Price > Lower BB (130.95 vs 128.14) | Price vs KC Middle: 130.95 vs 131.94
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2250 | Volatility Stop: $131.29
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.77, RSI=0.68, MACD=0.67, ADX=0.79, ARIMA=0.90
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.72 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $130.84 → Target: $130.65
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 27.73 ✓ | MACD > Signal | ADX = 32.86 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0078  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (130.78 vs 130.00) | RSI = 27.73 ✓ | MACD > Signal (0.0768 vs 0.0267) | ADX = 32.86 ✓ | Volatility = 0.0078  (threshold: 0.006) | Price < Upper BB (130.84 vs 132.17) | Price > Lower BB (130.84 vs 128.90) | Price vs KC Middle: 130.84 vs 131.10
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2147 | Volatility Stop: $131.17
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.82, RSI=0.91, MACD=0.66, ADX=0.67, ARIMA=0.85
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.77 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $130.95 → Target: $131.00
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 52.41  | MACD > Signal | ADX = 43.94 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0062  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (130.14 vs 129.92) | RSI = 52.41  | MACD > Signal (0.0753 vs -0.0767) | ADX = 43.94 ✓ | Volatility = 0.0062  (threshold: 0.006) | Price < Upper BB (130.95 vs 133.81) | Price > Lower BB (130.95 vs 129.26) | Price vs KC Middle: 130.95 vs 131.51
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🟢 BULLISH - Trade conditions met for LONG position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🟢 BUY | ATR: $0.2458 | Volatility Stop: $130.58
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.68, RSI=0.71, MACD=0.90, ADX=0.85, ARIMA=0.94
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.95 (BUY 🟢)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $131.24 → Target: $130.96
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 61.67  | MACD < Signal | ADX = 34.16 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0062  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.99 vs 131.12) | RSI = 61.67  | MACD < Signal (-0.0414 vs 0.0944) | ADX = 34.16 ✓ | Volatility = 0.0062  (threshold: 0.006) | Price < Upper BB (131.24 vs 132.52) | Price > Lower BB (131.24 vs 130.19) | Price vs KC Middle: 131.24 vs 131.97
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $131.68 → Target: $131.77
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 < EMA21 | RSI = 69.73  | MACD > Signal | ADX = 33.21 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0014 ✓ (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 < EMA21 (130.74 vs 131.49) | RSI = 69.73  | MACD > Signal (0.0739 vs -0.0377) | ADX = 33.21 ✓ | Volatility = 0.0014 ✓ (threshold: 0.006) | Price < Upper BB (131.68 vs 134.40) | Price > Lower BB (131.68 vs 129.53) | Price vs KC Middle: 131.68 vs 132.66
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2318 | Volatility Stop: $132.03
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.88, RSI=0.68, MACD=0.53, ADX=0.63, ARIMA=0.66
+2025-04-13 01:59:31 [INFO] 【INTEGRATED】 Final Signal Strength: 0.92 (SELL 🔴)
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:31 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $131.24 → Target: $131.36
+2025-04-13 01:59:31 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 37.09  | MACD > Signal | ADX = 42.24 ✓
+2025-04-13 01:59:31 [INFO] 【VOLATILITY】 Volatility = 0.0076  (threshold: 0.006)
+2025-04-13 01:59:31 [INFO] 【BANDS】 EMA9 > EMA21 (132.18 vs 130.56) | RSI = 37.09  | MACD > Signal (0.0432 vs -0.0862) | ADX = 42.24 ✓ | Volatility = 0.0076  (threshold: 0.006) | Price < Upper BB (131.24 vs 133.96) | Price > Lower BB (131.24 vs 129.81) | Price vs KC Middle: 131.24 vs 131.19
+2025-04-13 01:59:31 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:31 [INFO] ============================================================
+2025-04-13 01:59:32 [INFO] ============================================================
+2025-04-13 01:59:32 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $130.82 → Target: $130.74
+2025-04-13 01:59:32 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 58.60  | MACD < Signal | ADX = 32.10 ✓
+2025-04-13 01:59:32 [INFO] 【VOLATILITY】 Volatility = 0.0039 ✓ (threshold: 0.006)
+2025-04-13 01:59:32 [INFO] 【BANDS】 EMA9 > EMA21 (131.11 vs 130.02) | RSI = 58.60  | MACD < Signal (-0.0279 vs -0.0131) | ADX = 32.10 ✓ | Volatility = 0.0039 ✓ (threshold: 0.006) | Price < Upper BB (130.82 vs 133.26) | Price > Lower BB (130.82 vs 129.50) | Price vs KC Middle: 130.82 vs 130.36
+2025-04-13 01:59:32 [INFO] 【SIGNAL】 ⚪ NEUTRAL - Conditions not met for trading
+2025-04-13 01:59:32 [INFO] ============================================================
+2025-04-13 01:59:32 [INFO] ============================================================
+2025-04-13 01:59:32 [INFO] 【ANALYSIS】 Forecast: BULLISH | Current: $130.53 → Target: $130.77
+2025-04-13 01:59:32 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 40.10  | MACD > Signal | ADX = 35.89 ✓
+2025-04-13 01:59:32 [INFO] 【VOLATILITY】 Volatility = 0.0051 ✓ (threshold: 0.006)
+2025-04-13 01:59:32 [INFO] 【BANDS】 EMA9 > EMA21 (130.08 vs 129.48) | RSI = 40.10  | MACD > Signal (0.0898 vs 0.0417) | ADX = 35.89 ✓ | Volatility = 0.0051 ✓ (threshold: 0.006) | Price < Upper BB (130.53 vs 132.07) | Price > Lower BB (130.53 vs 128.46) | Price vs KC Middle: 130.53 vs 130.82
+2025-04-13 01:59:32 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:32 [INFO] ============================================================
+2025-04-13 01:59:32 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2469 | Volatility Stop: $130.90
+2025-04-13 01:59:32 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.98, RSI=0.72, MACD=0.64, ADX=0.91, ARIMA=0.87
+2025-04-13 01:59:32 [INFO] 【INTEGRATED】 Final Signal Strength: 0.82 (SELL 🔴)
+2025-04-13 01:59:32 [INFO] ============================================================
+2025-04-13 01:59:32 [INFO] 【ANALYSIS】 Forecast: BEARISH | Current: $131.02 → Target: $130.74
+2025-04-13 01:59:32 [INFO] 【INDICATORS】 EMA9 > EMA21 | RSI = 66.67  | MACD < Signal | ADX = 37.62 ✓
+2025-04-13 01:59:32 [INFO] 【VOLATILITY】 Volatility = 0.0080  (threshold: 0.006)
+2025-04-13 01:59:32 [INFO] 【BANDS】 EMA9 > EMA21 (130.46 vs 129.95) | RSI = 66.67  | MACD < Signal (-0.0863 vs 0.0628) | ADX = 37.62 ✓ | Volatility = 0.0080  (threshold: 0.006) | Price < Upper BB (131.02 vs 133.83) | Price > Lower BB (131.02 vs 128.37) | Price vs KC Middle: 131.02 vs 131.93
+2025-04-13 01:59:32 [INFO] 【SIGNAL】 🔴 BEARISH - Trade conditions met for SHORT position
+2025-04-13 01:59:32 [INFO] ============================================================
+2025-04-13 01:59:32 [INFO] 【ACTION】 🔴 SELL | ATR: $0.2369 | Volatility Stop: $131.37
+2025-04-13 01:59:32 [INFO] 【INTEGRATED】 Signal Strength: EMA=0.85, RSI=0.51, MACD=0.56, ADX=0.58, ARIMA=0.61
+2025-04-13 01:59:32 [INFO] 【INTEGRATED】 Final Signal Strength: 0.69 (SELL 🔴)

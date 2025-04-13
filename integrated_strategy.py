@@ -529,19 +529,60 @@ class IntegratedStrategy(TradingStrategy):
         if close_price is None:
             return
         
+        # Log indicator values for debugging
+        logger.info(f"【INTEGRATED】 Current price: ${close_price:.2f}")
+        
+        if self.indicators['ema9'] is not None and self.indicators['ema21'] is not None:
+            logger.info(f"【INTEGRATED】 EMA9 vs EMA21: {self.indicators['ema9']:.2f} vs {self.indicators['ema21']:.2f} | {'Bullish' if self.indicators['ema9'] > self.indicators['ema21'] else 'Bearish'}")
+        
+        if self.indicators['rsi'] is not None:
+            rsi_state = "Oversold" if self.indicators['rsi'] < 30 else "Overbought" if self.indicators['rsi'] > 70 else "Neutral"
+            logger.info(f"【INTEGRATED】 RSI: {self.indicators['rsi']:.2f} | State: {rsi_state}")
+        
+        if self.indicators['macd'] is not None and self.indicators['macd_signal'] is not None:
+            logger.info(f"【INTEGRATED】 MACD vs Signal: {self.indicators['macd']:.4f} vs {self.indicators['macd_signal']:.4f} | {'Bullish' if self.indicators['macd'] > self.indicators['macd_signal'] else 'Bearish'}")
+        
+        if self.indicators['adx'] is not None and self.indicators['plus_di'] is not None and self.indicators['minus_di'] is not None:
+            adx_state = "Strong Trend" if self.indicators['adx'] > 25 else "Weak Trend"
+            di_state = "Bullish" if self.indicators['plus_di'] > self.indicators['minus_di'] else "Bearish"
+            logger.info(f"【INTEGRATED】 ADX: {self.indicators['adx']:.2f} | State: {adx_state} | +DI vs -DI: {self.indicators['plus_di']:.2f} vs {self.indicators['minus_di']:.2f} | {di_state}")
+        
+        if self.indicators['bb_upper'] is not None and self.indicators['bb_lower'] is not None:
+            bb_position = "Above Upper" if close_price > self.indicators['bb_upper'] else "Below Lower" if close_price < self.indicators['bb_lower'] else "Inside"
+            logger.info(f"【INTEGRATED】 Bollinger Bands: Upper={self.indicators['bb_upper']:.2f}, Lower={self.indicators['bb_lower']:.2f} | Position: {bb_position}")
+        
+        if self.indicators['kc_upper'] is not None and self.indicators['kc_lower'] is not None:
+            kc_position = "Above Upper" if close_price > self.indicators['kc_upper'] else "Below Lower" if close_price < self.indicators['kc_lower'] else "Inside"
+            logger.info(f"【INTEGRATED】 Keltner Channels: Upper={self.indicators['kc_upper']:.2f}, Lower={self.indicators['kc_lower']:.2f} | Position: {kc_position}")
+        
+        if self.indicators['arima_forecast'] is not None:
+            arima_direction = "Bullish" if self.indicators['arima_forecast'] > close_price else "Bearish" if self.indicators['arima_forecast'] < close_price else "Neutral"
+            forecast_pct = ((self.indicators['arima_forecast'] / close_price) - 1) * 100
+            logger.info(f"【INTEGRATED】 ARIMA Forecast: ${self.indicators['arima_forecast']:.2f} | Direction: {arima_direction} | Change: {forecast_pct:+.2f}%")
+        
+        if self.indicators['volatility'] is not None:
+            vol_state = "Above Threshold" if self.indicators['volatility'] >= self.vol_threshold else "Below Threshold"
+            logger.info(f"【INTEGRATED】 Volatility: {self.indicators['volatility']:.4f} | State: {vol_state} (threshold: {self.vol_threshold})")
+        
+        # Log all signal strengths before final determination
+        logger.info(f"【INTEGRATED】 Signal Strengths: EMA={self.signal_strengths['ema']:.2f}, RSI={self.signal_strengths['rsi']:.2f}, MACD={self.signal_strengths['macd']:.2f}, ADX={self.signal_strengths['adx']:.2f}, BB={self.signal_strengths['bb']:.2f}, KC={self.signal_strengths['kc']:.2f}, ARIMA={self.signal_strengths['arima']:.2f}")
+        
         # --- Determine Bullish Signals ---
+        bullish_signals = []
         
         # EMA signal
         if (self.indicators['ema9'] is not None and 
             self.indicators['ema21'] is not None and 
             self.indicators['ema9'] > self.indicators['ema21']):
             
+            bullish_signals.append(("EMA", self.signal_strengths['ema']))
             if self.signal_strengths['ema'] > self.bullish_strength:
                 self.bullish_strength = self.signal_strengths['ema']
                 self.strongest_bullish = 'ema'
         
         # RSI signal
         if self.indicators['rsi'] is not None and self.indicators['rsi'] < 40:
+            bullish_signals.append(("RSI", self.signal_strengths['rsi']))
             if self.signal_strengths['rsi'] > self.bullish_strength:
                 self.bullish_strength = self.signal_strengths['rsi']
                 self.strongest_bullish = 'rsi'
@@ -551,6 +592,7 @@ class IntegratedStrategy(TradingStrategy):
             self.indicators['macd_signal'] is not None and 
             self.indicators['macd'] > self.indicators['macd_signal']):
             
+            bullish_signals.append(("MACD", self.signal_strengths['macd']))
             if self.signal_strengths['macd'] > self.bullish_strength:
                 self.bullish_strength = self.signal_strengths['macd']
                 self.strongest_bullish = 'macd'
@@ -561,6 +603,7 @@ class IntegratedStrategy(TradingStrategy):
             self.indicators['minus_di'] is not None and 
             self.indicators['plus_di'] > self.indicators['minus_di']):
             
+            bullish_signals.append(("ADX", self.signal_strengths['adx']))
             if self.signal_strengths['adx'] > self.bullish_strength:
                 self.bullish_strength = self.signal_strengths['adx']
                 self.strongest_bullish = 'adx'
@@ -569,6 +612,7 @@ class IntegratedStrategy(TradingStrategy):
         if (self.indicators['bb_lower'] is not None and 
             close_price < self.indicators['bb_lower']):
             
+            bullish_signals.append(("BB", self.signal_strengths['bb']))
             if self.signal_strengths['bb'] > self.bullish_strength:
                 self.bullish_strength = self.signal_strengths['bb']
                 self.strongest_bullish = 'bb'
@@ -577,6 +621,7 @@ class IntegratedStrategy(TradingStrategy):
         if (self.indicators['kc_upper'] is not None and 
             close_price > self.indicators['kc_upper']):
             
+            bullish_signals.append(("KC", self.signal_strengths['kc']))
             if self.signal_strengths['kc'] > self.bullish_strength:
                 self.bullish_strength = self.signal_strengths['kc']
                 self.strongest_bullish = 'kc'
@@ -585,23 +630,27 @@ class IntegratedStrategy(TradingStrategy):
         if (self.indicators['arima_forecast'] is not None and 
             self.indicators['arima_forecast'] > close_price):
             
+            bullish_signals.append(("ARIMA", self.signal_strengths['arima']))
             if self.signal_strengths['arima'] > self.bullish_strength:
                 self.bullish_strength = self.signal_strengths['arima']
                 self.strongest_bullish = 'arima'
         
         # --- Determine Bearish Signals ---
+        bearish_signals = []
         
         # EMA signal
         if (self.indicators['ema9'] is not None and 
             self.indicators['ema21'] is not None and 
             self.indicators['ema9'] < self.indicators['ema21']):
             
+            bearish_signals.append(("EMA", self.signal_strengths['ema']))
             if self.signal_strengths['ema'] > self.bearish_strength:
                 self.bearish_strength = self.signal_strengths['ema']
                 self.strongest_bearish = 'ema'
         
         # RSI signal
         if self.indicators['rsi'] is not None and self.indicators['rsi'] > 60:
+            bearish_signals.append(("RSI", self.signal_strengths['rsi']))
             if self.signal_strengths['rsi'] > self.bearish_strength:
                 self.bearish_strength = self.signal_strengths['rsi']
                 self.strongest_bearish = 'rsi'
@@ -611,6 +660,7 @@ class IntegratedStrategy(TradingStrategy):
             self.indicators['macd_signal'] is not None and 
             self.indicators['macd'] < self.indicators['macd_signal']):
             
+            bearish_signals.append(("MACD", self.signal_strengths['macd']))
             if self.signal_strengths['macd'] > self.bearish_strength:
                 self.bearish_strength = self.signal_strengths['macd']
                 self.strongest_bearish = 'macd'
@@ -621,6 +671,7 @@ class IntegratedStrategy(TradingStrategy):
             self.indicators['minus_di'] is not None and 
             self.indicators['plus_di'] < self.indicators['minus_di']):
             
+            bearish_signals.append(("ADX", self.signal_strengths['adx']))
             if self.signal_strengths['adx'] > self.bearish_strength:
                 self.bearish_strength = self.signal_strengths['adx']
                 self.strongest_bearish = 'adx'
@@ -629,6 +680,7 @@ class IntegratedStrategy(TradingStrategy):
         if (self.indicators['bb_upper'] is not None and 
             close_price > self.indicators['bb_upper']):
             
+            bearish_signals.append(("BB", self.signal_strengths['bb']))
             if self.signal_strengths['bb'] > self.bearish_strength:
                 self.bearish_strength = self.signal_strengths['bb']
                 self.strongest_bearish = 'bb'
@@ -637,6 +689,7 @@ class IntegratedStrategy(TradingStrategy):
         if (self.indicators['kc_lower'] is not None and 
             close_price < self.indicators['kc_lower']):
             
+            bearish_signals.append(("KC", self.signal_strengths['kc']))
             if self.signal_strengths['kc'] > self.bearish_strength:
                 self.bearish_strength = self.signal_strengths['kc']
                 self.strongest_bearish = 'kc'
@@ -645,32 +698,53 @@ class IntegratedStrategy(TradingStrategy):
         if (self.indicators['arima_forecast'] is not None and 
             self.indicators['arima_forecast'] < close_price):
             
+            bearish_signals.append(("ARIMA", self.signal_strengths['arima']))
             if self.signal_strengths['arima'] > self.bearish_strength:
                 self.bearish_strength = self.signal_strengths['arima']
                 self.strongest_bearish = 'arima'
+        
+        # Log all bullish and bearish signals before filtering
+        if bullish_signals:
+            bullish_signals.sort(key=lambda x: x[1], reverse=True)
+            bullish_list = ", ".join([f"{sig[0]}:{sig[1]:.2f}" for sig in bullish_signals])
+            logger.info(f"【INTEGRATED】 Bullish Signals: {bullish_list}")
+        
+        if bearish_signals:
+            bearish_signals.sort(key=lambda x: x[1], reverse=True)
+            bearish_list = ", ".join([f"{sig[0]}:{sig[1]:.2f}" for sig in bearish_signals])
+            logger.info(f"【INTEGRATED】 Bearish Signals: {bearish_list}")
         
         # Apply volatility filter
         if self.indicators['volatility'] is not None:
             volatility = self.indicators['volatility']
             if volatility < self.vol_threshold:
+                # Log before applying volatility filter
+                logger.info(f"【INTEGRATED】 Before volatility filter - Bullish: {self.bullish_strength:.2f}, Bearish: {self.bearish_strength:.2f}")
+                
                 # Reduce both signal strengths based on low volatility
                 vol_factor = volatility / self.vol_threshold
                 self.bullish_strength *= vol_factor
                 self.bearish_strength *= vol_factor
+                
+                # Log after applying volatility filter
+                logger.info(f"【INTEGRATED】 After volatility filter (factor: {vol_factor:.2f}) - Bullish: {self.bullish_strength:.2f}, Bearish: {self.bearish_strength:.2f}")
         
         # Determine the final signal
         if self.bullish_strength >= self.min_strength and self.bullish_strength > self.bearish_strength:
             self.current_signal = 'long'
             self.signal_strength = self.bullish_strength
             logger.info(f"【SIGNAL】 🟢 BULLISH - {self.strongest_bullish.upper()} signal with strength {self.bullish_strength:.2f}")
+            logger.info(f"【INTEGRATED】 Final Decision: LONG (strength: {self.bullish_strength:.2f}) driven by {self.strongest_bullish.upper()}")
         elif self.bearish_strength >= self.min_strength and self.bearish_strength > self.bullish_strength:
             self.current_signal = 'short'
             self.signal_strength = self.bearish_strength
             logger.info(f"【SIGNAL】 🔴 BEARISH - {self.strongest_bearish.upper()} signal with strength {self.bearish_strength:.2f}")
+            logger.info(f"【INTEGRATED】 Final Decision: SHORT (strength: {self.bearish_strength:.2f}) driven by {self.strongest_bearish.upper()}")
         else:
             self.current_signal = None
             self.signal_strength = 0.0
             logger.info(f"【SIGNAL】 ⚪ NEUTRAL - No strong signal detected (bullish: {self.bullish_strength:.2f}, bearish: {self.bearish_strength:.2f})")
+            logger.info(f"【INTEGRATED】 Final Decision: NEUTRAL - Insufficient signal strength (min threshold: {self.min_strength})")
     
     def _calculate_order_prices(self):
         """Calculate optimal entry prices for long and short positions"""
