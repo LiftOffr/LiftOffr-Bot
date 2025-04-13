@@ -10,6 +10,8 @@ Features:
 - Consider market volatility for risk-aware position sizing
 - Use trailing stop parameters to optimize risk-reward positioning
 - Implement dynamic maximum exposure limits based on market conditions
+- Dynamically adjust margin percentages and leverage based on model confidence
+- Allow ML-guided limit order price adjustments based on predicted price movements
 """
 
 import os
@@ -29,6 +31,9 @@ class DynamicPositionSizer:
     """
     Dynamically calculate optimal position size based on multiple factors
     including ML confidence, signal strength, and market conditions.
+    
+    The class also provides functionality for adjusting margin percentages,
+    leverage levels, and limit order prices based on ML predictions.
     """
     
     def __init__(self, config_file=None):
@@ -298,6 +303,151 @@ class DynamicPositionSizer:
         except Exception as e:
             logger.error(f"Error saving configuration: {e}")
 
+def calculate_dynamic_margin_percent(ml_confidence, signal_strength, market_volatility=None, base_margin=0.2):
+    """
+    Calculate an optimal margin percentage based on ML model confidence
+    
+    This function adjusts the margin percentage (amount of leverage) based on
+    the confidence of ML predictions and other factors. Higher confidence leads
+    to higher leverage use.
+    
+    Args:
+        ml_confidence (float): ML model prediction confidence (0.0 to 1.0)
+        signal_strength (float): Signal strength from strategy (0.0 to 1.0)
+        market_volatility (float, optional): Market volatility metric
+        base_margin (float): Base margin percentage (default: 0.2 or 20%)
+        
+    Returns:
+        float: Dynamic margin percentage (0.0 to 1.0)
+    """
+    # Start with base margin
+    margin_pct = base_margin
+    
+    # Only adjust margin if confidence is high enough
+    if ml_confidence >= 0.75:
+        # Scale from 0.75-1.0 confidence to 0.0-1.0 adjustment factor
+        confidence_factor = (ml_confidence - 0.75) * 4.0
+        
+        # Higher confidence allows for up to 50% more margin
+        confidence_adjustment = confidence_factor * 0.5 * base_margin
+        
+        # Signal strength provides an additional factor
+        signal_adjustment = signal_strength * 0.3 * base_margin
+        
+        # Combine adjustments
+        margin_pct += confidence_adjustment + signal_adjustment
+        
+        # If market volatility is provided, adjust margin inversely
+        if market_volatility is not None and market_volatility > 0:
+            # Reduce margin in more volatile markets
+            volatility_factor = max(0.5, min(1.0, 1.0 / (market_volatility * 5.0)))
+            margin_pct *= volatility_factor
+    
+    # Cap margin at reasonable bounds (10%-50%)
+    margin_pct = max(0.1, min(0.5, margin_pct))
+    
+    return margin_pct
+
+def calculate_dynamic_leverage(ml_confidence, market_regime, atr_value=None, base_leverage=3.0):
+    """
+    Calculate an optimal leverage level based on ML model confidence and market conditions
+    
+    This function adjusts the leverage based on prediction confidence and market regime.
+    
+    Args:
+        ml_confidence (float): ML model prediction confidence (0.0 to 1.0)
+        market_regime (str): Current market regime
+        atr_value (float, optional): Current ATR value
+        base_leverage (float): Base leverage level
+        
+    Returns:
+        float: Dynamic leverage level
+    """
+    # Start with base leverage
+    leverage = base_leverage
+    
+    # Adjust for ML confidence (minimum confidence of 0.75 required for any increase)
+    if ml_confidence >= 0.75:
+        confidence_adjustment = (ml_confidence - 0.75) * 4.0 * base_leverage
+        leverage += confidence_adjustment
+    
+    # Adjust for market regime
+    regime_factors = {
+        'volatile_trending_up': 0.7,     # Reduce leverage in volatile markets
+        'volatile_trending_down': 0.6,   # Reduce even more in volatile down markets
+        'normal_trending_up': 1.2,       # Increase in normal uptrends
+        'normal_trending_down': 0.8,     # Slightly reduce in downtrends
+        'neutral': 1.0                  # No change in neutral markets
+    }
+    
+    regime_factor = regime_factors.get(market_regime, 1.0)
+    leverage *= regime_factor
+    
+    # If ATR is provided, adjust leverage inversely with volatility
+    if atr_value is not None and atr_value > 0:
+        # Base ATR value for typical SOL/USD market
+        base_atr = 0.2
+        if atr_value > base_atr:
+            # Higher ATR = reduce leverage
+            atr_factor = max(0.6, base_atr / atr_value)
+            leverage *= atr_factor
+    
+    # Cap leverage at reasonable bounds (1x-10x)
+    leverage = max(1.0, min(10.0, round(leverage, 1)))
+    
+    return leverage
+
+def adjust_limit_order_price(base_price, direction, ml_confidence, price_prediction=None, atr_value=None):
+    """
+    Adjust limit order prices based on ML predictions
+    
+    This function can modify limit order prices to optimize execution probability
+    based on ML predictions of price movements.
+    
+    Args:
+        base_price (float): Base price for the limit order
+        direction (int): Order direction (1 for buy, -1 for sell)
+        ml_confidence (float): ML model prediction confidence
+        price_prediction (float, optional): ML predicted price target
+        atr_value (float, optional): Current ATR value
+        
+    Returns:
+        float: Adjusted limit order price
+    """
+    # If no ML prediction or low confidence, return base price
+    if price_prediction is None or ml_confidence < 0.8:
+        return base_price
+    
+    # Calculate basic price adjustment
+    # Higher confidence = more aggressive adjustment toward the predicted price
+    confidence_factor = (ml_confidence - 0.8) * 5.0  # Scale 0.8-1.0 to 0-1.0
+    
+    # Determine how much to adjust based on ATR
+    # Default to 0.1% of price if ATR not available
+    adjustment_basis = atr_value if atr_value is not None else (base_price * 0.001)
+    
+    # Determine adjustment direction based on order direction and prediction
+    price_diff = price_prediction - base_price
+    
+    # For buy orders: if prediction is higher, we can be more aggressive (lower price)
+    # For sell orders: if prediction is lower, we can be more aggressive (higher price)
+    if (direction == 1 and price_diff > 0) or (direction == -1 and price_diff < 0):
+        # Predicted price movement favorable to our order
+        # We can be more aggressive with our limit price
+        max_adjustment = adjustment_basis * 0.5  # Max 50% of ATR
+    else:
+        # Predicted price movement unfavorable to our order
+        # We need to be more conservative with our limit price
+        max_adjustment = adjustment_basis * 0.25  # Max 25% of ATR
+    
+    # Calculate actual adjustment
+    actual_adjustment = max_adjustment * confidence_factor * direction * -1
+    
+    # Apply adjustment to base price
+    adjusted_price = base_price + actual_adjustment
+    
+    return adjusted_price
+
 # Sample usage
 if __name__ == "__main__":
     # Example usage
@@ -354,4 +504,41 @@ if __name__ == "__main__":
             scenario['trailing_stop_distance']
         )
         print(f"Position Size: {pct:.2%} (${value:.2f})")
+        
+        # Also calculate dynamic margin and leverage
+        margin_pct = calculate_dynamic_margin_percent(
+            scenario['ml_confidence'],
+            scenario['signal_strength'],
+            scenario['market_volatility']
+        )
+        
+        leverage = calculate_dynamic_leverage(
+            scenario['ml_confidence'],
+            scenario['market_regime'],
+            scenario['atr_value']
+        )
+        
+        print(f"Margin: {margin_pct:.2%} | Leverage: {leverage:.1f}x")
+        
+        # Test limit order price adjustment
+        base_price = 100.0
+        price_prediction = 102.0 if scenario['market_regime'].endswith('up') else 98.0
+        
+        buy_price = adjust_limit_order_price(
+            base_price, 
+            1, 
+            scenario['ml_confidence'], 
+            price_prediction,
+            scenario['atr_value']
+        )
+        
+        sell_price = adjust_limit_order_price(
+            base_price, 
+            -1, 
+            scenario['ml_confidence'], 
+            price_prediction,
+            scenario['atr_value']
+        )
+        
+        print(f"Original price: ${base_price:.2f} | ML adjusted buy: ${buy_price:.2f} | ML adjusted sell: ${sell_price:.2f}")
         print(f"Reasoning: {json.dumps(reasoning, indent=2)}")
