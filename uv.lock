@@ -773,6 +773,19 @@ wheels = [
 ]
 
 [[package]]
+name = "keras-tcn"
+version = "3.5.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "tensorflow" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/56/85/ee6800338b25fc955550171c1ae1ea2acd682a7947307e429bae1258cb26/keras_tcn-3.5.6.tar.gz", hash = "sha256:db487eaebcf0806967fce6427fb091b9634edfc91b5e766fad2f8454f0c1ca8b", size = 12146 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/35/d0/ec84150e12fa2ecc645b234b1dba360c5446e921492e2f75ec061130bfa7/keras_tcn-3.5.6-py3-none-any.whl", hash = "sha256:14e4abce58346245c432d3f66abe86c742932cce5b6db7a53585f912d18ea61c", size = 12252 },
+]
+
+[[package]]
 name = "kiwisolver"
 version = "1.4.8"
 source = { registry = "https://pypi.org/simple" }
@@ -1589,6 +1602,7 @@ dependencies = [
     { name = "flask" },
     { name = "flask-sqlalchemy" },
     { name = "gunicorn" },
+    { name = "keras-tcn" },
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "pandas" },
@@ -1615,6 +1629,7 @@ requires-dist = [
     { name = "flask", specifier = ">=3.1.0" },
     { name = "flask-sqlalchemy", specifier = ">=3.1.1" },
     { name = "gunicorn", specifier = ">=23.0.0" },
+    { name = "keras-tcn", specifier = ">=3.5.6" },
     { name = "matplotlib", specifier = ">=3.10.1" },
     { name = "numpy", specifier = ">=2.2.4" },
     { name = "pandas", specifier = ">=2.2.3" },

@@ -2,20 +2,25 @@
 """
 ML Model Integrator for Kraken Trading Bot
 
-This module integrates trained ML models with the trading bot's strategy system,
-allowing the models to contribute signals to the trading decision process.
+This module integrates the advanced ensemble model with the trading bot,
+providing predictions and signals that can be used by trading strategies.
 """
 
 import os
+import sys
+import json
 import time
 import logging
 import numpy as np
 import pandas as pd
-import json
 from datetime import datetime
+import traceback
+
 import tensorflow as tf
 from tensorflow.keras.models import load_model
-import traceback
+
+# Import advanced ensemble model
+from advanced_ensemble_model import DynamicWeightedEnsemble
 
 # Configure logging
 logging.basicConfig(
@@ -27,375 +32,253 @@ logger = logging.getLogger(__name__)
 
 # Constants
 MODELS_DIR = "models"
-DATA_DIR = "historical_data"
-DEFAULT_TRADING_PAIR = "SOL/USD"
-DEFAULT_TIMEFRAME = "1h"
-MODEL_TYPES = ["tcn", "cnn", "lstm"]
+ENSEMBLE_DIR = os.path.join(MODELS_DIR, "ensemble")
+DEFAULT_CONFIDENCE_THRESHOLD = 0.6  # Minimum confidence to generate a signal
 
-class ModelSignalGenerator:
+class MLModelIntegrator:
     """
-    Class for generating trading signals using trained ML models
+    Integrates ML models with the trading bot by providing predictions
+    and signals that can be used by trading strategies.
     """
-    def __init__(self, trading_pair=DEFAULT_TRADING_PAIR, timeframe=DEFAULT_TIMEFRAME):
+    def __init__(self, trading_pair="SOL/USD", timeframe="1h", confidence_threshold=DEFAULT_CONFIDENCE_THRESHOLD):
         """
-        Initialize the model signal generator
+        Initialize the ML model integrator
         
         Args:
-            trading_pair (str): Trading pair to generate signals for
-            timeframe (str): Timeframe to use
+            trading_pair (str): Trading pair to model
+            timeframe (str): Timeframe for analysis
+            confidence_threshold (float): Minimum confidence threshold to generate signals
         """
         self.trading_pair = trading_pair
         self.timeframe = timeframe
-        self.models = {}
-        self.feature_columns = None
-        self.weights = {"tcn": 0.4, "cnn": 0.3, "lstm": 0.3}  # Default weights
-        self.performance = {"tcn": 0.0, "cnn": 0.0, "lstm": 0.0}  # Performance tracking
-        self.sequence_length = 60  # Default sequence length for models
-        self.initialized = False
-        self.recent_data = None
-        self.recent_predictions = {}
-        self.signal_log = []
-        self.last_update_time = 0
-        
-        # Initialize models
-        self._load_models()
+        self.confidence_threshold = confidence_threshold
+        self.ensemble = DynamicWeightedEnsemble(trading_pair, timeframe)
+        self.last_prediction = None
+        self.last_confidence = None
+        self.last_details = None
+        self.last_prediction_time = None
+        self.prediction_count = 0
+        self.correct_predictions = 0
     
-    def _load_models(self):
-        """Load trained models from disk"""
-        try:
-            # Check if models exist
-            for model_type in MODEL_TYPES:
-                model_path = f"{MODELS_DIR}/{model_type}/{self.trading_pair.replace('/', '')}-{self.timeframe}.h5"
-                if os.path.exists(model_path):
-                    logger.info(f"Loading {model_type} model from {model_path}")
-                    self.models[model_type] = load_model(model_path)
-                else:
-                    logger.warning(f"{model_type} model not found at {model_path}")
+    def get_model_status(self):
+        """
+        Get status of ML models
+        
+        Returns:
+            dict: Status information about loaded models
+        """
+        return self.ensemble.get_status()
+    
+    def predict(self, market_data):
+        """
+        Generate prediction from ML models
+        
+        Args:
+            market_data (pd.DataFrame): Market data with indicators
             
-            # Load feature columns
-            feature_file = f"{DATA_DIR}/ml_datasets/{self.trading_pair.replace('/', '')}-{self.timeframe}-features.json"
-            if os.path.exists(feature_file):
-                with open(feature_file, 'r') as f:
-                    self.feature_columns = json.load(f)
-                logger.info(f"Loaded feature columns from {feature_file}")
+        Returns:
+            tuple: (prediction, confidence, signal, details)
+        """
+        # Generate ensemble prediction
+        prediction, confidence, details = self.ensemble.predict(market_data)
+        
+        # Store prediction for reference
+        self.last_prediction = prediction
+        self.last_confidence = confidence
+        self.last_details = details
+        self.last_prediction_time = datetime.now()
+        
+        # Increment prediction count
+        self.prediction_count += 1
+        
+        # Generate signal based on prediction and confidence
+        if confidence >= self.confidence_threshold:
+            if prediction > 0.1:  # Use threshold to avoid noise
+                signal = "BUY"
+            elif prediction < -0.1:
+                signal = "SELL"
             else:
-                logger.warning(f"Feature columns file not found at {feature_file}")
-                # Use default feature columns
-                self.feature_columns = [
-                    'open', 'high', 'low', 'close', 'volume',
-                    'ema9', 'ema21', 'ema50', 'ema100',
-                    'rsi', 'macd', 'signal', 'macd_hist',
-                    'upper_band', 'middle_band', 'lower_band',
-                    'atr', 'volatility'
-                ]
-            
-            # Load model performance info if available
-            info_path = f"{MODELS_DIR}/{self.trading_pair.replace('/', '')}-{self.timeframe}-models-info.json"
-            if os.path.exists(info_path):
-                with open(info_path, 'r') as f:
-                    models_info = json.load(f)
-                
-                # Update performance based on validation accuracy
-                for model_type, info in models_info.items():
-                    if 'val_accuracy' in info:
-                        self.performance[model_type] = info['val_accuracy']
-                
-                # Update weights based on performance
-                total_perf = sum(self.performance.values())
-                if total_perf > 0:
-                    for model_type in self.weights:
-                        if model_type in self.performance:
-                            self.weights[model_type] = self.performance[model_type] / total_perf
-            
-            self.initialized = len(self.models) > 0
-            logger.info(f"Model initialization complete. Loaded {len(self.models)} models.")
-            
-        except Exception as e:
-            logger.error(f"Error loading models: {e}")
-            traceback.print_exc()
-    
-    def preprocess_market_data(self, market_data):
-        """
-        Preprocess market data for model input
-        
-        Args:
-            market_data (pd.DataFrame): Market data with OHLCV and indicators
-            
-        Returns:
-            numpy.ndarray: Preprocessed data ready for model input
-        """
-        try:
-            # Check if we have the necessary columns
-            missing_columns = [col for col in self.feature_columns if col not in market_data.columns]
-            if missing_columns:
-                logger.warning(f"Missing columns in market data: {missing_columns}")
-                # Fill missing columns with zeros
-                for col in missing_columns:
-                    market_data[col] = 0.0
-            
-            # Select and order columns according to feature_columns
-            features = market_data[self.feature_columns].values
-            
-            # Create sequence
-            if len(features) < self.sequence_length:
-                logger.warning(f"Insufficient data points: {len(features)} < {self.sequence_length}")
-                # Pad with zeros if not enough data
-                pad_length = self.sequence_length - len(features)
-                pad_array = np.zeros((pad_length, len(self.feature_columns)))
-                features = np.vstack((pad_array, features))
-            
-            # Take the most recent sequence_length data points
-            features = features[-self.sequence_length:]
-            
-            # Reshape for model input [batch_size, sequence_length, n_features]
-            features = np.expand_dims(features, axis=0)
-            
-            return features
-            
-        except Exception as e:
-            logger.error(f"Error preprocessing market data: {e}")
-            traceback.print_exc()
-            return None
-    
-    def update_model_weights(self, model_performance=None):
-        """
-        Update model weights based on recent performance
-        
-        Args:
-            model_performance (dict, optional): Dictionary with performance metrics for each model
-        """
-        if model_performance:
-            # Update performance metrics
-            for model_type, perf in model_performance.items():
-                if model_type in self.performance:
-                    # Blend new performance with existing (70% new, 30% existing)
-                    self.performance[model_type] = 0.7 * perf + 0.3 * self.performance[model_type]
-        
-        # Recalculate weights based on performance
-        total_perf = sum(self.performance.values())
-        if total_perf > 0:
-            for model_type in self.weights:
-                if model_type in self.performance:
-                    self.weights[model_type] = self.performance[model_type] / total_perf
-        
-        logger.info(f"Updated model weights: {self.weights}")
-    
-    def generate_signals(self, market_data):
-        """
-        Generate trading signals from ML models
-        
-        Args:
-            market_data (pd.DataFrame): Market data with OHLCV and indicators
-            
-        Returns:
-            tuple: (signal_direction, signal_strength, signal_details)
-        """
-        if not self.initialized:
-            logger.warning("Models not initialized, cannot generate signals")
-            return "neutral", 0.0, {}
-        
-        # Throttle updates to once per minute
-        current_time = time.time()
-        if current_time - self.last_update_time < 60 and self.recent_predictions:
-            # Use cached predictions
-            logger.info("Using cached predictions")
-            return self._calculate_ensemble_signal(self.recent_predictions)
-        
-        try:
-            # Preprocess data
-            processed_data = self.preprocess_market_data(market_data)
-            if processed_data is None:
-                return "neutral", 0.0, {}
-            
-            # Generate predictions from each model
-            predictions = {}
-            for model_type, model in self.models.items():
-                pred = model.predict(processed_data, verbose=0)
-                predictions[model_type] = float(pred[0][0])  # Extract scalar value
-                logger.info(f"{model_type.upper()} model prediction: {predictions[model_type]:.4f}")
-            
-            # Cache predictions
-            self.recent_predictions = predictions
-            self.last_update_time = current_time
-            
-            # Calculate ensemble signal
-            return self._calculate_ensemble_signal(predictions)
-            
-        except Exception as e:
-            logger.error(f"Error generating signals: {e}")
-            traceback.print_exc()
-            return "neutral", 0.0, {}
-    
-    def _calculate_ensemble_signal(self, predictions):
-        """
-        Calculate ensemble signal from model predictions
-        
-        Args:
-            predictions (dict): Predictions from each model
-            
-        Returns:
-            tuple: (signal_direction, signal_strength, signal_details)
-        """
-        # Calculate weighted average prediction
-        weighted_pred = 0.0
-        for model_type, pred in predictions.items():
-            weight = self.weights.get(model_type, 0.0)
-            weighted_pred += pred * weight
-        
-        # Determine signal direction and strength
-        signal_strength = abs(weighted_pred)
-        if weighted_pred > 0.15:  # Threshold for buy signal
-            signal_direction = "buy"
-        elif weighted_pred < -0.15:  # Threshold for sell signal
-            signal_direction = "sell"
+                signal = "NEUTRAL"
         else:
-            signal_direction = "neutral"
+            signal = "NEUTRAL"
         
-        # Normalize signal strength to 0-1 range
-        signal_strength = min(max(signal_strength, 0.0), 1.0)
+        # Log prediction
+        logger.info(f"ML Prediction: {prediction:.4f}, Confidence: {confidence:.4f}, Signal: {signal}")
+        logger.info(f"Market Regime: {details['regime']}")
         
-        # Prepare signal details
-        signal_details = {
-            "predictions": predictions,
-            "weights": self.weights,
-            "weighted_prediction": weighted_pred,
-            "timestamp": datetime.now().isoformat()
-        }
-        
-        # Log signal
-        self.signal_log.append({
-            "timestamp": datetime.now().isoformat(),
-            "direction": signal_direction,
-            "strength": signal_strength,
-            "predictions": predictions,
-            "weighted_prediction": weighted_pred
-        })
-        # Trim log to keep only 100 most recent entries
-        if len(self.signal_log) > 100:
-            self.signal_log = self.signal_log[-100:]
-        
-        logger.info(f"ML Ensemble Signal: {signal_direction.upper()} with strength {signal_strength:.4f}")
-        
-        return signal_direction, signal_strength, signal_details
-
-    def update_performance(self, trade_result):
+        return prediction, confidence, signal, details
+    
+    def calculate_signal_strength(self, prediction, confidence):
         """
-        Update model performance metrics based on trade results
+        Calculate signal strength based on prediction and confidence
         
         Args:
-            trade_result (dict): Trade result information
+            prediction (float): Prediction value (-1 to 1)
+            confidence (float): Confidence value (0 to 1)
+            
+        Returns:
+            float: Signal strength (0 to 1)
         """
-        if 'pnl' not in trade_result or 'models_used' not in trade_result:
-            logger.warning("Incomplete trade result information, cannot update performance")
-            return
+        # Scale prediction to 0-1 range (from -1 to 1)
+        prediction_abs = abs(prediction)
         
-        # Extract information
-        pnl = trade_result['pnl']
-        models_used = trade_result['models_used']
+        # Calculate signal strength as a combination of prediction and confidence
+        strength = (prediction_abs * 0.7) + (confidence * 0.3)
         
-        # Calculate performance delta based on PnL
-        perf_delta = 0.1 if pnl > 0 else -0.1  # Simple binary approach
+        # Scale to 0-1 range, with 1 being strongest
+        strength = min(1.0, max(0.0, strength))
         
-        # Update performance for models that were used
-        model_performance = {}
-        for model_type in models_used:
-            if model_type in self.performance:
-                # Update performance based on trade result
-                updated_perf = max(0.0, self.performance[model_type] + perf_delta)
-                model_performance[model_type] = updated_perf
+        return strength
+    
+    def update_performance(self, actual_direction):
+        """
+        Update model performance based on actual market direction
         
-        # Update weights
-        self.update_model_weights(model_performance)
+        Args:
+            actual_direction (int): Actual market direction (1 for up, -1 for down, 0 for neutral)
+            
+        Returns:
+            float: Current accuracy
+        """
+        if self.last_prediction is None:
+            return 0.0
         
-        logger.info(f"Updated model performance metrics based on trade with PnL {pnl}")
+        # Determine if prediction was correct
+        predicted_direction = 1 if self.last_prediction > 0 else (-1 if self.last_prediction < 0 else 0)
+        
+        # Update performance for each model
+        model_outcomes = {}
+        for model_type, pred in self.last_details.get('model_predictions', {}).items():
+            model_direction = 1 if pred > 0 else (-1 if pred < 0 else 0)
+            if model_direction == actual_direction:
+                model_outcomes[model_type] = 1  # Correct
+            elif model_direction == 0 or actual_direction == 0:
+                model_outcomes[model_type] = 0  # Neutral
+            else:
+                model_outcomes[model_type] = -1  # Incorrect
+        
+        # Update ensemble with model outcomes
+        self.ensemble.update_performance(model_outcomes)
+        
+        # Update overall performance
+        if predicted_direction == actual_direction:
+            self.correct_predictions += 1
+        
+        # Calculate accuracy
+        accuracy = self.correct_predictions / self.prediction_count if self.prediction_count > 0 else 0.0
+        
+        logger.info(f"Updated performance: {self.correct_predictions}/{self.prediction_count} = {accuracy:.4f}")
+        
+        return accuracy
+    
+    def get_recommendation(self, current_price=None, current_position=None):
+        """
+        Get trading recommendation based on current prediction
+        
+        Args:
+            current_price (float): Current market price
+            current_position (str): Current position (LONG, SHORT, NONE)
+            
+        Returns:
+            dict: Trading recommendation
+        """
+        if self.last_prediction is None:
+            return {
+                "action": "HOLD",
+                "reason": "No prediction available",
+                "confidence": 0.0,
+                "regime": "unknown"
+            }
+        
+        # Convert prediction to action
+        if current_position in [None, "NONE"]:
+            # No current position, consider opening new position
+            if self.last_prediction > 0.2 and self.last_confidence > self.confidence_threshold:
+                action = "BUY"
+                reason = f"ML predicts upward movement ({self.last_prediction:.4f}) with high confidence ({self.last_confidence:.4f})"
+            elif self.last_prediction < -0.2 and self.last_confidence > self.confidence_threshold:
+                action = "SELL"
+                reason = f"ML predicts downward movement ({self.last_prediction:.4f}) with high confidence ({self.last_confidence:.4f})"
+            else:
+                action = "HOLD"
+                reason = f"ML prediction ({self.last_prediction:.4f}) or confidence ({self.last_confidence:.4f}) too weak to act"
+        
+        elif current_position == "LONG":
+            # Currently long, consider closing position
+            if self.last_prediction < -0.1 and self.last_confidence > self.confidence_threshold:
+                action = "CLOSE_LONG"
+                reason = f"ML predicts downward movement ({self.last_prediction:.4f}) with high confidence ({self.last_confidence:.4f})"
+            else:
+                action = "HOLD_LONG"
+                reason = f"ML prediction ({self.last_prediction:.4f}) suggests maintaining long position"
+        
+        elif current_position == "SHORT":
+            # Currently short, consider closing position
+            if self.last_prediction > 0.1 and self.last_confidence > self.confidence_threshold:
+                action = "CLOSE_SHORT"
+                reason = f"ML predicts upward movement ({self.last_prediction:.4f}) with high confidence ({self.last_confidence:.4f})"
+            else:
+                action = "HOLD_SHORT"
+                reason = f"ML prediction ({self.last_prediction:.4f}) suggests maintaining short position"
+        
+        else:
+            action = "HOLD"
+            reason = f"Unknown position state: {current_position}"
+        
+        # Get current market regime
+        regime = self.last_details.get('regime', 'unknown') if self.last_details else 'unknown'
+        
+        # Calculate signal strength
+        strength = self.calculate_signal_strength(self.last_prediction, self.last_confidence)
+        
+        return {
+            "action": action,
+            "reason": reason,
+            "prediction": float(self.last_prediction),
+            "confidence": float(self.last_confidence),
+            "strength": float(strength),
+            "regime": regime,
+            "timestamp": self.last_prediction_time.isoformat() if self.last_prediction_time else None
+        }
 
-def get_market_data_with_indicators(ohlc_data):
-    """
-    Process OHLC data and add technical indicators
-    
-    Args:
-        ohlc_data (pd.DataFrame): OHLC data
-        
-    Returns:
-        pd.DataFrame: Processed DataFrame with indicators
-    """
-    df = ohlc_data.copy()
-    
-    # Calculate EMAs
-    df['ema9'] = df['close'].ewm(span=9, adjust=False).mean()
-    df['ema21'] = df['close'].ewm(span=21, adjust=False).mean()
-    df['ema50'] = df['close'].ewm(span=50, adjust=False).mean()
-    df['ema100'] = df['close'].ewm(span=100, adjust=False).mean()
-    
-    # Calculate RSI
-    delta = df['close'].diff()
-    gain = delta.where(delta > 0, 0)
-    loss = -delta.where(delta < 0, 0)
-    avg_gain = gain.rolling(window=14).mean()
-    avg_loss = loss.rolling(window=14).mean()
-    rs = avg_gain / avg_loss
-    df['rsi'] = 100 - (100 / (1 + rs))
-    
-    # Calculate MACD
-    df['ema12'] = df['close'].ewm(span=12, adjust=False).mean()
-    df['ema26'] = df['close'].ewm(span=26, adjust=False).mean()
-    df['macd'] = df['ema12'] - df['ema26']
-    df['signal'] = df['macd'].ewm(span=9, adjust=False).mean()
-    df['macd_hist'] = df['macd'] - df['signal']
-    
-    # Calculate Bollinger Bands
-    df['middle_band'] = df['close'].rolling(window=20).mean()
-    df['std_dev'] = df['close'].rolling(window=20).std()
-    df['upper_band'] = df['middle_band'] + (df['std_dev'] * 2)
-    df['lower_band'] = df['middle_band'] - (df['std_dev'] * 2)
-    
-    # Calculate ATR
-    high_low = df['high'] - df['low']
-    high_close = (df['high'] - df['close'].shift()).abs()
-    low_close = (df['low'] - df['close'].shift()).abs()
-    ranges = pd.concat([high_low, high_close, low_close], axis=1)
-    true_range = ranges.max(axis=1)
-    df['atr'] = true_range.rolling(14).mean()
-    
-    # Calculate price volatility (standard deviation of returns)
-    df['returns'] = df['close'].pct_change()
-    df['volatility'] = df['returns'].rolling(window=20).std()
-    
-    # Remove NaN values
-    df = df.fillna(method='bfill').fillna(method='ffill')
-    
-    return df
 
 def main():
     """Test the ML model integrator"""
-    logger.info("Testing ML model integrator")
+    # Create integrator
+    integrator = MLModelIntegrator()
     
-    # Load sample market data
-    try:
-        # Create sample data if no real data available
-        dates = pd.date_range(start='2023-01-01', periods=100, freq='H')
-        ohlc_data = pd.DataFrame({
-            'open': np.random.normal(100, 5, 100),
-            'high': np.random.normal(105, 5, 100),
-            'low': np.random.normal(95, 5, 100),
-            'close': np.random.normal(100, 5, 100),
-            'volume': np.random.normal(1000, 200, 100)
-        }, index=dates)
+    # Get model status
+    status = integrator.get_model_status()
+    logger.info(f"Model Status: {status}")
+    
+    # If we have models, test a prediction
+    if status.get('model_count', 0) > 0:
+        # Create dummy data for testing
+        dummy_data = pd.DataFrame({
+            f"open_{integrator.timeframe}": [100, 101, 102, 103, 104] * 12,
+            f"high_{integrator.timeframe}": [105, 106, 107, 108, 109] * 12,
+            f"low_{integrator.timeframe}": [95, 96, 97, 98, 99] * 12,
+            f"close_{integrator.timeframe}": [101, 102, 103, 104, 105] * 12,
+            f"volume_{integrator.timeframe}": [1000, 1100, 1200, 1300, 1400] * 12,
+            f"volatility_{integrator.timeframe}": [0.01, 0.02, 0.01, 0.03, 0.02] * 12,
+            f"ema9_{integrator.timeframe}": [101, 102, 103, 104, 105] * 12,
+            f"ema21_{integrator.timeframe}": [100, 101, 102, 103, 104] * 12
+        })
         
-        # Add indicators
-        market_data = get_market_data_with_indicators(ohlc_data)
+        # Make a prediction
+        prediction, confidence, signal, details = integrator.predict(dummy_data)
+        logger.info(f"Prediction: {prediction}, Confidence: {confidence}, Signal: {signal}")
         
-        # Initialize signal generator
-        signal_generator = ModelSignalGenerator()
+        # Get recommendation
+        recommendation = integrator.get_recommendation(current_price=103.5, current_position="NONE")
+        logger.info(f"Recommendation: {recommendation}")
         
-        # Generate signals
-        direction, strength, details = signal_generator.generate_signals(market_data)
-        
-        logger.info(f"Generated signal: {direction} with strength {strength}")
-        
-    except Exception as e:
-        logger.error(f"Error in test: {e}")
-        traceback.print_exc()
+        # Update performance
+        accuracy = integrator.update_performance(1)  # Assume market went up
+        logger.info(f"Accuracy: {accuracy}")
+    else:
+        logger.warning("No models available for prediction")
+
 
 if __name__ == "__main__":
     main()
