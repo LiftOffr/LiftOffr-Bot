@@ -1076,6 +1076,196 @@ class DynamicWeightedEnsemble:
         
         return ensemble_prediction, ensemble_confidence, details
     
+    def calculate_position_sizing_confidence(self, ensemble_confidence, market_data=None, additional_factors=None):
+        """
+        Calculate an enhanced confidence score specifically for position sizing
+        
+        This enhanced confidence considers additional market factors and historical performance
+        to provide a more nuanced confidence score suitable for dynamic position sizing.
+        
+        Args:
+            ensemble_confidence (float): Base confidence from the prediction ensemble (0.0-1.0)
+            market_data (pd.DataFrame, optional): Recent market data for additional analysis
+            additional_factors (dict, optional): Additional factors to consider:
+                - recent_win_rate (float): Recent win rate of the model
+                - price_action_strength (float): Strength of recent price action
+                - atr_volatility (float): Current ATR volatility
+                - trend_strength (float): Strength of the current trend
+                
+        Returns:
+            tuple: (position_confidence, sizing_details)
+        """
+        # Start with the base confidence from ensemble prediction
+        confidence_factors = [ensemble_confidence]
+        sizing_details = {"base_ensemble_confidence": ensemble_confidence}
+        
+        # Factor weights for final blending
+        weights = {
+            "ensemble_confidence": 0.35,   # Base confidence is most important
+            "market_regime": 0.20,         # Market regime is a strong factor
+            "price_action": 0.15,          # Recent price action
+            "volatility": 0.15,            # Market volatility consideration
+            "win_rate": 0.15               # Recent model performance
+        }
+        sizing_details["factor_weights"] = weights
+        
+        # Apply market regime adjustment
+        regime_factor = self._calculate_regime_confidence_factor()
+        confidence_factors.append(regime_factor)
+        sizing_details["regime_factor"] = regime_factor
+        sizing_details["current_regime"] = self.current_regime
+        
+        # Calculate price action strength if market data is available
+        price_action_factor = 0.75  # Default to moderate confidence
+        if market_data is not None and len(market_data) > 5:
+            try:
+                # Extract price data
+                closes = market_data['close'].values
+                
+                # Calculate directional price movement strength
+                price_changes = np.diff(closes[-10:])
+                directional_strength = np.abs(np.sum(price_changes)) / np.sum(np.abs(price_changes)) if np.sum(np.abs(price_changes)) > 0 else 0
+                
+                # Get recent momentum using RSI
+                rsi_periods = 14
+                if len(closes) > rsi_periods:
+                    delta = np.diff(closes[-rsi_periods-1:])
+                    gains = delta * 0
+                    losses = delta * 0
+                    gains[delta > 0] = delta[delta > 0]
+                    losses[-delta > 0] = -delta[-delta > 0]
+                    avg_gain = np.mean(gains)
+                    avg_loss = np.mean(losses)
+                    if avg_loss != 0:
+                        rs = avg_gain / avg_loss
+                        rsi = 100 - (100 / (1 + rs))
+                        
+                        # Convert RSI to factor (higher near extremes, lower in middle)
+                        rsi_factor = abs(rsi - 50) / 50  # 0 at RSI 50, 1 at RSI 0 or 100
+                    else:
+                        rsi_factor = 0.5
+                else:
+                    rsi_factor = 0.5
+                
+                # Combine factors
+                price_action_factor = 0.5 + (0.25 * directional_strength + 0.25 * rsi_factor)
+                price_action_factor = min(1.0, max(0.5, price_action_factor))
+                
+                # Add factor to details
+                sizing_details["price_action_details"] = {
+                    "directional_strength": float(directional_strength),
+                    "rsi_factor": float(rsi_factor)
+                }
+            except Exception as e:
+                logger.warning(f"Error calculating price action strength: {e}")
+        
+        confidence_factors.append(price_action_factor)
+        sizing_details["price_action_factor"] = price_action_factor
+        
+        # Apply volatility adjustment if provided
+        volatility_factor = 0.75  # Default to moderate confidence
+        if additional_factors and 'atr_volatility' in additional_factors:
+            try:
+                atr_volatility = additional_factors['atr_volatility']
+                
+                # Inverse relationship - higher volatility = lower confidence
+                # Typical ATR/Price ratios range from 0.005 (0.5%) to 0.03 (3%)
+                # Scale from 1.0 to 0.5 as volatility increases
+                volatility_factor = max(0.5, 1.0 - (atr_volatility * 25))
+                
+                sizing_details["volatility_details"] = {
+                    "atr_volatility": atr_volatility
+                }
+            except Exception as e:
+                logger.warning(f"Error applying volatility adjustment: {e}")
+        
+        confidence_factors.append(volatility_factor)
+        sizing_details["volatility_factor"] = volatility_factor
+        
+        # Apply historical win rate adjustment if provided
+        win_rate_factor = 0.75  # Default to moderate confidence
+        if additional_factors and 'recent_win_rate' in additional_factors:
+            try:
+                win_rate = additional_factors['recent_win_rate']
+                
+                # Scale win rate to confidence factor (0.5 to 1.0)
+                # A win rate of 50% = 0.5 factor, 100% = 1.0 factor
+                win_rate_factor = 0.5 + (0.5 * win_rate)
+                
+                sizing_details["win_rate_details"] = {
+                    "recent_win_rate": win_rate
+                }
+            except Exception as e:
+                logger.warning(f"Error applying win rate adjustment: {e}")
+        
+        confidence_factors.append(win_rate_factor)
+        sizing_details["win_rate_factor"] = win_rate_factor
+        
+        # Apply additional custom factors if provided
+        if additional_factors:
+            for factor_name, factor_value in additional_factors.items():
+                if factor_name not in ['recent_win_rate', 'atr_volatility'] and isinstance(factor_value, (int, float)):
+                    sizing_details[f"additional_{factor_name}"] = factor_value
+        
+        # Calculate the weighted position confidence
+        weighted_confidence = 0.0
+        weights_sum = 0.0
+        
+        # Map factors to their weights
+        factor_mapping = [
+            ("ensemble_confidence", ensemble_confidence),
+            ("market_regime", regime_factor),
+            ("price_action", price_action_factor),
+            ("volatility", volatility_factor),
+            ("win_rate", win_rate_factor)
+        ]
+        
+        for factor_name, factor_value in factor_mapping:
+            if factor_name in weights:
+                weight = weights[factor_name]
+                weighted_confidence += factor_value * weight
+                weights_sum += weight
+        
+        # Normalize if needed
+        if weights_sum > 0:
+            position_confidence = weighted_confidence / weights_sum
+        else:
+            # Fallback to simple average
+            position_confidence = sum(confidence_factors) / len(confidence_factors)
+        
+        # Ensure confidence is within valid range
+        position_confidence = min(1.0, max(0.5, position_confidence))
+        
+        # Final confidence and details
+        sizing_details["position_confidence"] = position_confidence
+        sizing_details["confidence_factors"] = confidence_factors
+        
+        logger.debug(f"Enhanced position sizing confidence: {position_confidence:.4f} (base: {ensemble_confidence:.4f})")
+        
+        return position_confidence, sizing_details
+        
+    def _calculate_regime_confidence_factor(self):
+        """
+        Calculate a confidence factor based on the current market regime
+        
+        Returns:
+            float: Regime-based confidence factor
+        """
+        # Define confidence levels for different market regimes
+        regime_confidence = {
+            "normal_trending_up": 0.90,    # High confidence in normal uptrend
+            "normal_trending_down": 0.85,  # Good confidence in normal downtrend
+            "normal_ranging": 0.70,        # Moderate confidence in normal ranging
+            "volatile_trending_up": 0.75,  # Reduced confidence in volatile uptrend
+            "volatile_trending_down": 0.70, # Lower confidence in volatile downtrend
+            "volatile_ranging": 0.60,      # Low confidence in volatile ranging
+            "volatile": 0.65,              # Low confidence in general volatility
+            "unknown": 0.70                # Default moderate confidence
+        }
+        
+        # Get confidence factor for current regime
+        return regime_confidence.get(self.current_regime, 0.70)
+    
     def update_performance(self, prediction_outcomes, trade_details=None):
         """
         Update performance history based on prediction outcomes and optionally trade details
