@@ -11,6 +11,7 @@ import os
 import sys
 import json
 import logging
+import traceback
 from datetime import datetime
 from typing import Optional, Dict, Tuple, Any, List
 
@@ -40,20 +41,44 @@ class MLEnhancedStrategy(TradingStrategy):
     and risk management.
     """
     
-    def __init__(self, base_strategy: TradingStrategy, trading_pair="SOL/USD", 
-                timeframe="1h", ml_influence=0.5, confidence_threshold=0.6):
+    def __init__(self, trading_pair="SOL/USD", base_strategy=None, 
+                timeframe="1h", ml_influence=0.5, confidence_threshold=0.6, **kwargs):
         """
         Initialize the ML-enhanced strategy
         
         Args:
-            base_strategy (TradingStrategy): Base trading strategy to enhance
             trading_pair (str): Trading pair to analyze
+            base_strategy (TradingStrategy, optional): Base trading strategy to enhance
             timeframe (str): Timeframe for analysis
             ml_influence (float): Weight of ML predictions in final decision (0.0-1.0)
             confidence_threshold (float): Minimum confidence required for ML to influence decision
+            **kwargs: Additional parameters passed to base strategy
         """
-        # Initialize with base strategy properties
-        super().__init__(symbol=base_strategy.symbol)
+        # Extract symbol from trading pair
+        self.symbol = trading_pair.split('/')[0] if '/' in trading_pair else trading_pair
+        
+        # Initialize with Trading Strategy properties
+        super().__init__(symbol=self.symbol)
+        
+        # If base strategy is not provided, create a default strategy
+        if base_strategy is None:
+            from arima_strategy import ARIMAStrategy
+            base_strategy = ARIMAStrategy(self.symbol, **kwargs)
+            
+        # Set up all required properties
+        self.trading_pair = trading_pair
+        
+        # Initialize prices array for TradingStrategy compatibility
+        self.prices = []
+        
+        # Initialize OHLC data structure
+        self.ohlc_data = {
+            'open': [],
+            'high': [],
+            'low': [],
+            'close': [],
+            'volume': []
+        }
         
         # Store lookback period for compatibility
         self.lookback_period = getattr(base_strategy, 'lookback_period', 30)
@@ -72,6 +97,11 @@ class MLEnhancedStrategy(TradingStrategy):
         # Set strategy name and description
         self.name = f"ML-Enhanced {getattr(self.base_strategy, 'name', 'Strategy')}"
         self.description = f"Machine Learning Enhanced {getattr(self.base_strategy, 'description', 'Trading Strategy')}"
+        
+        # Initialize position and trailing stop attributes
+        self.position = None
+        self.entry_price = None
+        self.trailing_stop = None
         
         # Track ML influence on decisions
         self.ml_influenced_decisions = 0
@@ -99,6 +129,12 @@ class MLEnhancedStrategy(TradingStrategy):
         
         # Copy relevant data
         self.ohlc_data = self.base_strategy.ohlc_data
+        
+        # Update prices array for TradingStrategy compatibility
+        self.prices.append(close_price)
+        # Keep only the most recent lookback_period prices
+        if len(self.prices) > self.lookback_period:
+            self.prices = self.prices[-self.lookback_period:]
     
     def update_position(self, position: Optional[str], entry_price: Optional[float] = None):
         """
@@ -123,24 +159,60 @@ class MLEnhancedStrategy(TradingStrategy):
         Returns:
             pd.DataFrame: Market data with indicators
         """
-        # Create a DataFrame from OHLC data
-        data = {
-            'timestamp': [datetime.now() for _ in range(len(self.ohlc_data['close']))],
-            'open': self.ohlc_data['open'],
-            'high': self.ohlc_data['high'],
-            'low': self.ohlc_data['low'],
-            'close': self.ohlc_data['close'],
-            'volume': self.ohlc_data.get('volume', [0] * len(self.ohlc_data['close']))
-        }
-        
-        df = pd.DataFrame(data)
-        
-        # Add indicators that are available in the base strategy
-        for key, values in self.ohlc_data.items():
-            if key not in ['open', 'high', 'low', 'close', 'volume', 'timestamp']:
-                df[key] = values
-        
-        return df
+        try:
+            # Check if OHLC data is available
+            if not self.ohlc_data or 'close' not in self.ohlc_data or not self.ohlc_data['close']:
+                logger.warning("OHLC data is missing or incomplete")
+                return pd.DataFrame()  # Return empty DataFrame
+                
+            # Get the length of available data
+            data_length = len(self.ohlc_data['close'])
+            
+            # Ensure all required keys exist with proper lengths
+            required_keys = ['open', 'high', 'low', 'close']
+            for key in required_keys:
+                if key not in self.ohlc_data or len(self.ohlc_data[key]) != data_length:
+                    logger.warning(f"OHLC data for {key} is missing or has wrong length")
+                    return pd.DataFrame()  # Return empty DataFrame
+            
+            # Create a DataFrame from OHLC data
+            data = {
+                'timestamp': [datetime.now() for _ in range(data_length)],
+                'open': self.ohlc_data['open'],
+                'high': self.ohlc_data['high'],
+                'low': self.ohlc_data['low'],
+                'close': self.ohlc_data['close'],
+                'volume': self.ohlc_data.get('volume', [0] * data_length)
+            }
+            
+            df = pd.DataFrame(data)
+            
+            # Add indicators that are available in the base strategy
+            for key, values in self.ohlc_data.items():
+                if key not in ['open', 'high', 'low', 'close', 'volume', 'timestamp']:
+                    # Make sure the length matches
+                    if len(values) == data_length:
+                        df[key] = values
+                    else:
+                        logger.warning(f"Indicator {key} has inconsistent length, skipping")
+            
+            # Calculate additional indicators if needed
+            if data_length >= 20:
+                # Add SMA20 if not already present
+                if 'sma20' not in df.columns:
+                    df['sma20'] = df['close'].rolling(window=20).mean()
+                
+                # Add volatility if not already present
+                if 'volatility' not in df.columns:
+                    df['volatility'] = df['close'].pct_change().rolling(window=20).std()
+            
+            logger.info(f"Prepared market data with shape {df.shape} and columns {list(df.columns)}")
+            return df
+            
+        except Exception as e:
+            logger.error(f"Error preparing market data: {e}")
+            logger.error(traceback.format_exc())
+            return pd.DataFrame()  # Return empty DataFrame in case of error
     
     def check_entry_signal(self, current_price):
         """

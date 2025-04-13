@@ -94,6 +94,15 @@ class DynamicWeightedEnsemble:
         self.norm_params = {}
         self.feature_names = {}
         
+        # If models directory doesn't exist, create it
+        os.makedirs(MODELS_DIR, exist_ok=True)
+        
+        # Ensure each model type directory exists
+        for model_type in MODEL_TYPES:
+            model_dir = os.path.join(MODELS_DIR, model_type)
+            os.makedirs(model_dir, exist_ok=True)
+        
+        missing_models = []
         for model_type in MODEL_TYPES:
             model_path = os.path.join(MODELS_DIR, model_type, f"{self.ticker_symbol}.h5")
             norm_path = os.path.join(MODELS_DIR, model_type, "norm_params.json")
@@ -115,11 +124,50 @@ class DynamicWeightedEnsemble:
                     logger.info(f"Loaded {model_type} model for {self.ticker_symbol}")
                 except Exception as e:
                     logger.error(f"Error loading {model_type} model: {e}")
-                    traceback.print_exc()
+                    logger.error(traceback.format_exc())
+                    missing_models.append(model_type)
             else:
                 logger.warning(f"{model_type} model not found at {model_path}")
+                missing_models.append(model_type)
+        
+        # Initialize placeholder models during testing/development
+        if not self.models and len(missing_models) > 0:
+            logger.warning("No trained models found. Using balanced weights with fallback prediction.")
+            self.using_fallback_models = True
+        else:
+            self.using_fallback_models = False
         
         logger.info(f"Loaded {len(self.models)} models for {self.ticker_symbol}")
+    
+    def get_loaded_models(self):
+        """
+        Get information about loaded models
+        
+        Returns:
+            dict: Dictionary with information about loaded models
+        """
+        loaded_models = []
+        for model_type in MODEL_TYPES:
+            if model_type in self.models:
+                loaded_models.append({
+                    'model_type': model_type,
+                    'weight': self.weights.get(model_type, 0.0),
+                    'features': len(self.feature_names.get(model_type, []))
+                })
+            else:
+                loaded_models.append({
+                    'model_type': model_type,
+                    'weight': self.weights.get(model_type, 0.0),
+                    'features': 0,
+                    'status': 'not_loaded'
+                })
+        
+        return {
+            'loaded_count': len(self.models),
+            'total_models': len(MODEL_TYPES),
+            'using_fallback': getattr(self, 'using_fallback_models', False),
+            'models': loaded_models
+        }
     
     def detect_market_regime(self, market_data):
         """
@@ -343,6 +391,17 @@ class DynamicWeightedEnsemble:
         """
         preprocessed_data = {}
         
+        # Check if we have enough data
+        if market_data is None or len(market_data) < 60:  # Minimum sequence length is typically 60
+            logger.warning(f"Not enough data for preprocessing. Data shape: {market_data.shape if market_data is not None else 'None'}")
+            return preprocessed_data
+            
+        # Log available columns for debugging
+        logger.debug(f"Available columns in market data: {list(market_data.columns)}")
+        
+        # Generate calculated features if needed
+        market_data = self._ensure_required_features(market_data)
+        
         for model_type, model in self.models.items():
             try:
                 # Get the right columns based on feature names
@@ -351,20 +410,38 @@ class DynamicWeightedEnsemble:
                     
                     # Extract relevant columns if they exist
                     X = []
+                    missing_features = []
                     for feature in feature_names:
-                        if feature in market_data.columns:
-                            X.append(market_data[feature].values)
-                        else:
-                            # Try with and without timeframe suffix
-                            base_name = feature.split('_')[0]
-                            alternate_feature = f"{base_name}_{self.timeframe}"
-                            
-                            if alternate_feature in market_data.columns:
-                                X.append(market_data[alternate_feature].values)
-                            else:
-                                logger.warning(f"Feature {feature} not found in market data")
-                                # Use zeros as placeholder
-                                X.append(np.zeros_like(market_data.index.values, dtype=float))
+                        # Try different naming conventions to find the right feature
+                        variants = [
+                            feature,  # Original name
+                            f"{feature}_{self.timeframe}",  # With timeframe suffix
+                            feature.split('_')[0],  # Base name without suffix
+                            f"{feature.split('_')[0]}_{self.timeframe}"  # Base name with timeframe
+                        ]
+                        
+                        feature_found = False
+                        for variant in variants:
+                            if variant in market_data.columns:
+                                X.append(market_data[variant].values)
+                                if variant != feature:
+                                    logger.debug(f"Found feature {feature} as {variant}")
+                                feature_found = True
+                                break
+                        
+                        if not feature_found:
+                            missing_features.append(feature)
+                            # Use zeros as placeholder (necessary for model structure)
+                            X.append(np.zeros_like(market_data.index.values, dtype=float))
+                    
+                    # Log missing features
+                    if missing_features:
+                        logger.warning(f"Missing {len(missing_features)}/{len(feature_names)} features for {model_type} model: {missing_features}")
+                        
+                        # If too many features are missing, skip this model
+                        if len(missing_features) > len(feature_names) / 3:  # Skip if more than 1/3 of features are missing
+                            logger.error(f"Too many features missing for {model_type}, skipping model")
+                            continue
                     
                     # Stack arrays to create input tensor
                     X = np.column_stack(X)
@@ -372,6 +449,11 @@ class DynamicWeightedEnsemble:
                     # Create sequences for recurrent models
                     input_shape = model.input_shape[1:]
                     sequence_length = input_shape[0]
+                    
+                    # Check if we have enough data for sequences
+                    if len(X) < sequence_length:
+                        logger.warning(f"Not enough data points ({len(X)}) for sequence length {sequence_length}")
+                        continue
                     
                     # Create sequences
                     sequences = []
@@ -391,9 +473,109 @@ class DynamicWeightedEnsemble:
                     preprocessed_data[model_type] = X_sequences
             except Exception as e:
                 logger.error(f"Error preprocessing data for {model_type}: {e}")
-                traceback.print_exc()
+                logger.error(traceback.format_exc())
+        
+        # Log summary of processed models
+        logger.info(f"Successfully preprocessed data for {len(preprocessed_data)}/{len(self.models)} models")
         
         return preprocessed_data
+        
+    def _ensure_required_features(self, market_data):
+        """
+        Ensure all commonly required features are present in the market data
+        by calculating them if needed
+        
+        Args:
+            market_data (pd.DataFrame): Market data
+            
+        Returns:
+            pd.DataFrame: Market data with additional calculated features
+        """
+        # Make a copy to avoid modifying the original
+        data = market_data.copy()
+        
+        # Ensure OHLCV columns exist with standard names
+        ohlc_columns = {
+            'open': ['open', f'open_{self.timeframe}', 'Open'],
+            'high': ['high', f'high_{self.timeframe}', 'High'],
+            'low': ['low', f'low_{self.timeframe}', 'Low'],
+            'close': ['close', f'close_{self.timeframe}', 'Close'],
+            'volume': ['volume', f'volume_{self.timeframe}', 'Volume']
+        }
+        
+        # Standardize OHLCV column names
+        for std_name, variants in ohlc_columns.items():
+            if std_name not in data.columns:
+                for variant in variants:
+                    if variant in data.columns:
+                        data[std_name] = data[variant]
+                        logger.debug(f"Standardized column name: {variant} -> {std_name}")
+                        break
+        
+        # Calculate RSI if not present
+        if 'rsi' not in data.columns and 'RSI' not in data.columns and 'close' in data.columns:
+            try:
+                delta = data['close'].diff()
+                gain = delta.clip(lower=0)
+                loss = -delta.clip(upper=0)
+                avg_gain = gain.rolling(window=14).mean()
+                avg_loss = loss.rolling(window=14).mean()
+                rs = avg_gain / avg_loss.replace(0, 1e-10)  # Avoid division by zero
+                data['rsi'] = 100 - (100 / (1 + rs))
+                logger.debug("Added calculated RSI")
+            except Exception as e:
+                logger.warning(f"Failed to calculate RSI: {e}")
+        
+        # Calculate EMAs if not present
+        for period in [9, 21, 50, 100]:
+            ema_col = f'ema{period}'
+            if ema_col not in data.columns and 'close' in data.columns:
+                try:
+                    data[ema_col] = data['close'].ewm(span=period, adjust=False).mean()
+                    logger.debug(f"Added calculated {ema_col}")
+                except Exception as e:
+                    logger.warning(f"Failed to calculate {ema_col}: {e}")
+        
+        # Calculate MACD if not present
+        if 'macd' not in data.columns and 'close' in data.columns:
+            try:
+                ema12 = data['close'].ewm(span=12, adjust=False).mean()
+                ema26 = data['close'].ewm(span=26, adjust=False).mean()
+                data['macd'] = ema12 - ema26
+                data['macd_signal'] = data['macd'].ewm(span=9, adjust=False).mean()
+                logger.debug("Added calculated MACD and MACD signal")
+            except Exception as e:
+                logger.warning(f"Failed to calculate MACD: {e}")
+        
+        # Calculate Bollinger Bands if not present
+        if 'bb_upper' not in data.columns and 'close' in data.columns:
+            try:
+                window = 20
+                std_dev = 2
+                sma = data['close'].rolling(window=window).mean()
+                rolling_std = data['close'].rolling(window=window).std()
+                data['bb_upper'] = sma + (rolling_std * std_dev)
+                data['bb_lower'] = sma - (rolling_std * std_dev)
+                data['bb_middle'] = sma
+                logger.debug("Added calculated Bollinger Bands")
+            except Exception as e:
+                logger.warning(f"Failed to calculate Bollinger Bands: {e}")
+        
+        # Calculate ATR if not present
+        if 'atr' not in data.columns and all(col in data.columns for col in ['high', 'low', 'close']):
+            try:
+                period = 14
+                high_low = data['high'] - data['low']
+                high_close = (data['high'] - data['close'].shift(1)).abs()
+                low_close = (data['low'] - data['close'].shift(1)).abs()
+                ranges = pd.concat([high_low, high_close, low_close], axis=1)
+                true_range = ranges.max(axis=1)
+                data['atr'] = true_range.rolling(period).mean()
+                logger.debug("Added calculated ATR")
+            except Exception as e:
+                logger.warning(f"Failed to calculate ATR: {e}")
+        
+        return data
     
     def predict(self, market_data):
         """
@@ -420,6 +602,35 @@ class DynamicWeightedEnsemble:
         # Generate predictions
         predictions = {}
         confidences = {}
+        errors = {}
+        
+        # Log diagnostic information
+        model_count = len(self.models)
+        preprocessed_count = len(preprocessed_data)
+        
+        logger.info(f"Generating predictions for {preprocessed_count}/{model_count} models")
+        
+        # If no models were preprocessed successfully, provide detailed error information
+        if preprocessed_count == 0 and model_count > 0:
+            logger.error("No models were successfully preprocessed. Input data may be incompatible.")
+            logger.debug(f"Market data columns: {list(market_data.columns) if market_data is not None else 'None'}")
+            logger.debug(f"Market data shape: {market_data.shape if market_data is not None else 'None'}")
+            
+            # Attempt to provide more specific diagnostic information
+            if market_data is None or len(market_data) == 0:
+                logger.error("Market data is empty or None")
+            elif len(market_data) < 60:
+                logger.error(f"Market data length {len(market_data)} is less than minimum sequence length (60)")
+            
+            # Check if any required features are completely missing
+            for model_type, features in self.feature_names.items():
+                missing = []
+                for feature in features:
+                    if feature not in market_data.columns:
+                        missing.append(feature)
+                
+                if missing:
+                    logger.error(f"Model {model_type} missing critical features: {missing[:10]}{'...' if len(missing) > 10 else ''}")
         
         for model_type, model in self.models.items():
             if model_type in preprocessed_data:
@@ -427,15 +638,23 @@ class DynamicWeightedEnsemble:
                     # Get the last sequence for prediction
                     X = preprocessed_data[model_type][-1:]
                     
+                    # Log tensor shape for debugging
+                    logger.debug(f"Input tensor shape for {model_type}: {X.shape}")
+                    
                     # Generate prediction
                     pred = model.predict(X, verbose=0)[0][0]
                     
                     # Store prediction and confidence
                     predictions[model_type] = pred
                     confidences[model_type] = abs(pred)
+                    
+                    # Log successful prediction for debugging
+                    logger.debug(f"Successful prediction from {model_type}: {pred:.4f} (confidence: {abs(pred):.4f})")
+                    
                 except Exception as e:
+                    errors[model_type] = str(e)
                     logger.error(f"Error generating prediction for {model_type}: {e}")
-                    traceback.print_exc()
+                    logger.error(traceback.format_exc())
         
         # Calculate weighted ensemble prediction
         weighted_sum = 0
@@ -481,7 +700,12 @@ class DynamicWeightedEnsemble:
             "model_predictions": predictions,
             "model_confidences": confidences,
             "adjusted_weights": adjusted_weights,
-            "confidence_factors": confidence_factors
+            "confidence_factors": confidence_factors,
+            "errors": errors,
+            "models_loaded": len(self.models),
+            "models_used": len(predictions),
+            "models_features": {model_type: len(features) for model_type, features in self.feature_names.items()} if hasattr(self, 'feature_names') else {},
+            "data_columns": list(market_data.columns) if market_data is not None else []
         }
         
         return ensemble_prediction, ensemble_confidence, details

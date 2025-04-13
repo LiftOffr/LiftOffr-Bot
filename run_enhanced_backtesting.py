@@ -410,8 +410,9 @@ def run_cross_timeframe_backtest(args):
     
     # Run cross-timeframe backtest
     from arima_strategy import ARIMAStrategy
+    from enhanced_backtesting import run_cross_timeframe_backtest as run_ctf_backtest
     
-    results = run_cross_timeframe_backtest(
+    results = run_ctf_backtest(
         symbol=args.symbol,
         timeframes=timeframes,
         strategy_class=ARIMAStrategy,

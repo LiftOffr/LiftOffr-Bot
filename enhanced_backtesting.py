@@ -894,11 +894,18 @@ def load_historical_data(symbol, timeframe="1h", start_date=None, end_date=None)
     Returns:
         pd.DataFrame: Historical data
     """
-    # Construct file path
-    file_path = os.path.join(DATA_DIR, f"{symbol}_{timeframe}.csv")
+    # Try different possible file paths
+    # First check nested directory structure
+    file_path = os.path.join(DATA_DIR, symbol, f"{timeframe}.csv")
     
+    # If not found, try the flat structure
     if not os.path.exists(file_path):
-        logger.error(f"Data file not found: {file_path}")
+        file_path = os.path.join(DATA_DIR, f"{symbol}_{timeframe}.csv")
+    
+    # Check if file exists
+    if not os.path.exists(file_path):
+        logger.error(f"Data file not found in any location for {symbol} {timeframe}")
+        logger.error(f"Tried paths: {os.path.join(DATA_DIR, symbol, f'{timeframe}.csv')} and {os.path.join(DATA_DIR, f'{symbol}_{timeframe}.csv')}")
         return None
     
     # Load data
@@ -909,10 +916,17 @@ def load_historical_data(symbol, timeframe="1h", start_date=None, end_date=None)
     df.set_index('timestamp', inplace=True)
     
     # Filter by date range if provided
-    if start_date:
-        df = df[df.index >= pd.to_datetime(start_date)]
-    if end_date:
-        df = df[df.index <= pd.to_datetime(end_date)]
+    if start_date and not df.empty:
+        try:
+            df = df[df.index >= pd.to_datetime(start_date)]
+        except Exception as e:
+            logger.warning(f"Error filtering by start date: {e}")
+    
+    if end_date and not df.empty:
+        try:
+            df = df[df.index <= pd.to_datetime(end_date)]
+        except Exception as e:
+            logger.warning(f"Error filtering by end date: {e}")
     
     # Sort by timestamp
     df.sort_index(inplace=True)

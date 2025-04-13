@@ -81,9 +81,95 @@ class MLStrategyIntegrator:
                 details: dict with detailed prediction information
         """
         try:
-            # Generate prediction from ensemble
-            prediction, confidence, details = self.ensemble.predict(market_data)
+            # Verify data integrity and minimum required data
+            if market_data is None:
+                logger.warning("Market data is None, cannot generate ML prediction")
+                return 0.0, 0.0, {'error': 'No market data provided'}
+                
+            if len(market_data) < 30:
+                logger.warning(f"Insufficient data for ML prediction: {len(market_data)} rows (need at least 30)")
+                return 0.0, 0.0, {'error': 'Insufficient data', 'rows': len(market_data), 'required': 30}
+                
+            # Create a copy of market data to avoid modifying the original
+            preprocessed_data = market_data.copy()
             
+            # Standardize column names - ensure all standard price/indicator names are available
+            # First check and normalize OHLCV column names (case-insensitive)
+            standard_columns = {
+                'open': ['open', 'Open', 'OPEN', 'open_price'],
+                'high': ['high', 'High', 'HIGH', 'high_price'],
+                'low': ['low', 'Low', 'LOW', 'low_price'],
+                'close': ['close', 'Close', 'CLOSE', 'close_price', 'price'],
+                'volume': ['volume', 'Volume', 'VOLUME', 'vol']
+            }
+            
+            # Try to find and standardize column names
+            for standard_name, alternatives in standard_columns.items():
+                if standard_name not in preprocessed_data.columns:
+                    # Check if any alternative names exist in the data
+                    for alt_name in alternatives:
+                        if alt_name in preprocessed_data.columns:
+                            preprocessed_data[standard_name] = preprocessed_data[alt_name]
+                            logger.debug(f"Mapped column {alt_name} to {standard_name}")
+                            break
+            
+            # Check required columns again after normalization
+            required_columns = ['open', 'high', 'low', 'close']
+            missing_columns = [col for col in required_columns if col not in preprocessed_data.columns]
+            
+            if missing_columns:
+                logger.warning(f"Missing required columns for ML prediction after normalization: {missing_columns}")
+                return 0.0, 0.0, {'error': 'Missing columns', 'missing': missing_columns}
+            
+            # Add missing indicators if needed for model compatibility
+            basic_indicators = {
+                'sma20': lambda df: df['close'].rolling(window=20).mean(),
+                'ema9': lambda df: df['close'].ewm(span=9, adjust=False).mean(),
+                'ema21': lambda df: df['close'].ewm(span=21, adjust=False).mean(),
+                'rsi': lambda df: self._calculate_rsi(df['close']),
+                'volatility': lambda df: df['close'].pct_change().rolling(window=20).std(),
+                'atr': lambda df: self._calculate_atr(df)
+            }
+            
+            # Check if models need specific features and create them if missing
+            models_info = None
+            try:
+                models_info = self.ensemble.get_loaded_models()
+                logger.debug(f"Loaded models info: {models_info}")
+            except:
+                logger.warning("Could not get loaded models info, using default indicators")
+            
+            # Add all basic indicators if they're missing - better to have extra than missing
+            for indicator_name, indicator_func in basic_indicators.items():
+                if indicator_name not in preprocessed_data.columns:
+                    try:
+                        preprocessed_data[indicator_name] = indicator_func(preprocessed_data)
+                        logger.debug(f"Added missing indicator: {indicator_name}")
+                    except Exception as calc_error:
+                        logger.warning(f"Error calculating indicator {indicator_name}: {calc_error}")
+                        # Add zeros placeholder as last resort
+                        preprocessed_data[indicator_name] = 0.0
+            
+            # Also check for other common indicators by name pattern
+            for col in market_data.columns:
+                if col not in preprocessed_data.columns:
+                    # Copy columns like macd, bollinger_bands etc.
+                    if any(pattern in col.lower() for pattern in ['macd', 'signal', 'bollinger', 'rsi', 'adx', 'cci']):
+                        preprocessed_data[col] = market_data[col]
+            
+            # Fill NaN values to prevent errors
+            preprocessed_data = preprocessed_data.fillna(method='ffill').fillna(method='bfill').fillna(0)
+            
+            logger.debug(f"Preprocessed data columns: {list(preprocessed_data.columns)}")
+            
+            # Generate prediction from ensemble
+            prediction, confidence, details = self.ensemble.predict(preprocessed_data)
+            
+            # Handle NaN values
+            if np.isnan(prediction) or np.isnan(confidence):
+                logger.warning("ML prediction returned NaN values")
+                return 0.0, 0.0, {'error': 'NaN prediction values'}
+                
             # Convert prediction from probability to -1 to 1 scale
             # 0.5 is neutral (0), 1.0 is strong buy (1), 0.0 is strong sell (-1)
             scaled_prediction = (prediction - 0.5) * 2
@@ -105,9 +191,57 @@ class MLStrategyIntegrator:
             return scaled_prediction, confidence, details
         
         except Exception as e:
+            # Log detailed error information
             logger.error(f"Error generating ML prediction: {e}")
-            traceback.print_exc()
-            return 0.0, 0.0, {}
+            logger.error(f"Market data shape: {market_data.shape if hasattr(market_data, 'shape') else 'unknown'}")
+            logger.error(f"Market data columns: {list(market_data.columns) if hasattr(market_data, 'columns') else 'unknown'}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            
+            # Return neutral prediction with zero confidence
+            return 0.0, 0.0, {'error': str(e), 'traceback': traceback.format_exc()}
+            
+    def _calculate_rsi(self, prices, period=14):
+        """
+        Calculate RSI indicator
+        
+        Args:
+            prices (Series): Price data
+            period (int): RSI period
+            
+        Returns:
+            Series: RSI values
+        """
+        delta = prices.diff()
+        gain = delta.where(delta > 0, 0)
+        loss = -delta.where(delta < 0, 0)
+        
+        avg_gain = gain.rolling(window=period).mean()
+        avg_loss = loss.rolling(window=period).mean()
+        
+        rs = avg_gain / avg_loss.replace(0, np.nan)
+        rsi = 100 - (100 / (1 + rs.fillna(0)))
+        
+        return rsi
+        
+    def _calculate_atr(self, df, period=14):
+        """
+        Calculate Average True Range
+        
+        Args:
+            df (DataFrame): OHLC data
+            period (int): ATR period
+            
+        Returns:
+            Series: ATR values
+        """
+        high_low = df['high'] - df['low']
+        high_close = (df['high'] - df['close'].shift()).abs()
+        low_close = (df['low'] - df['close'].shift()).abs()
+        
+        tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+        atr = tr.rolling(window=period).mean()
+        
+        return atr
     
     def integrate_with_strategy_signal(self, strategy_signal, strategy_strength, market_data):
         """
