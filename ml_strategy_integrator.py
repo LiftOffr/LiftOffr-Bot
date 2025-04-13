@@ -37,7 +37,10 @@ class MLStrategyIntegrator:
     """
     
     def __init__(self, trading_pair="SOL/USD", timeframe="1h", 
-                influence_weight=0.5, confidence_threshold=0.6):
+                influence_weight=0.5, confidence_threshold=0.6,
+                auto_prune_enabled=True, prune_interval=100, 
+                performance_threshold=0.0, min_samples=5,
+                ensemble_kwargs=None):
         """
         Initialize the ML strategy integrator
         
@@ -46,15 +49,32 @@ class MLStrategyIntegrator:
             timeframe (str): Timeframe for analysis
             influence_weight (float): Weight of ML predictions in final decision (0.0-1.0)
             confidence_threshold (float): Minimum confidence required for ML to influence decision
+            auto_prune_enabled (bool): Whether to automatically prune underperforming models
+            prune_interval (int): Number of predictions between model pruning operations
+            performance_threshold (float): Minimum performance score to keep a model
+            min_samples (int): Minimum number of performance samples required before pruning
+            ensemble_kwargs (dict): Additional keyword arguments to pass to DynamicWeightedEnsemble
         """
         self.trading_pair = trading_pair
+        
+        # Auto-pruning settings
+        self.auto_prune_enabled = auto_prune_enabled
+        self.prune_interval = prune_interval
+        self.performance_threshold = performance_threshold
+        self.min_samples = min_samples
+        self.prediction_counter = 0
         self.ticker_symbol = trading_pair.replace('/', '')
         self.timeframe = timeframe
         self.influence_weight = influence_weight
         self.confidence_threshold = confidence_threshold
         
-        # Initialize ensemble model
-        self.ensemble = DynamicWeightedEnsemble(trading_pair=trading_pair, timeframe=timeframe)
+        # Initialize ensemble model with optional additional parameters
+        ensemble_kwargs = ensemble_kwargs or {}
+        self.ensemble = DynamicWeightedEnsemble(
+            trading_pair=trading_pair,
+            timeframe=timeframe,
+            **ensemble_kwargs
+        )
         
         # Prediction history
         self.prediction_history = []
@@ -243,6 +263,51 @@ class MLStrategyIntegrator:
         
         return atr
     
+    def prune_underperforming_models(self):
+        """
+        Run auto-pruning to remove underperforming models from the ensemble
+        
+        This is called periodically based on the prediction counter and prune_interval
+        to ensure the ensemble maintains high-quality models.
+        
+        Returns:
+            tuple: (pruned_models, kept_models, pruning_details)
+        """
+        # Make sure we have the auto_prune_models method in the ensemble
+        if not hasattr(self.ensemble, 'auto_prune_models'):
+            logger.warning("Auto-pruning not available - DynamicWeightedEnsemble missing auto_prune_models method")
+            return [], [], {"error": "Auto-pruning not available"}
+        
+        logger.info(f"Running model auto-pruning with threshold: {self.performance_threshold}, min samples: {self.min_samples}")
+        
+        try:
+            # Call the auto_prune_models method of DynamicWeightedEnsemble
+            pruned_models, kept_models = self.ensemble.auto_prune_models(
+                performance_threshold=self.performance_threshold,
+                min_samples=self.min_samples
+            )
+            
+            # Log the results
+            if pruned_models:
+                logger.info(f"Auto-pruning removed {len(pruned_models)} models: {pruned_models}")
+                logger.info(f"Remaining models: {kept_models}")
+            else:
+                logger.info(f"No models pruned, all models performing sufficiently well")
+            
+            # Return results
+            return pruned_models, kept_models, {
+                "pruned_count": len(pruned_models),
+                "kept_count": len(kept_models),
+                "pruned_models": pruned_models,
+                "kept_models": kept_models,
+                "performance_threshold": self.performance_threshold
+            }
+            
+        except Exception as e:
+            logger.error(f"Error during model auto-pruning: {e}")
+            logger.error(traceback.format_exc())
+            return [], [], {"error": str(e)}
+    
     def integrate_with_strategy_signal(self, strategy_signal, strategy_strength, market_data):
         """
         Integrate ML prediction with strategy signal
@@ -255,6 +320,14 @@ class MLStrategyIntegrator:
         Returns:
             tuple: (integrated_signal, integrated_strength, details)
         """
+        # Increment prediction counter
+        self.prediction_counter += 1
+        
+        # Check if we should run auto-pruning
+        if self.auto_prune_enabled and self.prediction_counter % self.prune_interval == 0:
+            logger.info(f"Auto-pruning check triggered (prediction #{self.prediction_counter})")
+            self.prune_underperforming_models()
+        
         # Get ML prediction
         ml_prediction, ml_confidence, ml_details = self.get_ml_prediction(market_data)
         
@@ -318,9 +391,11 @@ class MLStrategyIntegrator:
         if was_correct:
             self.correct_predictions += 1
         
-        # Update ensemble model performance
+        # Update the most recent prediction with outcome
         if len(self.prediction_history) > 0:
             last_prediction = self.prediction_history[-1]
+            last_prediction['was_correct'] = was_correct
+            last_prediction['outcome_timestamp'] = datetime.now()
             
             # Create outcome value (1 for correct, -1 for incorrect)
             outcome = 1 if was_correct else -1
@@ -341,6 +416,12 @@ class MLStrategyIntegrator:
                 
                 # Update ensemble model performance
                 self.ensemble.update_performance(model_outcomes)
+                
+                # Save outcome in prediction history
+                last_prediction['model_outcomes'] = model_outcomes
+                
+            logger.info(f"Prediction performance updated: correct={was_correct}, " +
+                       f"total={self.total_predictions}, accuracy={self.correct_predictions/max(1, self.total_predictions):.2f}")
     
     def get_prediction_statistics(self):
         """
@@ -357,11 +438,25 @@ class MLStrategyIntegrator:
         recent_correct = 0
         recent_total = min(20, self.total_predictions)
         
+        # Get recent prediction outcomes from history
+        recent_outcomes = []
+        for prediction in self.prediction_history[-recent_total:]:
+            if "was_correct" in prediction:
+                recent_outcomes.append(prediction["was_correct"])
+                if prediction["was_correct"]:
+                    recent_correct += 1
+        
+        if recent_outcomes:
+            recent_accuracy = recent_correct / len(recent_outcomes)
+        else:
+            recent_accuracy = 0.0
+        
         return {
             "total_predictions": self.total_predictions,
             "correct_predictions": self.correct_predictions,
             "accuracy": accuracy,
-            "recent_accuracy": recent_correct / max(1, recent_total)
+            "recent_accuracy": recent_accuracy,
+            "recent_predictions_analyzed": len(recent_outcomes)
         }
     
     def adjust_position_size(self, base_position_size, market_data):
@@ -510,7 +605,14 @@ class MLStrategyIntegrator:
             "confidence_threshold": self.confidence_threshold,
             "prediction_statistics": prediction_stats,
             "ensemble": ensemble_status,
-            "recent_predictions": self.prediction_history[-5:] if len(self.prediction_history) > 0 else []
+            "recent_predictions": self.prediction_history[-5:] if len(self.prediction_history) > 0 else [],
+            "auto_pruning": {
+                "enabled": self.auto_prune_enabled,
+                "interval": self.prune_interval,
+                "performance_threshold": self.performance_threshold,
+                "min_samples": self.min_samples,
+                "prediction_counter": self.prediction_counter
+            }
         }
         
         return status

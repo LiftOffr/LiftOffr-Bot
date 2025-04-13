@@ -87,6 +87,34 @@ class DynamicWeightedEnsemble:
         default_weights = {model_type: 1.0 / len(MODEL_TYPES) for model_type in MODEL_TYPES}
         logger.info(f"Using default weights: {default_weights}")
         return default_weights
+        
+    def _normalize_weights(self):
+        """
+        Normalize weights to ensure they sum to 1.0
+        
+        This is called after weights have been adjusted or models pruned
+        to ensure a valid probability distribution of weights.
+        """
+        if not self.weights or not self.models:
+            return
+            
+        # Get weights only for existing models
+        valid_weights = {model_type: weight for model_type, weight in self.weights.items() 
+                       if model_type in self.models}
+        
+        # Calculate sum of valid weights
+        weight_sum = sum(valid_weights.values())
+        
+        # Normalize if sum is not zero
+        if weight_sum > 0:
+            for model_type in valid_weights:
+                self.weights[model_type] = valid_weights[model_type] / weight_sum
+        else:
+            # If all weights are zero, assign equal weights
+            for model_type in self.models:
+                self.weights[model_type] = 1.0 / len(self.models)
+                
+        logger.debug(f"Normalized weights: {self.weights}")
     
     def _load_models(self):
         """Load all available trained models"""
@@ -756,9 +784,15 @@ class DynamicWeightedEnsemble:
         model_info = {}
         for model_type, model in self.models.items():
             input_shape = model.input_shape
+            # Add performance information if available
+            perf_history = self.performance_history.get(model_type, [])
+            recent_perf = perf_history[-10:] if perf_history else []
+            
             model_info[model_type] = {
                 "input_shape": str(input_shape),
-                "weight": self.weights.get(model_type, 0)
+                "weight": self.weights.get(model_type, 0),
+                "recent_performance": sum(recent_perf) / len(recent_perf) if recent_perf else None,
+                "performance_samples": len(recent_perf)
             }
         
         # Calculate model usage stats
@@ -773,6 +807,67 @@ class DynamicWeightedEnsemble:
             "models": model_info,
             "weights": self.weights
         }
+        
+    def auto_prune_models(self, performance_threshold=0.0, min_samples=5):
+        """
+        Automatically detect and prune underperforming models from the ensemble
+        
+        This helps maintain high model quality by removing models that consistently
+        make incorrect predictions.
+        
+        Args:
+            performance_threshold (float): Minimum performance score to keep a model
+                                          (range: -1 to 1, where negative means more wrong than right)
+            min_samples (int): Minimum number of performance samples required before pruning
+            
+        Returns:
+            tuple: (list of pruned models, list of kept models)
+        """
+        logger.info(f"Auto-pruning models with performance threshold: {performance_threshold}")
+        
+        models_to_prune = []
+        models_to_keep = []
+        
+        # Check performance of each model
+        for model_type, history in self.performance_history.items():
+            # Skip if not enough performance samples
+            if len(history) < min_samples:
+                logger.info(f"Skipping model {model_type} - insufficient performance samples ({len(history)}/{min_samples})")
+                models_to_keep.append(model_type)
+                continue
+                
+            # Calculate average performance (recent values get more weight)
+            recent_history = history[-min_samples:]
+            avg_performance = sum(recent_history) / len(recent_history)
+            
+            logger.info(f"Model {model_type} performance: {avg_performance:.4f} ({len(history)} samples)")
+            
+            # Determine if model should be pruned
+            if avg_performance < performance_threshold:
+                logger.warning(f"Marking model {model_type} for pruning - performance below threshold: {avg_performance:.4f} < {performance_threshold}")
+                models_to_prune.append(model_type)
+            else:
+                models_to_keep.append(model_type)
+        
+        # Remove pruned models from the ensemble
+        for model_type in models_to_prune:
+            if model_type in self.models:
+                logger.info(f"Pruning model {model_type} from ensemble")
+                del self.models[model_type]
+                # Update weights by removing the pruned model's weight and rebalancing
+                if model_type in self.weights:
+                    del self.weights[model_type]
+        
+        # Rebalance weights for remaining models if needed
+        if models_to_prune and models_to_keep:
+            self._normalize_weights()
+            self._save_weights()
+            
+        # Log status after pruning
+        if models_to_prune:
+            logger.info(f"Pruned {len(models_to_prune)} models, {len(models_to_keep)} models remaining")
+            
+        return models_to_prune, models_to_keep
 
 
 def create_hybrid_model(input_shape, use_attention=True, use_transformer=True):
