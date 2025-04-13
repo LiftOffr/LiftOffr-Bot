@@ -36,6 +36,12 @@ class BotManager:
         
         # Track allocated capital and available funds
         self.allocated_capital = 0.0
+        
+        # Strategy categories
+        self.strategy_categories = {
+            "those dudes": [],  # For existing ARIMA and Adaptive strategies
+            "him all along": []  # For the integrated strategy
+        }
         self.available_funds = INITIAL_CAPITAL
         
         # For thread-safe access to shared resources
@@ -92,6 +98,14 @@ class BotManager:
         
         # Store the bot instance
         self.bots[bot_id] = bot
+        
+        # Assign the bot to appropriate category
+        if strategy_type == 'integrated':
+            self.strategy_categories["him all along"].append(bot_id)
+            logger.info(f"[BotManager] Added {bot_id} to 'him all along' category")
+        else:
+            self.strategy_categories["those dudes"].append(bot_id)
+            logger.info(f"[BotManager] Added {bot_id} to 'those dudes' category")
         
         # Calculate margin allocation for this bot
         allocated_margin = self.portfolio_value * margin_percent
@@ -575,6 +589,10 @@ class BotManager:
                 "min_signal_strength": self.min_signal_strength,
                 "signal_strength_advantage": self.signal_strength_advantage
             },
+            "categories": {
+                "those_dudes": len(self.strategy_categories.get("those dudes", [])),
+                "him_all_along": len(self.strategy_categories.get("him all along", []))
+            },
             "bots": {}
         }
         
@@ -582,9 +600,21 @@ class BotManager:
             strategy_margin = bot.margin_percent * 100 if hasattr(bot, 'margin_percent') else 0
             strategy_leverage = bot.leverage if hasattr(bot, 'leverage') else 0
             
+            # Determine strategy category
+            category = "unknown"
+            if bot_id in self.strategy_categories.get("those dudes", []):
+                category = "those dudes"
+            elif bot_id in self.strategy_categories.get("him all along", []):
+                category = "him all along"
+            
+            # Check if bot.strategy has a category attribute
+            if hasattr(bot.strategy, 'category'):
+                category = bot.strategy.category
+                
             status["bots"][bot_id] = {
                 "trading_pair": bot.trading_pair,
                 "strategy_type": bot.strategy.__class__.__name__,
+                "category": category,
                 "position": bot.position,
                 "entry_price": bot.entry_price,
                 "current_price": bot.current_price,
