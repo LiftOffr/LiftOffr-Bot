@@ -493,10 +493,41 @@ class DynamicWeightedEnsemble:
                     
                     # Normalize
                     if model_type in self.norm_params:
-                        mean = np.array(self.norm_params[model_type]['mean'])
-                        std = np.array(self.norm_params[model_type]['std'])
-                        std = np.where(std == 0, 1, std)  # Avoid division by zero
-                        X_sequences = (X_sequences - mean) / std
+                        # Get normalization parameters
+                        norm_params = self.norm_params[model_type]
+                        
+                        # Ensure norm_params are in the correct format
+                        if isinstance(norm_params, dict) and 'mean' in norm_params and 'std' in norm_params:
+                            # Convert parameters to numpy arrays if they're not already
+                            if isinstance(norm_params['mean'], dict):
+                                # Handle case where mean/std are stored as feature dictionaries
+                                logger.debug(f"Converting dictionary normalization parameters to arrays for {model_type}")
+                                # Use feature names to sort values consistently
+                                feature_names = list(sorted(norm_params['mean'].keys()))
+                                mean_values = [norm_params['mean'].get(f, 0) for f in feature_names]
+                                std_values = [norm_params['std'].get(f, 1) for f in feature_names]
+                                mean = np.array(mean_values)
+                                std = np.array(std_values)
+                            else:
+                                # Already in array/list format
+                                mean = np.array(norm_params['mean'])
+                                std = np.array(norm_params['std'])
+                            
+                            # Avoid division by zero
+                            std = np.where(std == 0, 1, std)
+                            
+                            # Ensure dimensions match
+                            if mean.size == X_sequences.shape[2]:
+                                # Apply normalization (shape adjustment for broadcasting)
+                                X_sequences = (X_sequences - mean.reshape(1, 1, -1)) / std.reshape(1, 1, -1)
+                            else:
+                                logger.warning(f"Normalization parameter dimensions ({mean.size}) don't match data ({X_sequences.shape[2]}) for {model_type}")
+                                # Apply a simpler normalization as fallback
+                                X_sequences = (X_sequences - np.mean(X_sequences, axis=(0, 1), keepdims=True)) / (np.std(X_sequences, axis=(0, 1), keepdims=True) + 1e-8)
+                        else:
+                            logger.warning(f"Invalid normalization parameters format for {model_type}")
+                            # Apply a simpler normalization as fallback
+                            X_sequences = (X_sequences - np.mean(X_sequences, axis=(0, 1), keepdims=True)) / (np.std(X_sequences, axis=(0, 1), keepdims=True) + 1e-8)
                     
                     preprocessed_data[model_type] = X_sequences
             except Exception as e:
@@ -522,6 +553,9 @@ class DynamicWeightedEnsemble:
         # Make a copy to avoid modifying the original
         data = market_data.copy()
         
+        # Track added features for logging
+        added_features = []
+        
         # Ensure OHLCV columns exist with standard names
         ohlc_columns = {
             'open': ['open', f'open_{self.timeframe}', 'Open'],
@@ -538,7 +572,47 @@ class DynamicWeightedEnsemble:
                     if variant in data.columns:
                         data[std_name] = data[variant]
                         logger.debug(f"Standardized column name: {variant} -> {std_name}")
+                        added_features.append(f"{std_name} (from {variant})")
                         break
+        
+        # Ensure we have basic OHLCV data
+        required_ohlcv = ['open', 'high', 'low', 'close']
+        missing_ohlcv = [col for col in required_ohlcv if col not in data.columns]
+        
+        if missing_ohlcv:
+            logger.warning(f"Missing essential OHLCV columns: {missing_ohlcv}")
+            # If we're missing close but have other price data, use it as a fallback
+            if 'close' not in data.columns:
+                if 'open' in data.columns:
+                    data['close'] = data['open']
+                    logger.info("Using 'open' as fallback for missing 'close'")
+                    added_features.append('close (from open)')
+                elif 'last' in data.columns:
+                    data['close'] = data['last']
+                    logger.info("Using 'last' as fallback for missing 'close'")
+                    added_features.append('close (from last)')
+                    
+            # If we're still missing essential data, provide basic fallbacks
+            for col in missing_ohlcv:
+                if col not in data.columns and 'close' in data.columns:
+                    if col in ['high', 'low']:
+                        # Create synthetic high/low as ±1% of close
+                        factor = 1.01 if col == 'high' else 0.99
+                        data[col] = data['close'] * factor
+                        logger.info(f"Created synthetic '{col}' based on close price")
+                        added_features.append(f"{col} (synthetic)")
+                    elif col == 'open':
+                        # Use close from previous period as open
+                        data[col] = data['close'].shift(1)
+                        data[col] = data[col].fillna(data['close'])
+                        logger.info(f"Created synthetic '{col}' from shifted close")
+                        added_features.append(f"{col} (from shifted close)")
+        
+        # Ensure we have a timestamp column if index is datetime
+        if 'timestamp' not in data.columns and hasattr(data.index, 'dtype') and pd.api.types.is_datetime64_any_dtype(data.index):
+            data['timestamp'] = data.index
+            logger.debug("Added timestamp from index")
+            added_features.append('timestamp (from index)')
         
         # Calculate RSI if not present
         if 'rsi' not in data.columns and 'RSI' not in data.columns and 'close' in data.columns:
@@ -550,17 +624,38 @@ class DynamicWeightedEnsemble:
                 avg_loss = loss.rolling(window=14).mean()
                 rs = avg_gain / avg_loss.replace(0, 1e-10)  # Avoid division by zero
                 data['rsi'] = 100 - (100 / (1 + rs))
+                data['rsi'] = data['rsi'].fillna(50)  # Fill NaN values with neutral RSI
                 logger.debug("Added calculated RSI")
+                added_features.append('rsi')
             except Exception as e:
                 logger.warning(f"Failed to calculate RSI: {e}")
+        elif 'RSI' in data.columns and 'rsi' not in data.columns:
+            # Standardize RSI column name
+            data['rsi'] = data['RSI']
+            added_features.append('rsi (from RSI)')
         
-        # Calculate EMAs if not present
-        for period in [9, 21, 50, 100]:
+        # Calculate Moving Averages (both SMA and EMA) if not present
+        for period in [5, 9, 20, 21, 50, 100, 200]:
+            sma_col = f'sma{period}'
             ema_col = f'ema{period}'
+            
+            # Calculate SMA if not present
+            if sma_col not in data.columns and 'close' in data.columns:
+                try:
+                    data[sma_col] = data['close'].rolling(window=period).mean()
+                    data[sma_col] = data[sma_col].fillna(data['close'])
+                    logger.debug(f"Added calculated {sma_col}")
+                    added_features.append(sma_col)
+                except Exception as e:
+                    logger.warning(f"Failed to calculate {sma_col}: {e}")
+            
+            # Calculate EMA if not present
             if ema_col not in data.columns and 'close' in data.columns:
                 try:
                     data[ema_col] = data['close'].ewm(span=period, adjust=False).mean()
+                    data[ema_col] = data[ema_col].fillna(data['close'])
                     logger.debug(f"Added calculated {ema_col}")
+                    added_features.append(ema_col)
                 except Exception as e:
                     logger.warning(f"Failed to calculate {ema_col}: {e}")
         
@@ -571,23 +666,94 @@ class DynamicWeightedEnsemble:
                 ema26 = data['close'].ewm(span=26, adjust=False).mean()
                 data['macd'] = ema12 - ema26
                 data['macd_signal'] = data['macd'].ewm(span=9, adjust=False).mean()
-                logger.debug("Added calculated MACD and MACD signal")
+                data['macd_hist'] = data['macd'] - data['macd_signal']
+                
+                # Fill NaN values with zeros
+                data['macd'] = data['macd'].fillna(0)
+                data['macd_signal'] = data['macd_signal'].fillna(0)
+                data['macd_hist'] = data['macd_hist'].fillna(0)
+                
+                logger.debug("Added calculated MACD indicators")
+                added_features.extend(['macd', 'macd_signal', 'macd_hist'])
             except Exception as e:
                 logger.warning(f"Failed to calculate MACD: {e}")
         
         # Calculate Bollinger Bands if not present
-        if 'bb_upper' not in data.columns and 'close' in data.columns:
+        if ('bollinger_upper' not in data.columns and 'bollinger_lower' not in data.columns) and 'close' in data.columns:
             try:
                 window = 20
                 std_dev = 2
                 sma = data['close'].rolling(window=window).mean()
                 rolling_std = data['close'].rolling(window=window).std()
-                data['bb_upper'] = sma + (rolling_std * std_dev)
-                data['bb_lower'] = sma - (rolling_std * std_dev)
-                data['bb_middle'] = sma
+                
+                data['bollinger_upper'] = sma + (rolling_std * std_dev)
+                data['bollinger_lower'] = sma - (rolling_std * std_dev)
+                data['bollinger_mid'] = sma
+                
+                # Fill NaN values
+                data['bollinger_upper'] = data['bollinger_upper'].fillna(data['close'] * 1.05)
+                data['bollinger_lower'] = data['bollinger_lower'].fillna(data['close'] * 0.95)
+                data['bollinger_mid'] = data['bollinger_mid'].fillna(data['close'])
+                
                 logger.debug("Added calculated Bollinger Bands")
+                added_features.extend(['bollinger_upper', 'bollinger_lower', 'bollinger_mid'])
             except Exception as e:
                 logger.warning(f"Failed to calculate Bollinger Bands: {e}")
+        
+        # Handle both naming conventions for Bollinger Bands
+        if 'bb_upper' not in data.columns and 'bollinger_upper' in data.columns:
+            data['bb_upper'] = data['bollinger_upper']
+            data['bb_lower'] = data['bollinger_lower']
+            data['bb_middle'] = data['bollinger_mid']
+            added_features.extend(['bb_upper', 'bb_lower', 'bb_middle'])
+        elif 'bollinger_upper' not in data.columns and 'bb_upper' in data.columns:
+            data['bollinger_upper'] = data['bb_upper']
+            data['bollinger_lower'] = data['bb_lower']
+            data['bollinger_mid'] = data['bb_middle']
+            added_features.extend(['bollinger_upper', 'bollinger_lower', 'bollinger_mid'])
+        
+        # Calculate ADX if not present
+        if 'adx' not in data.columns and all(col in data.columns for col in ['high', 'low', 'close']):
+            try:
+                period = 14
+                # Calculate True Range
+                data['tr1'] = data['high'] - data['low']
+                data['tr2'] = abs(data['high'] - data['close'].shift(1))
+                data['tr3'] = abs(data['low'] - data['close'].shift(1))
+                data['tr'] = data[['tr1', 'tr2', 'tr3']].max(axis=1)
+                
+                # Calculate directional movement
+                data['up_move'] = data['high'] - data['high'].shift(1)
+                data['down_move'] = data['low'].shift(1) - data['low']
+                
+                # Calculate positive and negative directional movement
+                data['plus_dm'] = np.where((data['up_move'] > data['down_move']) & (data['up_move'] > 0), data['up_move'], 0)
+                data['minus_dm'] = np.where((data['down_move'] > data['up_move']) & (data['down_move'] > 0), data['down_move'], 0)
+                
+                # Calculate smoothed values
+                data['tr14'] = data['tr'].rolling(window=period).sum()
+                data['plus_di14'] = 100 * (data['plus_dm'].rolling(window=period).sum() / data['tr14'])
+                data['minus_di14'] = 100 * (data['minus_dm'].rolling(window=period).sum() / data['tr14'])
+                
+                # Calculate DX and ADX
+                data['dx'] = 100 * abs(data['plus_di14'] - data['minus_di14']) / (data['plus_di14'] + data['minus_di14'])
+                data['adx'] = data['dx'].rolling(window=period).mean()
+                
+                # Fill NaN values with a default value (25 is a neutral value for ADX)
+                data['adx'] = data['adx'].fillna(25)
+                
+                # Clean up intermediate calculations
+                for col in ['tr1', 'tr2', 'tr3', 'tr', 'up_move', 'down_move', 'plus_dm', 'minus_dm', 'tr14', 'plus_di14', 'minus_di14', 'dx']:
+                    if col in data.columns:
+                        data = data.drop(col, axis=1)
+                
+                logger.debug("Added calculated ADX")
+                added_features.append('adx')
+            except Exception as e:
+                logger.warning(f"Failed to calculate ADX: {e}")
+                # Provide a fallback for ADX if calculation fails
+                data['adx'] = 25  # Neutral ADX value
+                added_features.append('adx (fallback)')
         
         # Calculate ATR if not present
         if 'atr' not in data.columns and all(col in data.columns for col in ['high', 'low', 'close']):
@@ -599,9 +765,181 @@ class DynamicWeightedEnsemble:
                 ranges = pd.concat([high_low, high_close, low_close], axis=1)
                 true_range = ranges.max(axis=1)
                 data['atr'] = true_range.rolling(period).mean()
+                
+                # Handle NaN values
+                data['atr'] = data['atr'].fillna(high_low)
+                
                 logger.debug("Added calculated ATR")
+                added_features.append('atr')
             except Exception as e:
                 logger.warning(f"Failed to calculate ATR: {e}")
+                # Provide fallback for ATR if calculation fails
+                if 'high' in data.columns and 'low' in data.columns:
+                    data['atr'] = (data['high'] - data['low']).mean() * 0.2
+                    added_features.append('atr (fallback)')
+        
+        # Calculate CCI if not present
+        if 'cci' not in data.columns and all(col in data.columns for col in ['high', 'low', 'close']):
+            try:
+                period = 20
+                tp = (data['high'] + data['low'] + data['close']) / 3
+                tp_sma = tp.rolling(window=period).mean()
+                tp_md = tp.rolling(window=period).apply(lambda x: np.fabs(x - x.mean()).mean(), raw=True)
+                data['cci'] = (tp - tp_sma) / (0.015 * tp_md)
+                
+                # Fill NaNs with 0 (neutral CCI value)
+                data['cci'] = data['cci'].fillna(0)
+                
+                logger.debug("Added calculated CCI")
+                added_features.append('cci')
+            except Exception as e:
+                logger.warning(f"Failed to calculate CCI: {e}")
+                # Provide fallback for CCI if calculation fails
+                data['cci'] = 0  # Neutral CCI value
+                added_features.append('cci (fallback)')
+        
+        # Calculate MFI if not present
+        if 'mfi' not in data.columns and all(col in data.columns for col in ['high', 'low', 'close', 'volume']):
+            try:
+                period = 14
+                # Calculate typical price
+                tp = (data['high'] + data['low'] + data['close']) / 3
+                
+                # Calculate money flow
+                raw_money_flow = tp * data['volume']
+                
+                # Get change in typical price
+                tp_diff = tp.diff()
+                
+                # Calculate positive and negative money flow
+                positive_flow = np.where(tp_diff > 0, raw_money_flow, 0)
+                negative_flow = np.where(tp_diff < 0, raw_money_flow, 0)
+                
+                # Calculate money flow ratio
+                positive_sum = pd.Series(positive_flow).rolling(window=period).sum()
+                negative_sum = pd.Series(negative_flow).rolling(window=period).sum()
+                
+                # Calculate MFI
+                money_ratio = np.where(negative_sum != 0, positive_sum / negative_sum, 9999)
+                data['mfi'] = 100 - (100 / (1 + money_ratio))
+                
+                # Fill NaNs with neutral value
+                data['mfi'] = data['mfi'].fillna(50)
+                
+                logger.debug("Added calculated MFI")
+                added_features.append('mfi')
+            except Exception as e:
+                logger.warning(f"Failed to calculate MFI: {e}")
+                # Provide fallback for MFI if calculation fails
+                data['mfi'] = 50  # Neutral MFI value
+                added_features.append('mfi (fallback)')
+        
+        # Calculate OBV if not present
+        if 'obv' not in data.columns and 'close' in data.columns and 'volume' in data.columns:
+            try:
+                # Calculate price change
+                price_change = data['close'].diff()
+                
+                # OBV calculation
+                obv = np.zeros(len(data))
+                for i in range(1, len(data)):
+                    if price_change.iloc[i] > 0:
+                        obv[i] = obv[i-1] + data['volume'].iloc[i]
+                    elif price_change.iloc[i] < 0:
+                        obv[i] = obv[i-1] - data['volume'].iloc[i]
+                    else:
+                        obv[i] = obv[i-1]
+                        
+                data['obv'] = obv
+                
+                logger.debug("Added calculated OBV")
+                added_features.append('obv')
+            except Exception as e:
+                logger.warning(f"Failed to calculate OBV: {e}")
+                # Provide fallback for OBV if calculation fails
+                data['obv'] = 0
+                added_features.append('obv (fallback)')
+        
+        # Calculate rate of change indicators if not present
+        for period in [1, 5, 10, 20]:
+            roc_col = f'price_rate_of_change_{period}'
+            if roc_col not in data.columns and 'close' in data.columns:
+                try:
+                    data[roc_col] = data['close'].pct_change(periods=period) * 100
+                    data[roc_col] = data[roc_col].fillna(0)
+                    logger.debug(f"Added calculated {roc_col}")
+                    added_features.append(roc_col)
+                except Exception as e:
+                    logger.warning(f"Failed to calculate {roc_col}: {e}")
+                    # Provide fallback
+                    data[roc_col] = 0
+                    added_features.append(f"{roc_col} (fallback)")
+        
+        # Calculate returns if not present
+        if 'return' not in data.columns and 'close' in data.columns:
+            try:
+                data['return'] = data['close'].pct_change()
+                data['return'] = data['return'].fillna(0)
+                logger.debug("Added calculated return")
+                added_features.append('return')
+            except Exception as e:
+                logger.warning(f"Failed to calculate return: {e}")
+        
+        # Calculate volatility if not present
+        if 'volatility' not in data.columns and 'return' in data.columns:
+            try:
+                data['volatility'] = data['return'].rolling(window=20).std()
+                data['volatility'] = data['volatility'].fillna(0.01)  # Default to 1% volatility
+                logger.debug("Added calculated volatility")
+                added_features.append('volatility')
+            except Exception as e:
+                logger.warning(f"Failed to calculate volatility: {e}")
+                # Provide fallback
+                data['volatility'] = 0.01
+                added_features.append('volatility (fallback)')
+        elif 'volatility' not in data.columns and 'close' in data.columns:
+            try:
+                returns = data['close'].pct_change()
+                data['volatility'] = returns.rolling(window=20).std()
+                data['volatility'] = data['volatility'].fillna(0.01)  # Default to 1% volatility
+                logger.debug("Added calculated volatility from close")
+                added_features.append('volatility (from close)')
+            except Exception as e:
+                logger.warning(f"Failed to calculate volatility from close: {e}")
+                # Provide fallback
+                data['volatility'] = 0.01
+                added_features.append('volatility (fallback)')
+        
+        # Calculate trend indicators for decision-making algorithms
+        if 'ema9' in data.columns and 'ema21' in data.columns:
+            try:
+                data['ema_trend'] = np.where(data['ema9'] > data['ema21'], 1, -1)
+                logger.debug("Added calculated EMA trend")
+                added_features.append('ema_trend')
+            except Exception as e:
+                logger.warning(f"Failed to calculate ema_trend: {e}")
+                
+        if 'close' in data.columns and 'sma20' in data.columns:
+            try:
+                data['sma_trend'] = np.where(data['close'] > data['sma20'], 1, -1)
+                logger.debug("Added calculated SMA trend")
+                added_features.append('sma_trend')
+            except Exception as e:
+                logger.warning(f"Failed to calculate sma_trend: {e}")
+            
+            try:
+                data['price_vs_sma20'] = ((data['close'] / data['sma20']) - 1) * 100
+                logger.debug("Added calculated price vs SMA20 percentage")
+                added_features.append('price_vs_sma20')
+            except Exception as e:
+                logger.warning(f"Failed to calculate price_vs_sma20: {e}")
+        
+        if added_features:
+            logger.info(f"Added {len(added_features)} missing features to the dataset: {', '.join(added_features[:10])}" + 
+                      (f" and {len(added_features) - 10} more" if len(added_features) > 10 else ""))
+            
+        # Final check for NaN values and fill them
+        data = data.fillna(method='ffill').fillna(method='bfill').fillna(0)
         
         return data
     
@@ -738,28 +1076,90 @@ class DynamicWeightedEnsemble:
         
         return ensemble_prediction, ensemble_confidence, details
     
-    def update_performance(self, prediction_outcomes):
+    def update_performance(self, prediction_outcomes, trade_details=None):
         """
-        Update performance history based on prediction outcomes
+        Update performance history based on prediction outcomes and optionally trade details
         
         Args:
             prediction_outcomes (dict): Dictionary with model_type -> outcome pairs
                 where outcome is 1 for correct prediction, -1 for incorrect, 0 for neutral
+            trade_details (dict, optional): Dictionary with additional trade information like:
+                - actual_price_change (float): The actual price change that occurred
+                - predicted_direction (int): The predicted direction (1 for up, -1 for down)
+                - predicted_magnitude (float): The predicted magnitude of movement
+                - market_regime (str): The detected market regime
+                - timestamp (str): ISO timestamp of the prediction
         """
+        timestamp = datetime.now().isoformat() if trade_details is None or 'timestamp' not in trade_details else trade_details.get('timestamp')
+        market_regime = self.current_regime if trade_details is None or 'market_regime' not in trade_details else trade_details.get('market_regime')
+        
+        # Add context information to log messages
+        context_info = f"[{timestamp}] Market regime: {market_regime}"
+        
+        # Data to save for performance analysis - extends beyond just the outcome score
+        performance_data = {}
+        
+        # Process each model's outcome
         for model_type, outcome in prediction_outcomes.items():
-            if model_type in self.performance_history:
+            if model_type in self.models:  # Only update for models that exist
+                # Initialize model's performance history if it doesn't exist
+                if model_type not in self.performance_history:
+                    self.performance_history[model_type] = []
+                
+                # Create detailed performance entry instead of just the score
+                entry = {
+                    'outcome': outcome,  # The simple score (1, 0, -1)
+                    'timestamp': timestamp,
+                    'market_regime': market_regime,
+                }
+                
+                # Add trade details if available
+                if trade_details is not None:
+                    entry.update({
+                        'actual_price_change': trade_details.get('actual_price_change', None),
+                        'predicted_direction': trade_details.get('predicted_direction', None),
+                        'predicted_magnitude': trade_details.get('predicted_magnitude', None),
+                        'weight': self.weights.get(model_type, 0),
+                    })
+                
+                # Store the detailed entry
+                performance_data[model_type] = entry
+                
+                # Also keep the simple outcome in the historical record
                 self.performance_history[model_type].append(outcome)
+                
+                # Log individual model performance
+                accuracy_msg = "CORRECT" if outcome == 1 else ("INCORRECT" if outcome == -1 else "NEUTRAL")
+                logger.info(f"{context_info} | Model {model_type} prediction: {accuracy_msg}")
                 
                 # Keep history at a reasonable size
                 max_history = 100
                 if len(self.performance_history[model_type]) > max_history:
                     self.performance_history[model_type] = self.performance_history[model_type][-max_history:]
         
+        # Calculate aggregate performance metrics
+        if prediction_outcomes:
+            correct = sum(1 for outcome in prediction_outcomes.values() if outcome == 1)
+            incorrect = sum(1 for outcome in prediction_outcomes.values() if outcome == -1)
+            neutral = sum(1 for outcome in prediction_outcomes.values() if outcome == 0)
+            total = len(prediction_outcomes)
+            
+            if total > 0:
+                accuracy = correct / total if total > 0 else 0
+                logger.info(f"{context_info} | Ensemble prediction summary: {correct}/{total} correct ({accuracy:.2%}), {incorrect} incorrect, {neutral} neutral")
+        
         # Update weights based on performance
         self.weights = self._adjust_weights_by_performance(self.weights)
         
+        # Log weight changes
+        weight_str = ", ".join([f"{m}: {w:.4f}" for m, w in sorted(self.weights.items(), key=lambda x: x[1], reverse=True)])
+        logger.info(f"{context_info} | Updated model weights: {weight_str}")
+        
         # Save updated weights
         self._save_weights()
+        
+        # Detailed performance info can be returned for external logging if needed
+        return performance_data
     
     def _save_weights(self):
         """Save current ensemble weights to disk"""
@@ -808,7 +1208,7 @@ class DynamicWeightedEnsemble:
             "weights": self.weights
         }
         
-    def auto_prune_models(self, performance_threshold=0.0, min_samples=5):
+    def auto_prune_models(self, performance_threshold=0.0, min_samples=5, keep_minimum=2):
         """
         Automatically detect and prune underperforming models from the ensemble
         
@@ -819,6 +1219,7 @@ class DynamicWeightedEnsemble:
             performance_threshold (float): Minimum performance score to keep a model
                                           (range: -1 to 1, where negative means more wrong than right)
             min_samples (int): Minimum number of performance samples required before pruning
+            keep_minimum (int): Minimum number of models to keep regardless of performance
             
         Returns:
             tuple: (list of pruned models, list of kept models)
@@ -827,9 +1228,14 @@ class DynamicWeightedEnsemble:
         
         models_to_prune = []
         models_to_keep = []
+        model_performances = {}
         
         # Check performance of each model
         for model_type, history in self.performance_history.items():
+            # Skip if not loaded or not in current weights
+            if model_type not in self.models or model_type not in self.weights:
+                continue
+                
             # Skip if not enough performance samples
             if len(history) < min_samples:
                 logger.info(f"Skipping model {model_type} - insufficient performance samples ({len(history)}/{min_samples})")
@@ -838,13 +1244,34 @@ class DynamicWeightedEnsemble:
                 
             # Calculate average performance (recent values get more weight)
             recent_history = history[-min_samples:]
-            avg_performance = sum(recent_history) / len(recent_history)
+            
+            # Calculate weighted average (newer outcomes have higher weight)
+            weighted_sum = sum(score * (i + 1) for i, score in enumerate(recent_history))
+            weight_sum = sum(i + 1 for i in range(len(recent_history)))
+            avg_performance = weighted_sum / weight_sum if weight_sum > 0 else 0
             
             logger.info(f"Model {model_type} performance: {avg_performance:.4f} ({len(history)} samples)")
             
-            # Determine if model should be pruned
-            if avg_performance < performance_threshold:
-                logger.warning(f"Marking model {model_type} for pruning - performance below threshold: {avg_performance:.4f} < {performance_threshold}")
+            # Store performance for sorting
+            model_performances[model_type] = avg_performance
+        
+        # If we don't have enough models to evaluate, keep all
+        if len(model_performances) <= keep_minimum:
+            logger.info(f"Not enough models to prune, keeping all {len(self.models)} models")
+            return [], list(self.models.keys())
+        
+        # Sort models by performance (descending)
+        sorted_models = sorted(model_performances.items(), key=lambda x: x[1], reverse=True)
+        
+        # Mark models for pruning or keeping
+        for i, (model_type, performance) in enumerate(sorted_models):
+            # Always keep top-performing models regardless of threshold
+            if i < keep_minimum:
+                logger.info(f"Keeping top-performing model {model_type} with score {performance:.4f}")
+                models_to_keep.append(model_type)
+            # For remaining models, apply performance threshold
+            elif performance < performance_threshold:
+                logger.warning(f"Marking model {model_type} for pruning - performance below threshold: {performance:.4f} < {performance_threshold}")
                 models_to_prune.append(model_type)
             else:
                 models_to_keep.append(model_type)
@@ -854,18 +1281,33 @@ class DynamicWeightedEnsemble:
             if model_type in self.models:
                 logger.info(f"Pruning model {model_type} from ensemble")
                 del self.models[model_type]
-                # Update weights by removing the pruned model's weight and rebalancing
+                
+                # Also clean up related data
+                if model_type in self.norm_params:
+                    del self.norm_params[model_type]
+                if model_type in self.feature_names:
+                    del self.feature_names[model_type]
+                    
+                # Update weights by removing the pruned model's weight
                 if model_type in self.weights:
                     del self.weights[model_type]
         
-        # Rebalance weights for remaining models if needed
+        # Rebalance weights for remaining models
         if models_to_prune and models_to_keep:
             self._normalize_weights()
             self._save_weights()
             
-        # Log status after pruning
+        # Log detailed status after pruning
         if models_to_prune:
             logger.info(f"Pruned {len(models_to_prune)} models, {len(models_to_keep)} models remaining")
+            logger.info(f"Pruned models: {models_to_prune}")
+            logger.info(f"Kept models: {models_to_keep}")
+            
+            # Log new weight distribution
+            weight_str = ", ".join([f"{m}: {self.weights.get(m, 0):.4f}" for m in models_to_keep])
+            logger.info(f"New weight distribution: {weight_str}")
+        else:
+            logger.info("No models pruned - all models performing adequately")
             
         return models_to_prune, models_to_keep
 
