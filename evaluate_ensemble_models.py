@@ -5,8 +5,12 @@ Evaluate Ensemble Models for Kraken Trading Bot
 This script evaluates the performance of the trained ensemble models and generates
 visualizations to help understand their predictions and performance.
 
+It includes an auto-pruning feature that identifies and removes unprofitable
+components of the trading system, focusing only on what works best.
+
 Usage:
-    python evaluate_ensemble_models.py [--symbol SYMBOL] [--timeframe TIMEFRAME]
+    python evaluate_ensemble_models.py [--symbol SYMBOL] [--timeframe TIMEFRAME] 
+                                     [--auto-prune] [--save-best]
 """
 
 import os
@@ -36,11 +40,15 @@ logger = logging.getLogger(__name__)
 DATA_DIR = "historical_data"
 MODELS_DIR = "models"
 RESULTS_DIR = "model_evaluation"
+PRUNED_MODELS_DIR = "pruned_models"
+LOW_TIMEFRAME_DATA_DIR = "historical_data/high_resolution"
 
-# Ensure results directory exists
+# Ensure directories exist
 os.makedirs(RESULTS_DIR, exist_ok=True)
+os.makedirs(PRUNED_MODELS_DIR, exist_ok=True)
+os.makedirs(LOW_TIMEFRAME_DATA_DIR, exist_ok=True)
 
-def load_historical_data(symbol="SOLUSD", timeframe="1h"):
+def load_historical_data(symbol="SOLUSD", timeframe="1h", use_low_timeframe=False):
     """
     Load and prepare historical data for evaluation
     
@@ -405,6 +413,88 @@ def save_evaluation_results(results, symbol, timeframe):
     for model, perf in results.get('model_performance', {}).items():
         print(f"  {model}: {perf.get('accuracy', 0):.2%}")
     
+def prune_unprofitable_components(ensemble, results):
+    """
+    Identify and prune unprofitable components from the ensemble model
+    
+    Args:
+        ensemble: The ensemble model to prune
+        results (dict): Evaluation results
+        
+    Returns:
+        DynamicWeightedEnsemble: Pruned ensemble model
+    """
+    # Check if we have model performance data
+    if 'model_performance' not in results:
+        logger.warning("No model performance data available, skipping pruning")
+        return ensemble
+    
+    model_performance = results['model_performance']
+    
+    # Identify models that perform worse than random (50% accuracy)
+    unprofitable_models = []
+    for model_type, perf in model_performance.items():
+        if perf['accuracy'] < 0.5:  # Worse than random
+            unprofitable_models.append(model_type)
+            logger.info(f"Flagging {model_type} for removal (accuracy: {perf['accuracy']:.2%})")
+    
+    # Create a copy of the ensemble with the underperforming models removed
+    pruned_ensemble = DynamicWeightedEnsemble(
+        trading_pair=ensemble.trading_pair,
+        timeframe=ensemble.timeframe
+    )
+    
+    # Copy all properties except models
+    for attr in dir(ensemble):
+        if not attr.startswith('_') and attr != 'models' and not callable(getattr(ensemble, attr)):
+            setattr(pruned_ensemble, attr, getattr(ensemble, attr))
+    
+    # Copy only profitable models
+    pruned_ensemble.models = {}
+    for model_type, model in ensemble.models.items():
+        if model_type not in unprofitable_models:
+            pruned_ensemble.models[model_type] = model
+            logger.info(f"Keeping model {model_type}")
+        else:
+            logger.info(f"Pruning unprofitable model {model_type}")
+    
+    # Recalculate weights
+    pruned_ensemble._initialize_weights()
+    
+    return pruned_ensemble
+
+
+def save_pruned_model(pruned_ensemble, symbol, timeframe):
+    """
+    Save pruned model to disk
+    
+    Args:
+        pruned_ensemble: Pruned ensemble model
+        symbol (str): Trading symbol
+        timeframe (str): Timeframe
+    """
+    # Create pruned models directory if it doesn't exist
+    os.makedirs(PRUNED_MODELS_DIR, exist_ok=True)
+    
+    # Save model configuration
+    config = {
+        'trading_pair': pruned_ensemble.trading_pair,
+        'timeframe': pruned_ensemble.timeframe,
+        'model_types': list(pruned_ensemble.models.keys()),
+        'weights': pruned_ensemble.weights,
+        'pruned_at': datetime.now().isoformat()
+    }
+    
+    config_file = os.path.join(PRUNED_MODELS_DIR, f"{symbol}_{timeframe}_pruned_config.json")
+    with open(config_file, 'w') as f:
+        json.dump(config, f, indent=2)
+    
+    logger.info(f"Saved pruned model configuration to {config_file}")
+    
+    # We could also save the actual model files, but that would require additional 
+    # serialization/deserialization logic for TensorFlow models
+
+
 def main():
     """Main function to evaluate ensemble models"""
     # Parse arguments
@@ -412,11 +502,14 @@ def main():
     parser.add_argument("--symbol", default="SOLUSD", help="Trading symbol")
     parser.add_argument("--timeframe", default="1h", help="Timeframe")
     parser.add_argument("--test-period", type=int, default=30, help="Test period in days")
+    parser.add_argument("--auto-prune", action="store_true", help="Automatically prune unprofitable components")
+    parser.add_argument("--save-best", action="store_true", help="Save best model configuration")
+    parser.add_argument("--use-low-timeframe", action="store_true", help="Use low timeframe data if available")
     args = parser.parse_args()
     
     # Load historical data
     logger.info(f"Loading historical data for {args.symbol} {args.timeframe}")
-    market_data = load_historical_data(args.symbol, args.timeframe)
+    market_data = load_historical_data(args.symbol, args.timeframe, use_low_timeframe=args.use_low_timeframe)
     
     if market_data is None:
         logger.error("Failed to load historical data. Exiting.")
@@ -437,6 +530,38 @@ def main():
     # Generate plots
     logger.info("Generating visualization plots")
     plot_prediction_results(results, args.symbol, args.timeframe)
+    
+    # Auto-prune if requested
+    if args.auto_prune:
+        logger.info("Auto-pruning unprofitable model components...")
+        pruned_ensemble = prune_unprofitable_components(ensemble, results)
+        
+        # Check if pruning made a difference
+        if len(pruned_ensemble.models) < len(ensemble.models):
+            logger.info(f"Pruned {len(ensemble.models) - len(pruned_ensemble.models)} unprofitable models")
+            
+            # Re-evaluate with pruned ensemble
+            logger.info("Re-evaluating with pruned model...")
+            pruned_results = evaluate_ensemble(pruned_ensemble, market_data, test_period=args.test_period)
+            
+            # Compare results
+            old_accuracy = results['accuracy']
+            new_accuracy = pruned_results['accuracy']
+            
+            logger.info(f"Original accuracy: {old_accuracy:.2%}")
+            logger.info(f"Pruned accuracy: {new_accuracy:.2%}")
+            
+            if new_accuracy >= old_accuracy:
+                logger.info("✅ Pruning improved or maintained model accuracy!")
+                
+                # Save pruned model if requested
+                if args.save_best:
+                    logger.info("Saving pruned model configuration...")
+                    save_pruned_model(pruned_ensemble, args.symbol, args.timeframe)
+            else:
+                logger.warning(f"⚠️ Pruning decreased accuracy by {(old_accuracy - new_accuracy) * 100:.2f}%")
+        else:
+            logger.info("No unprofitable models identified for pruning")
     
     logger.info("Evaluation complete!")
 
