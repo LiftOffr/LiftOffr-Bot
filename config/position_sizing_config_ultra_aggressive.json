@@ -1,18 +1,18 @@
 {
-    "base_position_size": 0.4,
-    "min_position_size": 0.2,
-    "max_position_size": 0.6,
-    "confidence_weight": 0.45,
-    "signal_weight": 0.3,
-    "volatility_weight": 0.2,
-    "trend_weight": 0.1,
-    "max_portfolio_exposure": 0.9,
-    "volatility_scaling_factor": 1.5,
+    "base_position_size": 0.48,
+    "min_position_size": 0.28,
+    "max_position_size": 0.75,
+    "confidence_weight": 0.48,
+    "signal_weight": 0.32,
+    "volatility_weight": 0.07,
+    "trend_weight": 0.13,
+    "max_portfolio_exposure": 0.98,
+    "volatility_scaling_factor": 1.2,
     "regime_allocation": {
-        "volatile_trending_up": 1.2,
-        "volatile_trending_down": 0.8,
-        "normal_trending_up": 1.1,
-        "normal_trending_down": 0.9,
-        "neutral": 1.0
+        "volatile_trending_up": 1.4,
+        "volatile_trending_down": 0.95,
+        "normal_trending_up": 1.35,
+        "normal_trending_down": 1.05,
+        "neutral": 1.15
     }
 }

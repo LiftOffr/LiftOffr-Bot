@@ -6,11 +6,16 @@ This script runs the ultra-aggressive SOL/USD backtest with parameters optimized
 maximum returns while maintaining high accuracy.
 
 Features:
-- Increased position sizing (35% vs 20% standard)
-- Increased trading frequency (3-4 candles vs 4-6 standard)
+- Increased position sizing (48% vs 20% standard)
+- Lower ML confidence threshold (0.65 vs 0.7)
+- Reduced signal thresholds (0.15 vs 0.2) for more trading opportunities 
+- Increased maximum margin cap to 60% (from 50%)
+- Raised base leverage to 3.5x (from 3.0x)
+- Increased maximum leverage cap to 12x (from 10x)
+- Higher position size multiplier in normal trends
 - More concurrent positions (5 vs 3 standard)
 - Tighter profit targets and stop losses
-- Advanced trailing stop logic
+- Advanced trailing stop logic with dynamic adjustments
 """
 
 import os

@@ -37,7 +37,7 @@ class MLStrategyIntegrator:
     """
     
     def __init__(self, trading_pair="SOL/USD", timeframe="1h", 
-                influence_weight=0.5, confidence_threshold=0.6,
+                influence_weight=0.6, confidence_threshold=0.5,  # More aggressive defaults
                 auto_prune_enabled=True, prune_interval=100, 
                 performance_threshold=0.0, min_samples=5,
                 ensemble_kwargs=None):
@@ -355,10 +355,10 @@ class MLStrategyIntegrator:
         # Calculate integrated strength
         integrated_strength = (strategy_strength * (1 - self.influence_weight)) + (ml_confidence * self.influence_weight)
         
-        # Determine signal type from integrated value
-        if integrated_value > 0.2:
+        # Determine signal type from integrated value - more aggressive thresholds
+        if integrated_value > 0.15:  # Reduced from 0.2 to 0.15
             integrated_signal = "buy"
-        elif integrated_value < -0.2:
+        elif integrated_value < -0.15:  # Reduced from -0.2 to -0.15
             integrated_signal = "sell"
         else:
             integrated_signal = "neutral"
