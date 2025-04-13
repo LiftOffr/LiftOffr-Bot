@@ -1,0 +1,32 @@
+{
+  "timeframe": "4h",
+  "window": 30,
+  "correlation_matrix": {
+    "SOLUSD": {
+      "SOLUSD": 1.0,
+      "BTCUSD": 0.9493822941608208,
+      "ETHUSD": 0.963506649092729
+    },
+    "BTCUSD": {
+      "SOLUSD": 0.9493822941608208,
+      "BTCUSD": 1.0,
+      "ETHUSD": 0.9498459781673476
+    },
+    "ETHUSD": {
+      "SOLUSD": 0.963506649092729,
+      "BTCUSD": 0.9498459781673476,
+      "ETHUSD": 1.0
+    }
+  },
+  "betas": {
+    "SOLUSD": 1.9000514427610742,
+    "BTCUSD": 1.0,
+    "ETHUSD": 1.4860311715891856
+  },
+  "clusters": {
+    "SOLUSD": 2,
+    "BTCUSD": 0,
+    "ETHUSD": 1
+  },
+  "analysis_date": "2025-04-13 06:08:30"
+}
