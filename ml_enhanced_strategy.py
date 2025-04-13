@@ -53,10 +53,10 @@ class MLEnhancedStrategy(TradingStrategy):
             confidence_threshold (float): Minimum confidence required for ML to influence decision
         """
         # Initialize with base strategy properties
-        super().__init__(
-            symbol=base_strategy.symbol,
-            lookback_period=base_strategy.lookback_period
-        )
+        super().__init__(symbol=base_strategy.symbol)
+        
+        # Store lookback period for compatibility
+        self.lookback_period = getattr(base_strategy, 'lookback_period', 30)
         
         # Store base strategy
         self.base_strategy = base_strategy
@@ -70,8 +70,8 @@ class MLEnhancedStrategy(TradingStrategy):
         )
         
         # Set strategy name and description
-        self.name = f"ML-Enhanced {self.base_strategy.name}"
-        self.description = f"Machine Learning Enhanced {self.base_strategy.description}"
+        self.name = f"ML-Enhanced {getattr(self.base_strategy, 'name', 'Strategy')}"
+        self.description = f"Machine Learning Enhanced {getattr(self.base_strategy, 'description', 'Trading Strategy')}"
         
         # Track ML influence on decisions
         self.ml_influenced_decisions = 0
@@ -81,7 +81,7 @@ class MLEnhancedStrategy(TradingStrategy):
         self.last_ml_prediction = None
         self.last_market_regime = None
         
-        logger.info(f"Initialized ML-Enhanced strategy with base strategy: {self.base_strategy.name}")
+        logger.info(f"Initialized ML-Enhanced strategy with base strategy: {getattr(self.base_strategy, 'name', 'Unknown')}")
         logger.info(f"ML influence: {ml_influence}, confidence threshold: {confidence_threshold}")
     
     def update_ohlc(self, open_price, high_price, low_price, close_price):
@@ -306,6 +306,114 @@ class MLEnhancedStrategy(TradingStrategy):
         logger.info(f"ML-Enhanced position size: {adjusted_size:.2f} (base: {base_size:.2f}, factor: {adjustment_factor:.2f})")
         
         return adjusted_size
+    
+    def should_buy(self) -> bool:
+        """
+        Determine if a buy signal is present, enhanced by ML predictions
+        
+        Returns:
+            bool: True if should buy, False otherwise
+        """
+        # Get base strategy decision
+        base_buy = self.base_strategy.should_buy()
+        
+        # If not enough data for ML, use base strategy
+        if len(self.prices) < 30:
+            return base_buy
+            
+        # Prepare market data
+        market_data = self.prepare_market_data()
+        
+        # Get ML prediction
+        ml_prediction, ml_confidence, _ = self.ml_integrator.get_ml_prediction(market_data)
+        
+        # If ML confidence is high and it suggests buying
+        if ml_confidence >= self.ml_integrator.confidence_threshold and ml_prediction > 0.5:
+            # ML strongly suggests buying
+            enhancement_factor = self.ml_integrator.influence_weight
+            # If base is already positive or ML is very confident, buy
+            if base_buy or ml_prediction > 0.8:
+                logger.info(f"ML-enhanced BUY signal (base: {'BUY' if base_buy else 'NEUTRAL'}, ML prediction: {ml_prediction:.2f}, confidence: {ml_confidence:.2f})")
+                return True
+        
+        # Default to base strategy if no ML enhancement
+        return base_buy
+    
+    def should_sell(self) -> bool:
+        """
+        Determine if a sell signal is present, enhanced by ML predictions
+        
+        Returns:
+            bool: True if should sell, False otherwise
+        """
+        # Get base strategy decision
+        base_sell = self.base_strategy.should_sell()
+        
+        # If not enough data for ML, use base strategy
+        if len(self.prices) < 30:
+            return base_sell
+            
+        # Prepare market data
+        market_data = self.prepare_market_data()
+        
+        # Get ML prediction
+        ml_prediction, ml_confidence, _ = self.ml_integrator.get_ml_prediction(market_data)
+        
+        # If ML confidence is high and it suggests selling
+        if ml_confidence >= self.ml_integrator.confidence_threshold and ml_prediction < -0.5:
+            # ML strongly suggests selling
+            enhancement_factor = self.ml_integrator.influence_weight
+            # If base is already negative or ML is very confident, sell
+            if base_sell or ml_prediction < -0.8:
+                logger.info(f"ML-enhanced SELL signal (base: {'SELL' if base_sell else 'NEUTRAL'}, ML prediction: {ml_prediction:.2f}, confidence: {ml_confidence:.2f})")
+                return True
+        
+        # Default to base strategy if no ML enhancement
+        return base_sell
+    
+    def calculate_signals(self, df: pd.DataFrame) -> Tuple[bool, bool, float]:
+        """
+        Calculate trading signals from DataFrame with indicators, enhanced with ML
+        
+        Args:
+            df (pd.DataFrame): DataFrame with price and indicator data
+            
+        Returns:
+            Tuple[bool, bool, float]: (buy_signal, sell_signal, atr_value)
+        """
+        # Get base strategy signals
+        base_buy, base_sell, atr_value = self.base_strategy.calculate_signals(df)
+        
+        # Get ML prediction if data is sufficient
+        if len(df) >= 30:
+            try:
+                # Get ML prediction
+                ml_prediction, ml_confidence, _ = self.ml_integrator.get_ml_prediction(df)
+                
+                # Enhanced buy signal: Base says buy or ML strongly suggests buy with high confidence
+                buy_signal = base_buy or (ml_prediction > 0.5 and ml_confidence >= self.ml_integrator.confidence_threshold)
+                
+                # Enhanced sell signal: Base says sell or ML strongly suggests sell with high confidence
+                sell_signal = base_sell or (ml_prediction < -0.5 and ml_confidence >= self.ml_integrator.confidence_threshold)
+                
+                # Don't allow conflicting signals
+                if buy_signal and sell_signal:
+                    # In case of conflict, use ML confidence to decide
+                    if ml_confidence >= 0.8:
+                        buy_signal = ml_prediction > 0
+                        sell_signal = ml_prediction < 0
+                    else:
+                        # Default to base strategy in case of conflict with low ML confidence
+                        buy_signal = base_buy
+                        sell_signal = base_sell
+                
+                return buy_signal, sell_signal, atr_value
+                
+            except Exception as e:
+                logger.error(f"Error in ML prediction: {e}")
+        
+        # Fallback to base signals
+        return base_buy, base_sell, atr_value
     
     def get_status(self) -> Dict:
         """
