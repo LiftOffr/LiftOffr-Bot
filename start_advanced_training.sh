@@ -105,7 +105,7 @@ run_training() {
     if [ $? -ne 0 ]; then
         log "ERROR: ML model integration testing failed."
         exit 1
-    }
+    fi
     
     log "Advanced ML training completed successfully."
 }
