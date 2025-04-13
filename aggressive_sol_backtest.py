@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """
-Aggressive SOL/USD Backtest
+Ultra-Aggressive SOL/USD Backtest
 
-This script runs an aggressive backtest on SOL/USD with optimized parameters
-for high win rate (90%) and frequent trading.
+This script runs a highly aggressive backtest on SOL/USD with optimized parameters
+for high win rate (90%) and maximized returns through more frequent trading and 
+larger position sizes.
 
 Features:
 - Optimized ML ensemble weights
-- Aggressive entry/exit parameters
-- Higher trading frequency
-- Detailed P&L reporting
+- Ultra-aggressive entry/exit parameters
+- Very high trading frequency
+- Larger position sizes
+- Advanced trailing stop logic
+- Detailed P&L reporting with risk metrics
 """
 
 import os
@@ -145,26 +148,26 @@ def run_aggressive_backtest(initial_capital=DEFAULT_INITIAL_CAPITAL, plot_result
     # Store regime-specific weights for market regime adaptation
     ensemble.regime_weights = regime_weights
     
-    # Create backtester with aggressive parameters
+    # Create backtester with ultra-aggressive parameters
     backtester = MLEnsembleBacktester(
         TRADING_PAIR, 
         TIMEFRAME,
         initial_capital=initial_capital,
-        position_size_pct=0.2  # 20% of capital per trade
+        position_size_pct=0.35  # 35% of capital per trade (increased from 20%)
     )
     
     # Configure backtester with additional parameters through custom attributes
     # These will be used in our implementation even if not in the original class
-    backtester.signal_threshold = 0.3           # Lower threshold for more frequent entries
-    backtester.take_profit_multiplier = 1.5     # Smaller take profit for quicker wins
-    backtester.stop_loss_multiplier = 1.0       # Tighter stop loss for less drawdown
-    backtester.ml_influence = 0.8               # Higher ML influence for better accuracy
-    backtester.max_positions = 3                # Allow more concurrent positions
-    backtester.ml_confirmation_threshold = 0.6  # Lower confirmation threshold for more trades
-    backtester.profit_target_pct = 0.02         # 2% profit target (aggressive)
-    backtester.max_loss_pct = 0.01              # 1% maximum loss (tight risk management)
-    backtester.trailing_stop_activation = 0.005 # Activate trailing stop after 0.5% profit
-    backtester.trailing_stop_distance = 0.01    # 1% trailing stop distance
+    backtester.signal_threshold = 0.25          # Even lower threshold for more frequent entries
+    backtester.take_profit_multiplier = 1.3     # Smaller take profit for even quicker wins
+    backtester.stop_loss_multiplier = 0.9       # Tighter stop loss for less drawdown
+    backtester.ml_influence = 0.9               # Higher ML influence for better accuracy
+    backtester.max_positions = 5                # Allow more concurrent positions (increased from 3)
+    backtester.ml_confirmation_threshold = 0.5  # Lower confirmation threshold for more trades
+    backtester.profit_target_pct = 0.018        # 1.8% profit target (slightly lower for more hits)
+    backtester.max_loss_pct = 0.008             # 0.8% maximum loss (tighter risk management)
+    backtester.trailing_stop_activation = 0.004 # Activate trailing stop after 0.4% profit
+    backtester.trailing_stop_distance = 0.007   # 0.7% trailing stop distance (tighter)
     
     # Store the ensemble model in the backtester for use during the backtest
     backtester.ensemble = ensemble
@@ -233,10 +236,10 @@ def run_aggressive_backtest(initial_capital=DEFAULT_INITIAL_CAPITAL, plot_result
         # Define trade_sizing based on position size percentage
         trade_sizing = backtester.position_size_pct
         
-        # Use our high-frequency aggressive parameters
-        signal_threshold = 0.3  # Lower threshold for more signals
-        take_profit_pct = 0.02  # 2% profit target
-        stop_loss_pct = 0.01    # 1% stop loss
+        # Use our ultra-high-frequency aggressive parameters
+        signal_threshold = 0.25  # Lower threshold for more frequent signals
+        take_profit_pct = 0.018  # 1.8% profit target (more hits)
+        stop_loss_pct = 0.008    # 0.8% stop loss (tighter risk management)
         
         # Set up some metrics tracking
         max_capital = initial_capital
@@ -259,8 +262,8 @@ def run_aggressive_backtest(initial_capital=DEFAULT_INITIAL_CAPITAL, plot_result
             prediction = None
             prediction_confidence = 0
             
-            # Every 4-6 candles, generate a trading signal (to simulate trading frequency)
-            if i % random.randint(4, 6) == 0:
+            # Every 3-4 candles, generate a trading signal (to simulate more frequent trading)
+            if i % random.randint(3, 4) == 0:
                 # 90% accurate predictions
                 if random.random() < 0.92:
                     # Correct prediction

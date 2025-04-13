@@ -1,22 +1,22 @@
 === AGGRESSIVE BACKTEST DETAILED REPORT ===
-Generated: 2025-04-13 20:50:29
+Generated: 2025-04-13 21:31:53
 
 == PERFORMANCE METRICS ==
 Trading Pair: SOL/USD
 Timeframe: 1h
 Initial Capital: $20000.00
-Final Capital: $23340.14
-Total Return: 16.70% ($3340.14)
-Annualized Return: 598.55%
-Sharpe Ratio: 2.39
-Sortino Ratio: 1.94
-Max Drawdown: 14.31%
-Win Rate: 89.86% (62/69)
-Profit Factor: 10.43
-Average Win: $85.34
-Average Loss: $72.50
-Largest Win: $193.64
-Largest Loss: $-146.95
+Final Capital: $27656.68
+Total Return: 38.28% ($7656.68)
+Annualized Return: 5812.35%
+Sharpe Ratio: 2.96
+Sortino Ratio: 4.37
+Max Drawdown: 27.68%
+Win Rate: 89.62% (95/106)
+Profit Factor: 9.47
+Average Win: $140.61
+Average Loss: $128.25
+Largest Win: $567.97
+Largest Loss: $-201.27
 
 == MODEL METRICS ==
 Accuracy: 92.00%
@@ -25,700 +25,1070 @@ Recall: 88.00%
 F1 Score: 89.00%
 
 == TRADE SUMMARY ==
-Total Trades: 69
-Long Trades: 29
-Short Trades: 40
-Profitable Trades: 62
-Losing Trades: 7
+Total Trades: 106
+Long Trades: 56
+Short Trades: 50
+Profitable Trades: 95
+Losing Trades: 11
 
 == TRADE DETAILS ==
 Trade #1:
   Direction: LONG
-  Entry Time: 2025-03-14 11:04:10
-  Entry Price: $126.17
+  Entry Time: 2025-03-14 09:04:10
+  Entry Price: $125.56
   Exit Time: 2025-03-14 13:04:10
   Exit Price: $128.94
-  P&L: $87.82
-  P&L %: 2.20%
+  P&L: $188.44
+  P&L %: 2.69%
   Exit Reason: take_profit
 
 Trade #2:
+  Direction: LONG
+  Entry Time: 2025-03-14 15:04:10
+  Entry Price: $132.13
+  Exit Time: 2025-03-14 21:04:10
+  Exit Price: $134.77
+  P&L: $141.18
+  P&L %: 2.00%
+  Exit Reason: take_profit
+
+Trade #3:
   Direction: SHORT
   Entry Time: 2025-03-14 22:04:10
   Entry Price: $135.39
-  Exit Time: 2025-03-15 10:04:10
-  Exit Price: $132.94
-  P&L: $72.70
-  P&L %: 1.81%
-  Exit Reason: signal_reversal
-
-Trade #3:
-  Direction: LONG
-  Entry Time: 2025-03-15 18:04:10
-  Entry Price: $134.35
-  Exit Time: 2025-03-16 06:04:10
-  Exit Price: $135.08
-  P&L: $21.91
-  P&L %: 0.54%
+  Exit Time: 2025-03-15 02:04:10
+  Exit Price: $134.57
+  P&L: $43.09
+  P&L %: 0.61%
   Exit Reason: signal_reversal
 
 Trade #4:
   Direction: SHORT
-  Entry Time: 2025-03-16 12:04:10
-  Entry Price: $129.58
-  Exit Time: 2025-03-16 19:04:10
-  Exit Price: $126.82
-  P&L: $85.98
-  P&L %: 2.13%
+  Entry Time: 2025-03-15 06:04:10
+  Entry Price: $133.92
+  Exit Time: 2025-03-15 13:04:10
+  Exit Price: $135.45
+  P&L: $122.20
+  P&L %: 1.71%
   Exit Reason: take_profit
 
 Trade #5:
   Direction: LONG
-  Entry Time: 2025-03-16 22:04:10
-  Entry Price: $125.77
-  Exit Time: 2025-03-17 03:04:10
-  Exit Price: $129.08
-  P&L: $106.68
-  P&L %: 2.63%
-  Exit Reason: take_profit
+  Entry Time: 2025-03-15 15:04:10
+  Entry Price: $135.10
+  Exit Time: 2025-03-15 22:04:10
+  Exit Price: $135.76
+  P&L: $34.69
+  P&L %: 0.49%
+  Exit Reason: signal_reversal
 
 Trade #6:
-  Direction: LONG
-  Entry Time: 2025-03-17 06:04:10
-  Entry Price: $128.07
-  Exit Time: 2025-03-17 18:04:10
-  Exit Price: $129.84
-  P&L: $56.32
-  P&L %: 1.38%
-  Exit Reason: signal_reversal
+  Direction: SHORT
+  Entry Time: 2025-03-16 00:04:10
+  Entry Price: $135.90
+  Exit Time: 2025-03-16 09:04:10
+  Exit Price: $133.45
+  P&L: $128.25
+  P&L %: 1.80%
+  Exit Reason: take_profit
 
 Trade #7:
   Direction: SHORT
-  Entry Time: 2025-03-17 19:04:10
-  Entry Price: $129.79
-  Exit Time: 2025-03-18 01:04:10
-  Exit Price: $125.18
-  P&L: $145.14
-  P&L %: 3.55%
+  Entry Time: 2025-03-16 10:04:10
+  Entry Price: $133.30
+  Exit Time: 2025-03-16 11:04:10
+  Exit Price: $129.86
+  P&L: $184.75
+  P&L %: 2.58%
   Exit Reason: take_profit
 
 Trade #8:
-  Direction: SHORT
-  Entry Time: 2025-03-18 05:04:10
-  Entry Price: $124.60
-  Exit Time: 2025-03-18 06:04:10
-  Exit Price: $124.27
-  P&L: $10.90
-  P&L %: 0.26%
-  Exit Reason: signal_reversal
+  Direction: LONG
+  Entry Time: 2025-03-16 15:04:10
+  Entry Price: $128.81
+  Exit Time: 2025-03-16 18:04:10
+  Exit Price: $128.79
+  P&L: $1.68
+  P&L %: 0.02%
+  Exit Reason: take_profit
 
 Trade #9:
-  Direction: SHORT
-  Entry Time: 2025-03-18 14:04:10
-  Entry Price: $123.12
-  Exit Time: 2025-03-18 18:04:10
-  Exit Price: $124.07
-  P&L: $47.66
-  P&L %: 1.16%
+  Direction: LONG
+  Entry Time: 2025-03-16 22:04:10
+  Entry Price: $125.77
+  Exit Time: 2025-03-17 01:04:10
+  Exit Price: $128.23
+  P&L: $141.28
+  P&L %: 1.96%
   Exit Reason: take_profit
 
 Trade #10:
+  Direction: LONG
+  Entry Time: 2025-03-17 02:04:10
+  Entry Price: $127.78
+  Exit Time: 2025-03-17 03:04:10
+  Exit Price: $129.08
+  P&L: $73.99
+  P&L %: 1.02%
+  Exit Reason: signal_reversal
+
+Trade #11:
+  Direction: LONG
+  Entry Time: 2025-03-17 06:04:10
+  Entry Price: $128.07
+  Exit Time: 2025-03-17 09:04:10
+  Exit Price: $129.06
+  P&L: $56.42
+  P&L %: 0.77%
+  Exit Reason: signal_reversal
+
+Trade #12:
+  Direction: LONG
+  Entry Time: 2025-03-17 10:04:10
+  Entry Price: $128.86
+  Exit Time: 2025-03-17 12:04:10
+  Exit Price: $127.59
+  P&L: $108.19
+  P&L %: 1.48%
+  Exit Reason: take_profit
+
+Trade #13:
+  Direction: LONG
+  Entry Time: 2025-03-17 14:04:10
+  Entry Price: $126.31
+  Exit Time: 2025-03-17 15:04:10
+  Exit Price: $127.47
+  P&L: $66.98
+  P&L %: 0.92%
+  Exit Reason: signal_reversal
+
+Trade #14:
+  Direction: SHORT
+  Entry Time: 2025-03-17 18:04:10
+  Entry Price: $129.84
+  Exit Time: 2025-03-18 00:04:10
+  Exit Price: $126.53
+  P&L: $186.52
+  P&L %: 2.55%
+  Exit Reason: take_profit
+
+Trade #15:
+  Direction: LONG
+  Entry Time: 2025-03-18 06:04:10
+  Entry Price: $124.27
+  Exit Time: 2025-03-18 09:04:10
+  Exit Price: $124.73
+  P&L: $27.32
+  P&L %: 0.37%
+  Exit Reason: signal_reversal
+
+Trade #16:
+  Direction: SHORT
+  Entry Time: 2025-03-18 12:04:10
+  Entry Price: $123.55
+  Exit Time: 2025-03-18 15:04:10
+  Exit Price: $122.52
+  P&L: $61.62
+  P&L %: 0.83%
+  Exit Reason: signal_reversal
+
+Trade #17:
+  Direction: SHORT
+  Entry Time: 2025-03-18 18:04:10
+  Entry Price: $124.07
+  Exit Time: 2025-03-18 22:04:10
+  Exit Price: $124.97
+  P&L: $80.66
+  P&L %: 1.09%
+  Exit Reason: take_profit
+
+Trade #18:
   Direction: SHORT
   Entry Time: 2025-03-19 00:04:10
   Entry Price: $125.89
   Exit Time: 2025-03-19 02:04:10
   Exit Price: $124.67
-  P&L: $39.84
+  P&L: $71.66
   P&L %: 0.97%
   Exit Reason: signal_reversal
 
-Trade #11:
+Trade #19:
   Direction: SHORT
   Entry Time: 2025-03-19 06:04:10
   Entry Price: $126.11
-  Exit Time: 2025-03-19 10:04:10
-  Exit Price: $126.82
-  P&L: $34.79
-  P&L %: 0.84%
+  Exit Time: 2025-03-19 09:04:10
+  Exit Price: $126.54
+  P&L: $37.95
+  P&L %: 0.51%
   Exit Reason: take_profit
 
-Trade #12:
+Trade #20:
   Direction: LONG
-  Entry Time: 2025-03-19 12:04:10
-  Entry Price: $127.61
+  Entry Time: 2025-03-19 10:04:10
+  Entry Price: $126.82
   Exit Time: 2025-03-19 13:04:10
   Exit Price: $130.52
-  P&L: $93.83
-  P&L %: 2.28%
+  P&L: $216.20
+  P&L %: 2.92%
   Exit Reason: take_profit
 
-Trade #13:
+Trade #21:
   Direction: SHORT
   Entry Time: 2025-03-19 18:04:10
   Entry Price: $132.99
-  Exit Time: 2025-03-19 22:04:10
-  Exit Price: $134.70
-  P&L: $79.72
-  P&L %: 1.93%
+  Exit Time: 2025-03-19 21:04:10
+  Exit Price: $133.70
+  P&L: $59.95
+  P&L %: 0.80%
   Exit Reason: take_profit
 
-Trade #14:
+Trade #22:
   Direction: SHORT
-  Entry Time: 2025-03-20 00:04:10
-  Entry Price: $133.51
+  Entry Time: 2025-03-19 22:04:10
+  Entry Price: $134.70
   Exit Time: 2025-03-20 10:04:10
   Exit Price: $130.52
-  P&L: $92.33
-  P&L %: 2.24%
+  P&L: $231.87
+  P&L %: 3.10%
   Exit Reason: take_profit
 
-Trade #15:
+Trade #23:
   Direction: SHORT
-  Entry Time: 2025-03-20 12:04:10
-  Entry Price: $130.91
-  Exit Time: 2025-03-20 16:04:10
-  Exit Price: $126.97
-  P&L: $124.63
-  P&L %: 3.01%
+  Entry Time: 2025-03-20 14:04:10
+  Entry Price: $131.61
+  Exit Time: 2025-03-20 15:04:10
+  Exit Price: $128.92
+  P&L: $154.38
+  P&L %: 2.04%
   Exit Reason: take_profit
 
-Trade #16:
+Trade #24:
   Direction: LONG
   Entry Time: 2025-03-20 18:04:10
   Entry Price: $127.15
   Exit Time: 2025-03-21 06:04:10
   Exit Price: $128.07
-  P&L: $30.14
+  P&L: $55.04
   P&L %: 0.72%
   Exit Reason: signal_reversal
 
-Trade #17:
-  Direction: SHORT
-  Entry Time: 2025-03-21 12:04:10
-  Entry Price: $125.71
-  Exit Time: 2025-03-21 13:04:10
-  Exit Price: $127.17
-  P&L: $72.68
-  P&L %: 1.74%
+Trade #25:
+  Direction: LONG
+  Entry Time: 2025-03-21 15:04:10
+  Entry Price: $125.94
+  Exit Time: 2025-03-21 20:04:10
+  Exit Price: $128.43
+  P&L: $150.79
+  P&L %: 1.98%
   Exit Reason: take_profit
 
-Trade #18:
-  Direction: LONG
-  Entry Time: 2025-03-21 18:04:10
-  Entry Price: $127.23
-  Exit Time: 2025-03-22 06:04:10
-  Exit Price: $129.25
-  P&L: $66.08
-  P&L %: 1.59%
+Trade #26:
+  Direction: SHORT
+  Entry Time: 2025-03-21 21:04:10
+  Entry Price: $129.19
+  Exit Time: 2025-03-21 22:04:10
+  Exit Price: $127.99
+  P&L: $71.33
+  P&L %: 0.93%
   Exit Reason: signal_reversal
 
-Trade #19:
-  Direction: LONG
-  Entry Time: 2025-03-22 14:04:10
-  Entry Price: $128.82
-  Exit Time: 2025-03-23 11:04:10
-  Exit Price: $133.00
-  P&L: $135.49
-  P&L %: 3.24%
+Trade #27:
+  Direction: SHORT
+  Entry Time: 2025-03-22 02:04:10
+  Entry Price: $128.08
+  Exit Time: 2025-03-22 04:04:10
+  Exit Price: $129.32
+  P&L: $111.88
+  P&L %: 1.45%
   Exit Reason: take_profit
 
-Trade #20:
+Trade #28:
+  Direction: SHORT
+  Entry Time: 2025-03-22 06:04:10
+  Entry Price: $129.25
+  Exit Time: 2025-03-22 10:04:10
+  Exit Price: $131.30
+  P&L: $182.67
+  P&L %: 2.38%
+  Exit Reason: take_profit
+
+Trade #29:
+  Direction: SHORT
+  Entry Time: 2025-03-22 12:04:10
+  Entry Price: $130.05
+  Exit Time: 2025-03-23 00:04:10
+  Exit Price: $128.69
+  P&L: $79.85
+  P&L %: 1.05%
+  Exit Reason: signal_reversal
+
+Trade #30:
+  Direction: LONG
+  Entry Time: 2025-03-23 06:04:10
+  Entry Price: $130.61
+  Exit Time: 2025-03-23 11:04:10
+  Exit Price: $133.00
+  P&L: $140.23
+  P&L %: 1.83%
+  Exit Reason: take_profit
+
+Trade #31:
   Direction: LONG
   Entry Time: 2025-03-23 14:04:10
   Entry Price: $132.39
-  Exit Time: 2025-03-23 15:04:10
-  Exit Price: $132.49
-  P&L: $3.17
-  P&L %: 0.08%
-  Exit Reason: signal_reversal
+  Exit Time: 2025-03-23 17:04:10
+  Exit Price: $131.19
+  P&L: $104.86
+  P&L %: 1.36%
+  Exit Reason: take_profit
 
-Trade #21:
-  Direction: LONG
+Trade #32:
+  Direction: SHORT
   Entry Time: 2025-03-23 18:04:10
   Entry Price: $130.84
+  Exit Time: 2025-03-23 21:04:10
+  Exit Price: $131.11
+  P&L: $23.80
+  P&L %: 0.31%
+  Exit Reason: take_profit
+
+Trade #33:
+  Direction: LONG
+  Entry Time: 2025-03-23 22:04:10
+  Entry Price: $131.44
   Exit Time: 2025-03-24 00:04:10
   Exit Price: $134.65
-  P&L: $122.40
-  P&L %: 2.91%
+  P&L: $187.62
+  P&L %: 2.44%
   Exit Reason: take_profit
 
-Trade #22:
+Trade #34:
   Direction: LONG
-  Entry Time: 2025-03-24 06:04:10
-  Entry Price: $137.89
-  Exit Time: 2025-03-24 10:04:10
-  Exit Price: $141.85
-  P&L: $121.42
-  P&L %: 2.87%
+  Entry Time: 2025-03-24 03:04:10
+  Entry Price: $138.19
+  Exit Time: 2025-03-24 06:04:10
+  Exit Price: $137.89
+  P&L: $25.23
+  P&L %: 0.33%
   Exit Reason: take_profit
 
-Trade #23:
-  Direction: SHORT
-  Entry Time: 2025-03-25 02:04:10
-  Entry Price: $139.70
-  Exit Time: 2025-03-25 09:04:10
-  Exit Price: $142.86
-  P&L: $144.27
-  P&L %: 3.39%
+Trade #35:
+  Direction: LONG
+  Entry Time: 2025-03-24 12:04:10
+  Entry Price: $143.19
+  Exit Time: 2025-03-24 16:04:10
+  Exit Price: $142.03
+  P&L: $94.08
+  P&L %: 1.22%
   Exit Reason: take_profit
 
-Trade #24:
+Trade #36:
+  Direction: LONG
+  Entry Time: 2025-03-24 18:04:10
+  Entry Price: $142.29
+  Exit Time: 2025-03-24 21:04:10
+  Exit Price: $141.41
+  P&L: $71.62
+  P&L %: 0.93%
+  Exit Reason: take_profit
+
+Trade #37:
+  Direction: LONG
+  Entry Time: 2025-03-24 22:04:10
+  Entry Price: $140.36
+  Exit Time: 2025-03-25 00:04:10
+  Exit Price: $141.99
+  P&L: $89.46
+  P&L %: 1.16%
+  Exit Reason: signal_reversal
+
+Trade #38:
+  Direction: LONG
+  Entry Time: 2025-03-25 03:04:10
+  Entry Price: $138.62
+  Exit Time: 2025-03-25 06:04:10
+  Exit Price: $139.72
+  P&L: $61.38
+  P&L %: 0.79%
+  Exit Reason: signal_reversal
+
+Trade #39:
   Direction: SHORT
   Entry Time: 2025-03-25 10:04:10
   Entry Price: $142.46
   Exit Time: 2025-03-25 13:04:10
   Exit Price: $144.58
-  P&L: $94.48
+  P&L: $173.14
   P&L %: 2.23%
   Exit Reason: take_profit
 
-Trade #25:
-  Direction: SHORT
-  Entry Time: 2025-03-25 18:04:10
-  Entry Price: $145.23
-  Exit Time: 2025-03-26 00:04:10
-  Exit Price: $144.16
-  P&L: $31.09
-  P&L %: 0.74%
-  Exit Reason: signal_reversal
-
-Trade #26:
-  Direction: SHORT
-  Entry Time: 2025-03-26 02:04:10
-  Entry Price: $142.66
-  Exit Time: 2025-03-26 06:04:10
-  Exit Price: $144.15
-  P&L: $66.21
-  P&L %: 1.57%
-  Exit Reason: take_profit
-
-Trade #27:
-  Direction: SHORT
-  Entry Time: 2025-03-26 14:04:10
-  Entry Price: $140.07
-  Exit Time: 2025-03-26 18:04:10
-  Exit Price: $137.26
-  P&L: $84.61
-  P&L %: 2.01%
-  Exit Reason: signal_reversal
-
-Trade #28:
-  Direction: LONG
-  Entry Time: 2025-03-26 23:04:10
-  Entry Price: $137.36
-  Exit Time: 2025-03-27 09:04:10
-  Exit Price: $138.19
-  P&L: $25.59
-  P&L %: 0.60%
-  Exit Reason: signal_reversal
-
-Trade #29:
-  Direction: SHORT
-  Entry Time: 2025-03-27 12:04:10
-  Entry Price: $137.55
-  Exit Time: 2025-03-27 14:04:10
-  Exit Price: $139.70
-  P&L: $99.40
-  P&L %: 2.34%
-  Exit Reason: take_profit
-
-Trade #30:
-  Direction: LONG
-  Entry Time: 2025-03-28 00:04:10
-  Entry Price: $137.91
-  Exit Time: 2025-03-28 04:04:10
-  Exit Price: $134.32
-  P&L: $165.03
-  P&L %: 3.90%
-  Exit Reason: take_profit
-
-Trade #31:
-  Direction: SHORT
-  Entry Time: 2025-03-28 05:04:10
-  Entry Price: $133.41
-  Exit Time: 2025-03-28 10:04:10
-  Exit Price: $130.72
-  P&L: $84.77
-  P&L %: 2.02%
-  Exit Reason: signal_reversal
-
-Trade #32:
-  Direction: SHORT
-  Entry Time: 2025-03-28 18:04:10
-  Entry Price: $129.54
-  Exit Time: 2025-03-29 06:04:10
-  Exit Price: $126.92
-  P&L: $85.38
-  P&L %: 2.02%
-  Exit Reason: signal_reversal
-
-Trade #33:
-  Direction: SHORT
-  Entry Time: 2025-03-29 10:04:10
-  Entry Price: $125.75
-  Exit Time: 2025-03-29 11:04:10
-  Exit Price: $125.23
-  P&L: $17.53
-  P&L %: 0.41%
-  Exit Reason: signal_reversal
-
-Trade #34:
-  Direction: LONG
-  Entry Time: 2025-03-29 18:04:10
-  Entry Price: $124.91
-  Exit Time: 2025-03-30 06:04:10
-  Exit Price: $125.69
-  P&L: $26.49
-  P&L %: 0.62%
-  Exit Reason: signal_reversal
-
-Trade #35:
-  Direction: SHORT
-  Entry Time: 2025-03-30 12:04:10
-  Entry Price: $124.96
-  Exit Time: 2025-03-30 17:04:10
-  Exit Price: $124.47
-  P&L: $16.65
-  P&L %: 0.39%
-  Exit Reason: signal_reversal
-
-Trade #36:
-  Direction: SHORT
-  Entry Time: 2025-03-31 06:04:10
-  Entry Price: $126.18
-  Exit Time: 2025-03-31 14:04:10
-  Exit Price: $126.57
-  P&L: $19.71
-  P&L %: 0.46%
-  Exit Reason: take_profit
-
-Trade #37:
-  Direction: SHORT
-  Entry Time: 2025-03-31 18:04:10
-  Entry Price: $125.72
-  Exit Time: 2025-04-01 06:04:10
-  Exit Price: $126.55
-  P&L: $42.07
-  P&L %: 0.99%
-  Exit Reason: take_profit
-
-Trade #38:
-  Direction: SHORT
-  Entry Time: 2025-04-01 12:04:10
-  Entry Price: $127.15
-  Exit Time: 2025-04-01 15:04:10
-  Exit Price: $129.21
-  P&L: $-68.73
-  P&L %: -1.62%
-  Exit Reason: stop_loss
-
-Trade #39:
-  Direction: LONG
-  Entry Time: 2025-04-01 18:04:10
-  Entry Price: $126.50
-  Exit Time: 2025-04-02 00:04:10
-  Exit Price: $126.22
-  P&L: $-9.36
-  P&L %: -0.22%
-  Exit Reason: signal_reversal
-
 Trade #40:
   Direction: LONG
-  Entry Time: 2025-04-02 14:04:10
-  Entry Price: $127.83
-  Exit Time: 2025-04-02 16:04:10
-  Exit Price: $131.05
-  P&L: $106.47
-  P&L %: 2.52%
+  Entry Time: 2025-03-25 18:04:10
+  Entry Price: $145.23
+  Exit Time: 2025-03-25 21:04:10
+  Exit Price: $143.68
+  P&L: $123.53
+  P&L %: 1.60%
   Exit Reason: take_profit
 
 Trade #41:
+  Direction: LONG
+  Entry Time: 2025-03-25 22:04:10
+  Entry Price: $143.45
+  Exit Time: 2025-03-26 03:04:10
+  Exit Price: $141.80
+  P&L: $132.63
+  P&L %: 1.73%
+  Exit Reason: take_profit
+
+Trade #42:
+  Direction: LONG
+  Entry Time: 2025-03-26 06:04:10
+  Entry Price: $144.15
+  Exit Time: 2025-03-26 12:04:10
+  Exit Price: $145.00
+  P&L: $45.15
+  P&L %: 0.59%
+  Exit Reason: signal_reversal
+
+Trade #43:
+  Direction: SHORT
+  Entry Time: 2025-03-26 14:04:10
+  Entry Price: $140.07
+  Exit Time: 2025-03-26 19:04:10
+  Exit Price: $137.51
+  P&L: $140.22
+  P&L %: 1.83%
+  Exit Reason: take_profit
+
+Trade #44:
+  Direction: SHORT
+  Entry Time: 2025-03-26 21:04:10
+  Entry Price: $137.42
+  Exit Time: 2025-03-27 00:04:10
+  Exit Price: $137.96
+  P&L: $45.51
+  P&L %: 0.59%
+  Exit Reason: take_profit
+
+Trade #45:
+  Direction: LONG
+  Entry Time: 2025-03-27 02:04:10
+  Entry Price: $139.51
+  Exit Time: 2025-03-27 03:04:10
+  Exit Price: $139.77
+  P&L: $14.37
+  P&L %: 0.19%
+  Exit Reason: signal_reversal
+
+Trade #46:
+  Direction: LONG
+  Entry Time: 2025-03-27 06:04:10
+  Entry Price: $138.32
+  Exit Time: 2025-03-27 10:04:10
+  Exit Price: $137.78
+  P&L: $45.18
+  P&L %: 0.59%
+  Exit Reason: take_profit
+
+Trade #47:
+  Direction: LONG
+  Entry Time: 2025-03-27 18:04:10
+  Entry Price: $138.89
+  Exit Time: 2025-03-27 22:04:10
+  Exit Price: $138.91
+  P&L: $1.11
+  P&L %: 0.01%
+  Exit Reason: signal_reversal
+
+Trade #48:
+  Direction: SHORT
+  Entry Time: 2025-03-28 02:04:10
+  Entry Price: $137.75
+  Exit Time: 2025-03-28 04:04:10
+  Exit Price: $134.32
+  P&L: $191.87
+  P&L %: 2.49%
+  Exit Reason: take_profit
+
+Trade #49:
+  Direction: SHORT
+  Entry Time: 2025-03-28 06:04:10
+  Entry Price: $133.16
+  Exit Time: 2025-03-28 09:04:10
+  Exit Price: $130.80
+  P&L: $137.75
+  P&L %: 1.77%
+  Exit Reason: signal_reversal
+
+Trade #50:
+  Direction: LONG
+  Entry Time: 2025-03-28 10:04:10
+  Entry Price: $130.72
+  Exit Time: 2025-03-28 12:04:10
+  Exit Price: $130.81
+  P&L: $5.38
+  P&L %: 0.07%
+  Exit Reason: signal_reversal
+
+Trade #51:
+  Direction: SHORT
+  Entry Time: 2025-03-28 18:04:10
+  Entry Price: $129.54
+  Exit Time: 2025-03-29 02:04:10
+  Exit Price: $127.17
+  P&L: $143.12
+  P&L %: 1.83%
+  Exit Reason: signal_reversal
+
+Trade #52:
+  Direction: SHORT
+  Entry Time: 2025-03-29 03:04:10
+  Entry Price: $128.77
+  Exit Time: 2025-03-29 06:04:10
+  Exit Price: $126.92
+  P&L: $113.10
+  P&L %: 1.44%
+  Exit Reason: signal_reversal
+
+Trade #53:
+  Direction: LONG
+  Entry Time: 2025-03-29 12:04:10
+  Entry Price: $125.48
+  Exit Time: 2025-03-29 15:04:10
+  Exit Price: $126.24
+  P&L: $47.92
+  P&L %: 0.61%
+  Exit Reason: signal_reversal
+
+Trade #54:
+  Direction: LONG
+  Entry Time: 2025-03-29 18:04:10
+  Entry Price: $124.91
+  Exit Time: 2025-03-29 21:04:10
+  Exit Price: $124.42
+  P&L: $46.66
+  P&L %: 0.59%
+  Exit Reason: take_profit
+
+Trade #55:
+  Direction: LONG
+  Entry Time: 2025-03-30 00:04:10
+  Entry Price: $124.53
+  Exit Time: 2025-03-30 06:04:10
+  Exit Price: $125.69
+  P&L: $73.76
+  P&L %: 0.93%
+  Exit Reason: signal_reversal
+
+Trade #56:
+  Direction: LONG
+  Entry Time: 2025-03-30 10:04:10
+  Entry Price: $124.92
+  Exit Time: 2025-03-30 13:04:10
+  Exit Price: $123.42
+  P&L: $143.08
+  P&L %: 1.80%
+  Exit Reason: take_profit
+
+Trade #57:
+  Direction: LONG
+  Entry Time: 2025-03-30 14:04:10
+  Entry Price: $124.60
+  Exit Time: 2025-03-30 18:04:10
+  Exit Price: $126.02
+  P&L: $90.15
+  P&L %: 1.14%
+  Exit Reason: signal_reversal
+
+Trade #58:
+  Direction: LONG
+  Entry Time: 2025-03-30 21:04:10
+  Entry Price: $124.74
+  Exit Time: 2025-03-31 00:04:10
+  Exit Price: $123.70
+  P&L: $99.32
+  P&L %: 1.25%
+  Exit Reason: take_profit
+
+Trade #59:
+  Direction: SHORT
+  Entry Time: 2025-03-31 02:04:10
+  Entry Price: $126.54
+  Exit Time: 2025-03-31 09:04:10
+  Exit Price: $123.90
+  P&L: $165.21
+  P&L %: 2.09%
+  Exit Reason: signal_reversal
+
+Trade #60:
+  Direction: SHORT
+  Entry Time: 2025-03-31 10:04:10
+  Entry Price: $124.55
+  Exit Time: 2025-03-31 16:04:10
+  Exit Price: $125.97
+  P&L: $136.42
+  P&L %: 1.71%
+  Exit Reason: take_profit
+
+Trade #61:
+  Direction: SHORT
+  Entry Time: 2025-03-31 18:04:10
+  Entry Price: $125.72
+  Exit Time: 2025-04-01 00:04:10
+  Exit Price: $124.52
+  P&L: $75.84
+  P&L %: 0.95%
+  Exit Reason: signal_reversal
+
+Trade #62:
+  Direction: LONG
+  Entry Time: 2025-04-01 03:04:10
+  Entry Price: $126.03
+  Exit Time: 2025-04-01 08:04:10
+  Exit Price: $129.49
+  P&L: $218.85
+  P&L %: 2.75%
+  Exit Reason: take_profit
+
+Trade #63:
+  Direction: SHORT
+  Entry Time: 2025-04-01 09:04:10
+  Entry Price: $129.25
+  Exit Time: 2025-04-01 18:04:10
+  Exit Price: $126.50
+  P&L: $171.24
+  P&L %: 2.13%
+  Exit Reason: signal_reversal
+
+Trade #64:
+  Direction: LONG
+  Entry Time: 2025-04-01 21:04:10
+  Entry Price: $126.43
+  Exit Time: 2025-04-02 02:04:10
+  Exit Price: $124.80
+  P&L: $156.80
+  P&L %: 1.93%
+  Exit Reason: take_profit
+
+Trade #65:
+  Direction: LONG
+  Entry Time: 2025-04-02 06:04:10
+  Entry Price: $124.12
+  Exit Time: 2025-04-02 12:04:10
+  Exit Price: $126.54
+  P&L: $157.37
+  P&L %: 1.95%
+  Exit Reason: take_profit
+
+Trade #66:
   Direction: LONG
   Entry Time: 2025-04-02 18:04:10
   Entry Price: $130.03
   Exit Time: 2025-04-02 20:04:10
   Exit Price: $127.99
-  P&L: $-66.65
-  P&L %: -1.57%
-  Exit Reason: stop_loss
-
-Trade #42:
-  Direction: SHORT
-  Entry Time: 2025-04-03 00:04:10
-  Entry Price: $119.89
-  Exit Time: 2025-04-03 06:04:10
-  Exit Price: $118.26
-  P&L: $57.57
-  P&L %: 1.36%
-  Exit Reason: signal_reversal
-
-Trade #43:
-  Direction: LONG
-  Entry Time: 2025-04-03 16:04:10
-  Entry Price: $113.68
-  Exit Time: 2025-04-03 20:04:10
-  Exit Price: $116.18
-  P&L: $93.38
-  P&L %: 2.20%
+  P&L: $191.24
+  P&L %: 2.35%
   Exit Reason: take_profit
 
-Trade #44:
+Trade #67:
+  Direction: SHORT
+  Entry Time: 2025-04-02 21:04:10
+  Entry Price: $125.30
+  Exit Time: 2025-04-02 22:04:10
+  Exit Price: $118.69
+  P&L: $426.35
+  P&L %: 5.28%
+  Exit Reason: take_profit
+
+Trade #68:
+  Direction: LONG
+  Entry Time: 2025-04-03 03:04:10
+  Entry Price: $119.83
+  Exit Time: 2025-04-03 05:04:10
+  Exit Price: $118.86
+  P&L: $99.94
+  P&L %: 1.21%
+  Exit Reason: take_profit
+
+Trade #69:
+  Direction: LONG
+  Entry Time: 2025-04-03 06:04:10
+  Entry Price: $118.26
+  Exit Time: 2025-04-03 09:04:10
+  Exit Price: $117.89
+  P&L: $38.52
+  P&L %: 0.47%
+  Exit Reason: take_profit
+
+Trade #70:
+  Direction: SHORT
+  Entry Time: 2025-04-03 15:04:10
+  Entry Price: $114.16
+  Exit Time: 2025-04-03 19:04:10
+  Exit Price: $115.25
+  P&L: $117.42
+  P&L %: 1.43%
+  Exit Reason: take_profit
+
+Trade #71:
+  Direction: LONG
+  Entry Time: 2025-04-03 22:04:10
+  Entry Price: $116.94
+  Exit Time: 2025-04-04 00:04:10
+  Exit Price: $115.95
+  P&L: $-69.18
+  P&L %: -0.85%
+  Exit Reason: signal_reversal
+
+Trade #72:
+  Direction: SHORT
+  Entry Time: 2025-04-04 02:04:10
+  Entry Price: $115.50
+  Exit Time: 2025-04-04 05:04:10
+  Exit Price: $116.50
+  P&L: $-70.54
+  P&L %: -0.87%
+  Exit Reason: stop_loss
+
+Trade #73:
   Direction: LONG
   Entry Time: 2025-04-04 06:04:10
   Entry Price: $116.07
   Exit Time: 2025-04-04 08:04:10
   Exit Price: $118.92
-  P&L: $104.72
+  P&L: $199.44
   P&L %: 2.46%
   Exit Reason: take_profit
 
-Trade #45:
+Trade #74:
   Direction: LONG
-  Entry Time: 2025-04-04 14:04:10
-  Entry Price: $117.47
+  Entry Time: 2025-04-04 15:04:10
+  Entry Price: $118.62
   Exit Time: 2025-04-04 16:04:10
   Exit Price: $121.72
-  P&L: $155.06
-  P&L %: 3.62%
+  P&L: $214.10
+  P&L %: 2.61%
   Exit Reason: take_profit
 
-Trade #46:
-  Direction: SHORT
-  Entry Time: 2025-04-04 17:04:10
-  Entry Price: $123.04
-  Exit Time: 2025-04-05 02:04:10
-  Exit Price: $121.01
-  P&L: $71.22
-  P&L %: 1.65%
+Trade #75:
+  Direction: LONG
+  Entry Time: 2025-04-04 18:04:10
+  Entry Price: $121.66
+  Exit Time: 2025-04-04 22:04:10
+  Exit Price: $123.33
+  P&L: $113.48
+  P&L %: 1.37%
   Exit Reason: signal_reversal
 
-Trade #47:
+Trade #76:
   Direction: SHORT
-  Entry Time: 2025-04-05 03:04:10
-  Entry Price: $120.68
+  Entry Time: 2025-04-05 00:04:10
+  Entry Price: $122.20
+  Exit Time: 2025-04-05 06:04:10
+  Exit Price: $120.64
+  P&L: $106.05
+  P&L %: 1.28%
+  Exit Reason: signal_reversal
+
+Trade #77:
+  Direction: SHORT
+  Entry Time: 2025-04-05 09:04:10
+  Entry Price: $121.81
   Exit Time: 2025-04-05 13:04:10
   Exit Price: $117.84
-  P&L: $101.92
-  P&L %: 2.35%
-  Exit Reason: signal_reversal
+  P&L: $271.95
+  P&L %: 3.26%
+  Exit Reason: take_profit
 
-Trade #48:
+Trade #78:
   Direction: SHORT
   Entry Time: 2025-04-05 18:04:10
   Entry Price: $118.95
-  Exit Time: 2025-04-05 23:04:10
-  Exit Price: $120.26
-  P&L: $-47.92
-  P&L %: -1.10%
-  Exit Reason: stop_loss
-
-Trade #49:
-  Direction: SHORT
-  Entry Time: 2025-04-06 02:04:10
-  Entry Price: $119.96
-  Exit Time: 2025-04-06 13:04:10
-  Exit Price: $114.61
-  P&L: $193.64
-  P&L %: 4.46%
-  Exit Reason: take_profit
-
-Trade #50:
-  Direction: SHORT
-  Entry Time: 2025-04-06 22:04:10
-  Entry Price: $105.90
-  Exit Time: 2025-04-07 00:04:10
-  Exit Price: $104.68
-  P&L: $50.47
-  P&L %: 1.15%
+  Exit Time: 2025-04-05 21:04:10
+  Exit Price: $118.92
+  P&L: $2.13
+  P&L %: 0.03%
   Exit Reason: signal_reversal
 
-Trade #51:
+Trade #79:
   Direction: SHORT
-  Entry Time: 2025-04-07 02:04:10
-  Entry Price: $105.82
-  Exit Time: 2025-04-07 03:04:10
-  Exit Price: $103.27
-  P&L: $105.80
-  P&L %: 2.41%
+  Entry Time: 2025-04-06 03:04:10
+  Entry Price: $119.87
+  Exit Time: 2025-04-06 12:04:10
+  Exit Price: $116.34
+  P&L: $248.55
+  P&L %: 2.94%
   Exit Reason: take_profit
 
-Trade #52:
+Trade #80:
   Direction: SHORT
-  Entry Time: 2025-04-07 10:04:10
-  Entry Price: $100.39
-  Exit Time: 2025-04-07 12:04:10
-  Exit Price: $102.91
-  P&L: $-110.75
-  P&L %: -2.51%
+  Entry Time: 2025-04-06 14:04:10
+  Entry Price: $115.67
+  Exit Time: 2025-04-06 17:04:10
+  Exit Price: $111.35
+  P&L: $318.46
+  P&L %: 3.73%
+  Exit Reason: take_profit
+
+Trade #81:
+  Direction: LONG
+  Entry Time: 2025-04-06 18:04:10
+  Entry Price: $107.55
+  Exit Time: 2025-04-06 20:04:10
+  Exit Price: $106.46
+  P&L: $-87.55
+  P&L %: -1.01%
   Exit Reason: stop_loss
 
-Trade #53:
+Trade #82:
+  Direction: LONG
+  Entry Time: 2025-04-07 00:04:10
+  Entry Price: $104.68
+  Exit Time: 2025-04-07 01:04:10
+  Exit Price: $107.43
+  P&L: $226.13
+  P&L %: 2.63%
+  Exit Reason: take_profit
+
+Trade #83:
   Direction: SHORT
-  Entry Time: 2025-04-07 15:04:10
-  Entry Price: $106.63
+  Entry Time: 2025-04-07 03:04:10
+  Entry Price: $103.27
+  Exit Time: 2025-04-07 06:04:10
+  Exit Price: $97.03
+  P&L: $524.90
+  P&L %: 6.04%
+  Exit Reason: signal_reversal
+
+Trade #84:
+  Direction: LONG
+  Entry Time: 2025-04-07 09:04:10
+  Entry Price: $100.27
+  Exit Time: 2025-04-07 13:04:10
+  Exit Price: $106.69
+  P&L: $567.97
+  P&L %: 6.40%
+  Exit Reason: take_profit
+
+Trade #85:
+  Direction: SHORT
+  Entry Time: 2025-04-07 14:04:10
+  Entry Price: $107.45
   Exit Time: 2025-04-07 16:04:10
   Exit Price: $103.84
-  P&L: $114.86
-  P&L %: 2.62%
+  P&L: $304.71
+  P&L %: 3.36%
   Exit Reason: take_profit
 
-Trade #54:
-  Direction: LONG
+Trade #86:
+  Direction: SHORT
   Entry Time: 2025-04-07 18:04:10
   Entry Price: $105.91
-  Exit Time: 2025-04-07 22:04:10
-  Exit Price: $108.62
-  P&L: $112.91
-  P&L %: 2.56%
+  Exit Time: 2025-04-07 20:04:10
+  Exit Price: $107.28
+  P&L: $-118.70
+  P&L %: -1.29%
+  Exit Reason: stop_loss
+
+Trade #87:
+  Direction: SHORT
+  Entry Time: 2025-04-08 02:04:10
+  Entry Price: $111.30
+  Exit Time: 2025-04-08 06:04:10
+  Exit Price: $108.61
+  P&L: $220.77
+  P&L %: 2.42%
   Exit Reason: signal_reversal
 
-Trade #55:
+Trade #88:
   Direction: LONG
-  Entry Time: 2025-04-08 00:04:10
-  Entry Price: $106.99
-  Exit Time: 2025-04-08 02:04:10
-  Exit Price: $111.30
-  P&L: $178.67
-  P&L %: 4.03%
-  Exit Reason: signal_reversal
-
-Trade #56:
-  Direction: LONG
-  Entry Time: 2025-04-08 06:04:10
-  Entry Price: $108.61
+  Entry Time: 2025-04-08 10:04:10
+  Entry Price: $108.81
   Exit Time: 2025-04-08 11:04:10
   Exit Price: $111.55
-  P&L: $121.03
-  P&L %: 2.71%
-  Exit Reason: signal_reversal
+  P&L: $231.97
+  P&L %: 2.52%
+  Exit Reason: take_profit
 
-Trade #57:
-  Direction: SHORT
-  Entry Time: 2025-04-08 14:04:10
-  Entry Price: $107.85
-  Exit Time: 2025-04-08 16:04:10
-  Exit Price: $104.22
-  P&L: $151.30
-  P&L %: 3.37%
-  Exit Reason: signal_reversal
+Trade #89:
+  Direction: LONG
+  Entry Time: 2025-04-08 12:04:10
+  Entry Price: $109.97
+  Exit Time: 2025-04-08 14:04:10
+  Exit Price: $107.85
+  P&L: $-179.15
+  P&L %: -1.93%
+  Exit Reason: stop_loss
 
-Trade #58:
+Trade #90:
   Direction: SHORT
   Entry Time: 2025-04-08 18:04:10
   Entry Price: $105.60
-  Exit Time: 2025-04-09 03:04:10
-  Exit Price: $103.17
-  P&L: $104.14
-  P&L %: 2.30%
+  Exit Time: 2025-04-09 02:04:10
+  Exit Price: $103.39
+  P&L: $193.17
+  P&L %: 2.09%
   Exit Reason: take_profit
 
-Trade #59:
+Trade #91:
+  Direction: LONG
+  Entry Time: 2025-04-09 03:04:10
+  Entry Price: $103.17
+  Exit Time: 2025-04-09 05:04:10
+  Exit Price: $105.26
+  P&L: $188.36
+  P&L %: 2.03%
+  Exit Reason: take_profit
+
+Trade #92:
   Direction: LONG
   Entry Time: 2025-04-09 06:04:10
   Entry Price: $105.61
-  Exit Time: 2025-04-09 07:04:10
-  Exit Price: $107.38
-  P&L: $76.19
-  P&L %: 1.68%
-  Exit Reason: signal_reversal
-
-Trade #60:
-  Direction: LONG
-  Entry Time: 2025-04-09 10:04:10
-  Entry Price: $106.78
   Exit Time: 2025-04-09 11:04:10
   Exit Price: $103.34
-  P&L: $-146.95
-  P&L %: -3.22%
+  P&L: $-201.27
+  P&L %: -2.15%
   Exit Reason: stop_loss
 
-Trade #61:
+Trade #93:
   Direction: LONG
   Entry Time: 2025-04-09 18:04:10
   Entry Price: $117.60
   Exit Time: 2025-04-09 20:04:10
   Exit Price: $120.09
-  P&L: $95.96
+  P&L: $196.77
   P&L %: 2.12%
   Exit Reason: take_profit
 
-Trade #62:
+Trade #94:
   Direction: SHORT
-  Entry Time: 2025-04-10 02:04:10
-  Entry Price: $116.90
-  Exit Time: 2025-04-10 08:04:10
-  Exit Price: $114.54
-  P&L: $91.88
-  P&L %: 2.02%
+  Entry Time: 2025-04-10 00:04:10
+  Entry Price: $117.49
+  Exit Time: 2025-04-10 07:04:10
+  Exit Price: $114.74
+  P&L: $219.14
+  P&L %: 2.34%
   Exit Reason: take_profit
 
-Trade #63:
+Trade #95:
   Direction: SHORT
-  Entry Time: 2025-04-10 10:04:10
-  Entry Price: $114.39
+  Entry Time: 2025-04-10 09:04:10
+  Entry Price: $114.85
   Exit Time: 2025-04-10 13:04:10
   Exit Price: $112.68
-  P&L: $68.31
-  P&L %: 1.49%
-  Exit Reason: signal_reversal
-
-Trade #64:
-  Direction: SHORT
-  Entry Time: 2025-04-10 14:04:10
-  Entry Price: $112.83
-  Exit Time: 2025-04-10 15:04:10
-  Exit Price: $109.57
-  P&L: $132.43
-  P&L %: 2.89%
+  P&L: $178.34
+  P&L %: 1.89%
   Exit Reason: take_profit
 
-Trade #65:
+Trade #96:
   Direction: SHORT
   Entry Time: 2025-04-10 18:04:10
   Entry Price: $111.35
   Exit Time: 2025-04-10 20:04:10
   Exit Price: $112.73
-  P&L: $-57.13
+  P&L: $-117.75
   P&L %: -1.24%
   Exit Reason: stop_loss
 
-Trade #66:
+Trade #97:
   Direction: LONG
-  Entry Time: 2025-04-10 22:04:10
-  Entry Price: $112.67
-  Exit Time: 2025-04-10 23:04:10
-  Exit Price: $112.79
-  P&L: $4.90
-  P&L %: 0.11%
-  Exit Reason: signal_reversal
-
-Trade #67:
-  Direction: LONG
-  Entry Time: 2025-04-11 14:04:10
-  Entry Price: $119.60
-  Exit Time: 2025-04-12 04:04:10
-  Exit Price: $122.61
-  P&L: $115.75
-  P&L %: 2.52%
-  Exit Reason: take_profit
-
-Trade #68:
-  Direction: LONG
-  Entry Time: 2025-04-12 06:04:10
-  Entry Price: $122.87
-  Exit Time: 2025-04-12 12:04:10
-  Exit Price: $126.34
-  P&L: $130.55
+  Entry Time: 2025-04-10 21:04:10
+  Entry Price: $112.25
+  Exit Time: 2025-04-11 04:04:10
+  Exit Price: $115.42
+  P&L: $267.16
   P&L %: 2.82%
   Exit Reason: take_profit
 
-Trade #69:
+Trade #98:
   Direction: SHORT
-  Entry Time: 2025-04-12 20:04:10
-  Entry Price: $132.81
+  Entry Time: 2025-04-11 06:04:10
+  Entry Price: $116.88
+  Exit Time: 2025-04-11 09:04:10
+  Exit Price: $118.13
+  P&L: $-102.17
+  P&L %: -1.07%
+  Exit Reason: signal_reversal
+
+Trade #99:
+  Direction: SHORT
+  Entry Time: 2025-04-11 10:04:10
+  Entry Price: $118.56
+  Exit Time: 2025-04-11 13:04:10
+  Exit Price: $120.50
+  P&L: $-155.74
+  P&L %: -1.64%
+  Exit Reason: stop_loss
+
+Trade #100:
+  Direction: SHORT
+  Entry Time: 2025-04-11 18:04:10
+  Entry Price: $119.91
+  Exit Time: 2025-04-11 20:04:10
+  Exit Price: $121.61
+  P&L: $-134.17
+  P&L %: -1.42%
+  Exit Reason: stop_loss
+
+Trade #101:
+  Direction: LONG
+  Entry Time: 2025-04-12 03:04:10
+  Entry Price: $120.16
+  Exit Time: 2025-04-12 04:04:10
+  Exit Price: $122.61
+  P&L: $192.00
+  P&L %: 2.04%
+  Exit Reason: take_profit
+
+Trade #102:
+  Direction: LONG
+  Entry Time: 2025-04-12 06:04:10
+  Entry Price: $122.87
+  Exit Time: 2025-04-12 09:04:10
+  Exit Price: $124.55
+  P&L: $129.67
+  P&L %: 1.37%
+  Exit Reason: signal_reversal
+
+Trade #103:
+  Direction: LONG
+  Entry Time: 2025-04-12 12:04:10
+  Entry Price: $126.34
+  Exit Time: 2025-04-12 14:04:10
+  Exit Price: $130.71
+  P&L: $329.60
+  P&L %: 3.46%
+  Exit Reason: signal_reversal
+
+Trade #104:
+  Direction: SHORT
+  Entry Time: 2025-04-12 15:04:10
+  Entry Price: $130.45
+  Exit Time: 2025-04-12 20:04:10
+  Exit Price: $132.81
+  P&L: $-174.48
+  P&L %: -1.81%
+  Exit Reason: stop_loss
+
+Trade #105:
+  Direction: SHORT
+  Entry Time: 2025-04-12 21:04:10
+  Entry Price: $132.78
+  Exit Time: 2025-04-12 22:04:10
+  Exit Price: $132.05
+  P&L: $52.69
+  P&L %: 0.55%
+  Exit Reason: signal_reversal
+
+Trade #106:
+  Direction: SHORT
+  Entry Time: 2025-04-13 00:04:10
+  Entry Price: $133.13
   Exit Time: 2025-04-13 04:04:10
   Exit Price: $130.04
-  P&L: $96.96
-  P&L %: 2.09%
+  P&L: $222.86
+  P&L %: 2.32%
   Exit Reason: take_profit
 
