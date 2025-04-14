@@ -82,21 +82,18 @@ class EnhancedDatasetPreparation:
         """Initialize ARIMA and Adaptive strategies for feature extraction"""
         try:
             # Import at runtime to avoid circular imports
-            from arima_strategy import ARIMAStrategy
-            from fixed_strategy import AdaptiveStrategy
+            from fixed_strategy import ARIMAStrategy, AdaptiveStrategy
             
             self.arima_strategy = ARIMAStrategy(
                 trading_pair=self.pair,
                 timeframe=self.timeframe,
-                sandbox=True,
-                backtest=True
+                max_leverage=125
             )
             
             self.adaptive_strategy = AdaptiveStrategy(
                 trading_pair=self.pair,
                 timeframe=self.timeframe,
-                sandbox=True,
-                backtest=True
+                max_leverage=125
             )
             
             logger.info(f"Initialized ARIMA and Adaptive strategies for {self.pair}")
