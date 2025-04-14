@@ -1,712 +1,554 @@
 """
-Dynamic Position Sizing with ML Confidence Integration
+Dynamic Position Sizing with ML Integration
 
-This module implements adaptive position sizing based on ML prediction confidence
-and trailing stop parameters. Position sizes scale with prediction confidence and 
-are inversely related to volatility measures.
+This module enhances the dynamic position sizing capabilities by using
+ML model predictions and confidence scores to determine leverage and
+margin allocation for extreme leverage trading.
 
 Features:
-- Confidence-based position sizing (higher confidence = larger position)
-- Volatility-adjusted positions (higher volatility = smaller position)
-- Trailing stop position adjustment (tighter stops = larger position)
-- Market regime-adaptive sizing (trending = larger, volatile = smaller)
-- Historical performance-based scaling
-- Advanced position sizing with ATR-based risk management
-- Enhanced ensemble confidence integration
+1. ML-driven leverage calculation (up to 125x)
+2. Confidence-based margin percentage determination
+3. Market regime adjustment factors
+4. Asset-specific volatility considerations
+5. Risk management constraints
 """
 
+import os
 import logging
+import json
+import time
+from typing import Dict, Tuple, Optional
 import numpy as np
-from typing import Dict, Union, Tuple, Optional
-import pandas as pd
+
+from config import LEVERAGE, MARGIN_PERCENT
 
 logger = logging.getLogger(__name__)
 
-class MLConfidencePositionSizer:
-    """
-    Position sizer that dynamically adjusts trade size based on ML prediction confidence
-    and market conditions.
-    """
-    
-    def __init__(
-        self,
-        base_position_pct: float = 0.20,
-        max_position_pct: float = 0.35,
-        min_position_pct: float = 0.10,
-        min_confidence: float = 0.55,
-        max_confidence: float = 0.95,
-        volatility_scaling: bool = True,
-        trailing_stop_scaling: bool = True
-    ):
-        """
-        Initialize the ML confidence-based position sizer
-        
-        Args:
-            base_position_pct: Base position size as percentage of capital
-            max_position_pct: Maximum position size allowed
-            min_position_pct: Minimum position size for valid signals
-            min_confidence: Minimum ML confidence required for base position size
-            max_confidence: ML confidence level that would warrant maximum position
-            volatility_scaling: Whether to scale position size inversely with volatility
-            trailing_stop_scaling: Whether to adjust position based on trailing stop distance
-        """
-        self.base_position_pct = base_position_pct
-        self.max_position_pct = max_position_pct
-        self.min_position_pct = min_position_pct
-        self.min_confidence = min_confidence
-        self.max_confidence = max_confidence
-        self.volatility_scaling = volatility_scaling
-        self.trailing_stop_scaling = trailing_stop_scaling
-        
-        logger.info(f"Initialized ML confidence-based position sizer: "
-                   f"base={base_position_pct:.1%}, max={max_position_pct:.1%}, "
-                   f"min_confidence={min_confidence:.2f}")
-    
-    def calculate_position_size(
-        self,
-        capital: float,
-        ml_confidence: float,
-        atr: Optional[float] = None,
-        trailing_stop_pct: Optional[float] = None,
-        market_volatility: Optional[float] = None,
-        max_drawdown_target: float = 0.02  # Target max drawdown per trade
-    ) -> Tuple[float, Dict]:
-        """
-        Calculate position size based on ML confidence and market conditions
-        
-        Args:
-            capital: Available capital for trading
-            ml_confidence: Confidence score from ML models (0.0-1.0)
-            atr: Average True Range (volatility measure)
-            trailing_stop_pct: Trailing stop percentage
-            market_volatility: General market volatility measure (normalized 0-1)
-            max_drawdown_target: Maximum drawdown target per trade
-            
-        Returns:
-            tuple: (position_size_usd, calculation_details)
-        """
-        # Start with base calculation from confidence
-        confidence_factor = self._calculate_confidence_factor(ml_confidence)
-        position_pct = self.base_position_pct * confidence_factor
-        
-        # Apply volatility scaling if enabled and data available
-        volatility_factor = 1.0
-        if self.volatility_scaling and market_volatility is not None:
-            volatility_factor = self._calculate_volatility_factor(market_volatility)
-            position_pct *= volatility_factor
-        
-        # Apply trailing stop scaling if enabled and data available
-        trailing_stop_factor = 1.0
-        if self.trailing_stop_scaling and trailing_stop_pct is not None:
-            trailing_stop_factor = self._calculate_trailing_stop_factor(trailing_stop_pct)
-            position_pct *= trailing_stop_factor
-        
-        # Apply ATR-based position sizing if available
-        atr_factor = 1.0
-        atr_size = None
-        if atr is not None:
-            atr_factor, atr_size = self._calculate_atr_position(
-                capital, atr, max_drawdown_target
-            )
-        
-        # Calculate final position size
-        position_pct = min(position_pct, self.max_position_pct)
-        position_pct = max(position_pct, self.min_position_pct)
-        
-        # If ATR-based sizing suggests a smaller position, use it
-        position_size = capital * position_pct
-        if atr_size is not None:
-            position_size = min(position_size, atr_size)
-        
-        # Compile calculation details
-        details = {
-            "position_pct": position_pct,
-            "position_size": position_size,
-            "confidence_factor": confidence_factor,
-            "volatility_factor": volatility_factor,
-            "trailing_stop_factor": trailing_stop_factor,
-            "atr_factor": atr_factor,
-            "atr_position_size": atr_size
-        }
-        
-        logger.debug(f"Position size calculation: {position_size:.2f} USD ({position_pct:.1%} of capital)")
-        return position_size, details
-    
-    def _calculate_confidence_factor(self, ml_confidence: float) -> float:
-        """
-        Calculate a scaling factor based on ML prediction confidence
-        
-        Args:
-            ml_confidence: Confidence score from ML models (0.0-1.0)
-            
-        Returns:
-            float: Confidence scaling factor
-        """
-        # No position if below minimum confidence
-        if ml_confidence < self.min_confidence:
-            return 0.0
-        
-        # Linear scaling between min and max confidence
-        if ml_confidence >= self.max_confidence:
-            return 2.0  # Double the base position at maximum confidence
-        
-        # Scale between 1.0 and 2.0 based on confidence
-        confidence_range = self.max_confidence - self.min_confidence
-        confidence_factor = 1.0 + (ml_confidence - self.min_confidence) / confidence_range
-        
-        return confidence_factor
-    
-    def _calculate_volatility_factor(self, market_volatility: float) -> float:
-        """
-        Calculate a scaling factor based on market volatility
-        
-        Args:
-            market_volatility: Market volatility measure (normalized 0-1)
-            
-        Returns:
-            float: Volatility scaling factor (lower when volatility is high)
-        """
-        # Scale inversely with volatility - reduce size in high volatility
-        # 1.0 at 0% volatility, 0.5 at 100% volatility
-        return 1.0 - (0.5 * market_volatility)
-    
-    def _calculate_trailing_stop_factor(self, trailing_stop_pct: float) -> float:
-        """
-        Calculate a scaling factor based on trailing stop percentage
-        
-        Args:
-            trailing_stop_pct: Trailing stop as percentage
-            
-        Returns:
-            float: Trailing stop scaling factor
-        """
-        # For tighter trailing stops, increase position size
-        # For wider trailing stops, decrease position size
-        # Base assumption: 1% trailing stop is "standard"
-        standard_stop = 0.01  # 1%
-        
-        if trailing_stop_pct <= 0.0:
-            return 1.0
-        
-        # Inverse relationship - tighter stops allow larger positions
-        return min(1.5, standard_stop / trailing_stop_pct)
-    
-    def _calculate_atr_position(
-        self, capital: float, atr: float, max_drawdown_target: float
-    ) -> Tuple[float, float]:
-        """
-        Calculate position size based on ATR to limit risk per trade
-        
-        Args:
-            capital: Available capital
-            atr: Average True Range
-            max_drawdown_target: Maximum acceptable drawdown per trade
-            
-        Returns:
-            tuple: (atr_factor, position_size)
-        """
-        if atr <= 0:
-            return 1.0, None
-        
-        # Calculate maximum position size based on risk tolerance
-        risk_amount = capital * max_drawdown_target  # Maximum dollar risk
-        atr_multiples = 1.5  # Allow for price to move 1.5 x ATR against position
-        max_position = risk_amount / (atr * atr_multiples)
-        
-        # Calculate the factor as a proportion of base position
-        base_position = capital * self.base_position_pct
-        atr_factor = max_position / base_position if base_position > 0 else 1.0
-        
-        return atr_factor, max_position
+# Default leverage limits
+BASE_LEVERAGE = 35.0  # Default base leverage
+MAX_LEVERAGE = 125.0  # Maximum leverage (with high confidence)
+MIN_LEVERAGE = 20.0   # Minimum leverage floor
 
+# Market regime adjustment factors
+MARKET_REGIME_FACTORS = {
+    'volatile_trending_up': 1.2,    # Previously 0.8 (now we increase in volatile uptrends)
+    'volatile_trending_down': 0.9,  # Previously 0.7 (less reduction in volatile downtrends)
+    'normal_trending_up': 1.8,      # Previously 1.4 (much more aggressive in normal uptrends)
+    'normal_trending_down': 1.2,    # Previously 0.9 (now we increase even in downtrends)
+    'neutral': 1.4                  # Previously 1.1 (much more aggressive in sideways markets)
+}
 
-class AdaptivePositionSizer:
-    """
-    Advanced position sizer that combines multiple factors including:
-    - Market regime (trending, ranging, volatile)
-    - Signal strength from multiple sources
-    - Historical win rate in current conditions
-    - Risk-adjusted position sizing
-    """
+# Default position sizing configuration
+DEFAULT_CONFIG = {
+    'base_leverage': BASE_LEVERAGE,
+    'max_leverage': MAX_LEVERAGE,
+    'min_leverage': MIN_LEVERAGE,
+    'base_margin_percent': 0.22,    # Enhanced from 0.20
+    'max_margin_cap': 0.65,         # Enhanced from 0.50
+    'min_margin_floor': 0.15,
+    'ml_influence': 0.75,           # Enhanced from 0.50
+    'confidence_threshold': 0.80,
+    'risk_factor': 1.0,
+    'market_regime_factors': MARKET_REGIME_FACTORS,
+    'signal_threshold': 0.08,       # Reduced from 0.20 for more signals
+    'stop_loss_atr_multiplier': 1.5,
+    'take_profit_atr_multiplier': 3.0,
+    'limit_order_factor': 0.70,     # Enhanced from 0.65
+    'volume_factor': 1.0
+}
+
+class PositionSizingConfig:
+    """Configuration class for dynamic position sizing parameters"""
     
-    def __init__(
-        self,
-        base_position_pct: float = 0.20,
-        max_position_pct: float = 0.35,
-        model_performance_window: int = 50,  # Use last 50 trades for performance
-        enable_regime_adaptation: bool = True,
-        enable_performance_scaling: bool = True
-    ):
+    def __init__(self, config_path: Optional[str] = None):
         """
-        Initialize the adaptive position sizer
+        Initialize with either default configuration or from a file
         
         Args:
-            base_position_pct: Base position size as percentage of capital
-            max_position_pct: Maximum position size allowed
-            model_performance_window: Number of past trades to consider for performance
-            enable_regime_adaptation: Whether to adapt to market regimes
-            enable_performance_scaling: Whether to scale based on model performance
+            config_path: Optional path to JSON configuration file
         """
-        self.base_position_pct = base_position_pct
-        self.max_position_pct = max_position_pct
-        self.model_performance_window = model_performance_window
-        self.enable_regime_adaptation = enable_regime_adaptation
-        self.enable_performance_scaling = enable_performance_scaling
+        self.config = DEFAULT_CONFIG.copy()
         
-        # Regime-specific position sizing
-        self.regime_position_pct = {
-            'normal_trending_up': base_position_pct * 1.2,     # More confident in trends
-            'normal_trending_down': base_position_pct * 1.0,
-            'volatile_trending_up': base_position_pct * 0.8,   # More cautious in volatility
-            'volatile_trending_down': base_position_pct * 0.7,
-            'ranging': base_position_pct * 0.6                 # Smallest in ranges
-        }
+        if config_path and os.path.exists(config_path):
+            try:
+                with open(config_path, 'r') as f:
+                    loaded_config = json.load(f)
+                    self.config.update(loaded_config)
+                logger.info(f"Loaded position sizing configuration from {config_path}")
+            except Exception as e:
+                logger.error(f"Error loading configuration from {config_path}: {e}")
         
-        # Historical performance by model and regime
-        self.model_performance = {}
-        
-        logger.info(f"Initialized adaptive position sizer: base={base_position_pct:.1%}, "
-                   f"max={max_position_pct:.1%}")
-    
-    def calculate_position_size(
-        self,
-        capital: float,
-        ml_predictions: Dict[str, Dict],
-        current_regime: str,
-        atr: Optional[float] = None,
-        risk_params: Optional[Dict] = None
-    ) -> Tuple[float, Dict]:
-        """
-        Calculate position size based on multiple ML models, their confidence, 
-        historical performance, and market regime
-        
-        Args:
-            capital: Available capital for trading
-            ml_predictions: Dictionary with model predictions and confidence
-            current_regime: Current market regime
-            atr: Average True Range (volatility measure)
-            risk_params: Additional risk parameters
-            
-        Returns:
-            tuple: (position_size_usd, calculation_details)
-        """
-        # Start with regime-based position sizing
-        if current_regime in self.regime_position_pct and self.enable_regime_adaptation:
-            position_pct = self.regime_position_pct[current_regime]
-        else:
-            position_pct = self.base_position_pct
-        
-        # Factor in ML model confidences and historical performance
-        avg_confidence = self._calculate_weighted_confidence(ml_predictions)
-        
-        # Apply confidence scaling - scale from 60% to 150% of base
-        confidence_scaling = 0.6 + (avg_confidence * 0.9)
-        position_pct *= confidence_scaling
-        
-        # Apply model performance scaling if enabled
-        performance_scaling = 1.0
-        if self.enable_performance_scaling:
-            performance_scaling = self._calculate_performance_factor(
-                ml_predictions, current_regime
-            )
-            position_pct *= performance_scaling
-        
-        # Apply ATR-based risk control
-        risk_adjusted_position = capital * position_pct
-        atr_position = None
-        
-        if atr is not None and risk_params is not None:
-            max_drawdown_target = risk_params.get('max_drawdown_target', 0.02)
-            atr_multiple = risk_params.get('atr_multiple', 1.5)
-            
-            if atr > 0:
-                # Calculate position size based on ATR risk control
-                risk_amount = capital * max_drawdown_target
-                atr_position = risk_amount / (atr * atr_multiple)
-        
-        # Use the more conservative of the two approaches
-        if atr_position is not None:
-            position_size = min(risk_adjusted_position, atr_position)
-        else:
-            position_size = risk_adjusted_position
-        
-        # Ensure we don't exceed maximum position size
-        position_size = min(position_size, capital * self.max_position_pct)
-        final_position_pct = position_size / capital if capital > 0 else 0
-        
-        # Prepare calculation details for logging and analysis
-        details = {
-            "position_pct": final_position_pct,
-            "position_size": position_size,
-            "regime": current_regime,
-            "avg_confidence": avg_confidence,
-            "confidence_scaling": confidence_scaling,
-            "performance_scaling": performance_scaling,
-            "atr_position": atr_position
-        }
-        
-        logger.debug(f"Adaptive position size: {position_size:.2f} USD "
-                    f"({final_position_pct:.1%} of capital) in {current_regime} regime")
-        
-        return position_size, details
-    
-    def _calculate_weighted_confidence(self, ml_predictions: Dict[str, Dict]) -> float:
-        """
-        Calculate weighted average confidence from multiple models
-        
-        Args:
-            ml_predictions: Dictionary with model predictions and confidence
-            
-        Returns:
-            float: Weighted average confidence
-        """
-        if not ml_predictions:
-            return 0.5  # Default to neutral confidence
-        
-        total_weight = 0.0
-        weighted_confidence = 0.0
-        
-        for model_name, prediction in ml_predictions.items():
-            if 'confidence' in prediction and 'weight' in prediction:
-                confidence = prediction['confidence']
-                weight = prediction['weight']
-                
-                weighted_confidence += confidence * weight
-                total_weight += weight
-        
-        if total_weight > 0:
-            return weighted_confidence / total_weight
-        else:
-            return 0.5
-    
-    def _calculate_performance_factor(
-        self, ml_predictions: Dict[str, Dict], current_regime: str
-    ) -> float:
-        """
-        Calculate performance scaling factor based on historical model performance
-        in the current market regime
-        
-        Args:
-            ml_predictions: Dictionary with model predictions
-            current_regime: Current market regime
-            
-        Returns:
-            float: Performance scaling factor
-        """
-        if not self.model_performance:
-            return 1.0
-        
-        # Get weights for each model
-        model_weights = {
-            model_name: pred.get('weight', 1.0) 
-            for model_name, pred in ml_predictions.items()
-        }
-        
-        # Calculate weighted performance factor
-        total_weight = sum(model_weights.values())
-        if total_weight == 0:
-            return 1.0
-        
-        weighted_performance = 0.0
-        for model_name, weight in model_weights.items():
-            # Get historical performance for this model and regime
-            if model_name in self.model_performance:
-                model_perf = self.model_performance[model_name]
-                regime_win_rate = model_perf.get(current_regime, 0.5)  # Default 50% win rate
-                
-                # Scale between 0.8 (at 50% win rate) to 1.5 (at 100% win rate)
-                model_factor = 0.8 + ((regime_win_rate - 0.5) * 1.4)
-                weighted_performance += model_factor * weight
-        
-        performance_factor = weighted_performance / total_weight
-        
-        # Constrain between 0.7 and 1.5
-        return max(0.7, min(1.5, performance_factor))
-    
-    def update_model_performance(
-        self, model_name: str, regime: str, trade_result: float, is_win: bool
-    ) -> None:
-        """
-        Update the historical performance records for a model in a specific regime
-        
-        Args:
-            model_name: Name of the ML model
-            regime: Market regime during the trade
-            trade_result: P&L result of the trade
-            is_win: Whether the trade was profitable
-        """
-        if model_name not in self.model_performance:
-            self.model_performance[model_name] = {
-                'normal_trending_up': 0.5,
-                'normal_trending_down': 0.5,
-                'volatile_trending_up': 0.5,
-                'volatile_trending_down': 0.5,
-                'ranging': 0.5,
-                'trades': []
+        # Asset-specific configurations
+        self.asset_configs = {
+            'SOL/USD': {
+                'base_leverage': 35.0,
+                'max_leverage': 125.0,
+                'min_leverage': 20.0,
+                'volatility_adjustment': 1.1  # Higher volatility, slightly higher adjustment
+            },
+            'ETH/USD': {
+                'base_leverage': 30.0,
+                'max_leverage': 100.0,
+                'min_leverage': 15.0,
+                'volatility_adjustment': 1.0  # Medium volatility, neutral adjustment
+            },
+            'BTC/USD': {
+                'base_leverage': 25.0,
+                'max_leverage': 85.0,
+                'min_leverage': 12.0,
+                'volatility_adjustment': 0.9  # Lower volatility, slightly lower adjustment
             }
-        
-        # Add this trade to the performance history
-        model_perf = self.model_performance[model_name]
-        model_perf['trades'].append({
-            'regime': regime,
-            'result': trade_result,
-            'win': is_win,
-            'timestamp': pd.Timestamp.now()
-        })
-        
-        # Limit history to the specified window
-        if len(model_perf['trades']) > self.model_performance_window:
-            model_perf['trades'] = model_perf['trades'][-self.model_performance_window:]
-        
-        # Recalculate win rates for each regime
-        regime_trades = {}
-        for trade in model_perf['trades']:
-            trade_regime = trade['regime']
-            if trade_regime not in regime_trades:
-                regime_trades[trade_regime] = []
-            regime_trades[trade_regime].append(trade)
-        
-        for r, trades in regime_trades.items():
-            win_count = sum(1 for t in trades if t['win'])
-            win_rate = win_count / len(trades) if trades else 0.5
-            model_perf[r] = win_rate
-        
-        logger.debug(f"Updated performance for {model_name} in {regime} regime: {model_perf[regime]:.2f}")
-
-
-class EnhancedEnsemblePositionSizer:
-    """
-    Advanced position sizer that integrates with the DynamicWeightedEnsemble model
-    to leverage enhanced confidence calculations for more effective position sizing.
+        }
     
-    This position sizer utilizes the sophisticated confidence calculation methods from
-    the ensemble model to better adjust position sizes based on market conditions,
-    prediction confidence, and historical performance.
-    """
-    
-    def __init__(
-        self,
-        base_position_pct: float = 0.20,
-        max_position_pct: float = 0.35,
-        min_position_pct: float = 0.10,
-        min_confidence: float = 0.60,
-        confidence_scaling_factor: float = 1.5,
-        apply_atr_limits: bool = True,
-        apply_volatility_scaling: bool = True
-    ):
+    def get_asset_config(self, asset: str) -> Dict:
         """
-        Initialize the enhanced ensemble position sizer
+        Get asset-specific configuration
         
         Args:
-            base_position_pct: Base position size as percentage of capital
-            max_position_pct: Maximum position size allowed as percentage of capital
-            min_position_pct: Minimum position size for valid signals
-            min_confidence: Minimum confidence required to take a position
-            confidence_scaling_factor: How much to scale positions based on confidence
-            apply_atr_limits: Whether to apply ATR-based risk limits
-            apply_volatility_scaling: Whether to scale positions based on volatility
-        """
-        self.base_position_pct = base_position_pct
-        self.max_position_pct = max_position_pct
-        self.min_position_pct = min_position_pct
-        self.min_confidence = min_confidence
-        self.confidence_scaling_factor = confidence_scaling_factor
-        self.apply_atr_limits = apply_atr_limits
-        self.apply_volatility_scaling = apply_volatility_scaling
-        
-        logger.info(f"Initialized Enhanced Ensemble Position Sizer: "
-                   f"base={base_position_pct:.1%}, max={max_position_pct:.1%}, "
-                   f"min_confidence={min_confidence:.2f}")
-    
-    def calculate_position_size(
-        self,
-        capital: float,
-        ensemble_model,
-        market_data: pd.DataFrame,
-        prediction: float,
-        confidence: float,
-        direction: int,  # 1 for long, -1 for short
-        atr: Optional[float] = None,
-        current_price: Optional[float] = None,
-        additional_factors: Optional[Dict] = None
-    ) -> Tuple[float, Dict]:
-        """
-        Calculate position size using the enhanced confidence calculation from the ensemble model
-        
-        Args:
-            capital: Available capital for trading
-            ensemble_model: Instance of DynamicWeightedEnsemble model
-            market_data: Recent market data for additional analysis
-            prediction: The ensemble prediction value
-            confidence: The base confidence score from the model
-            direction: Trade direction (1 for long, -1 for short)
-            atr: Average True Range (volatility measure)
-            current_price: Current price of the asset
-            additional_factors: Additional factors to consider for sizing
+            asset: Trading pair symbol
             
         Returns:
-            tuple: (position_size_usd, calculation_details)
+            Dict: Configuration dictionary for the asset
         """
-        # Use the advanced confidence calculation from ensemble model
-        enhanced_confidence, sizing_details = ensemble_model.calculate_position_sizing_confidence(
-            confidence, market_data, additional_factors
-        )
+        # Start with base configuration
+        asset_config = self.config.copy()
         
-        # Check if confidence meets minimum threshold
-        if enhanced_confidence < self.min_confidence:
-            logger.info(f"Confidence {enhanced_confidence:.2f} below minimum threshold {self.min_confidence:.2f}")
-            return 0.0, {"reason": "confidence_below_threshold", "confidence": enhanced_confidence}
+        # Override with asset-specific values if available
+        if asset in self.asset_configs:
+            asset_config.update(self.asset_configs[asset])
         
-        # Calculate position size as percentage of capital based on confidence
-        # Scale from base_position_pct to max_position_pct based on confidence
-        confidence_range = 1.0 - self.min_confidence
-        if confidence_range > 0:
-            # Scale confidence factor from 1.0 to confidence_scaling_factor
-            confidence_scale = 1.0 + (self.confidence_scaling_factor - 1.0) * (enhanced_confidence - self.min_confidence) / confidence_range
-        else:
-            confidence_scale = 1.0
-            
-        position_pct = self.base_position_pct * confidence_scale
-        
-        # Apply directional bias if specified in additional factors
-        trend_bias = 1.0
-        if additional_factors and 'trend_direction' in additional_factors:
-            trend_direction = additional_factors['trend_direction']  # 1 for uptrend, -1 for downtrend, 0 for ranging
-            
-            # Increase position size if trading in direction of trend
-            if trend_direction * direction > 0:
-                trend_bias = 1.1  # 10% increase when trading with the trend
-            # Decrease position size if trading against the trend
-            elif trend_direction * direction < 0:
-                trend_bias = 0.8  # 20% decrease when trading against the trend
-                
-        position_pct *= trend_bias
-        
-        # Apply volatility scaling if enabled and ATR is available
-        volatility_factor = 1.0
-        if self.apply_volatility_scaling and atr is not None and current_price is not None:
-            # Calculate normalized volatility as ATR / Price
-            normalized_volatility = atr / current_price if current_price > 0 else 0
-            
-            # Scale inversely with volatility (higher volatility = smaller position)
-            # Typical ATR/Price ratios range from 0.005 (0.5%) to 0.03 (3%)
-            # Scale from 1.0 to 0.6 as volatility increases
-            volatility_factor = max(0.6, 1.0 - normalized_volatility * 15)
-            position_pct *= volatility_factor
-            
-        # Apply ATR-based position sizing if enabled and ATR is available
-        atr_position = None
-        if self.apply_atr_limits and atr is not None:
-            max_drawdown_target = additional_factors.get('max_drawdown_target', 0.02) if additional_factors else 0.02
-            atr_multiple = additional_factors.get('atr_multiple', 1.5) if additional_factors else 1.5
-            
-            # Calculate position size based on ATR risk control
-            # This limits the position size so that a move of atr_multiple * ATR
-            # would result in a loss of max_drawdown_target * capital
-            if atr > 0 and current_price is not None and current_price > 0:
-                risk_amount = capital * max_drawdown_target
-                atr_position = risk_amount / (atr * atr_multiple)
-        
-        # Calculate final position size
-        position_pct = min(position_pct, self.max_position_pct)
-        position_pct = max(position_pct, self.min_position_pct)
-        
-        position_size = capital * position_pct
-        
-        # Apply ATR-based limit if it's more conservative
-        if atr_position is not None:
-            position_size = min(position_size, atr_position)
-        
-        # Prepare calculation details
-        details = {
-            "position_pct": position_pct,
-            "position_size": position_size,
-            "enhanced_confidence": enhanced_confidence,
-            "base_confidence": confidence,
-            "confidence_scale": confidence_scale,
-            "volatility_factor": volatility_factor,
-            "trend_bias": trend_bias,
-            "atr_position": atr_position,
-            "direction": direction,
-            "sizing_details": sizing_details
-        }
-        
-        if additional_factors:
-            details["additional_factors"] = additional_factors
-        
-        logger.info(f"Enhanced position sizing: {position_size:.2f} USD ({position_pct:.1%} of capital) "
-                   f"with confidence {enhanced_confidence:.2f}")
-        
-        return position_size, details
+        return asset_config
     
-    def calculate_trailing_stop(
-        self,
-        position_size: float,
-        capital: float,
-        confidence: float,
-        atr: Optional[float] = None,
-        base_trailing_stop_pct: float = 0.01,
-        direction: int = 1  # 1 for long, -1 for short
-    ) -> Tuple[float, Dict]:
+    def get_value(self, key: str, asset: Optional[str] = None) -> any:
         """
-        Calculate trailing stop percentage based on position size and confidence
+        Get a configuration value, using asset-specific value if available
         
         Args:
-            position_size: Current position size in USD
-            capital: Total available capital
-            confidence: ML model confidence (0.0-1.0)
-            atr: Average True Range (volatility measure)
-            base_trailing_stop_pct: Base trailing stop percentage
-            direction: Trade direction (1 for long, -1 for short)
+            key: Configuration key
+            asset: Optional trading pair symbol
             
         Returns:
-            tuple: (trailing_stop_pct, calculation_details)
+            Value for the configuration key
         """
-        # Calculate position percentage
-        position_pct = position_size / capital if capital > 0 else 0
+        if asset and asset in self.asset_configs and key in self.asset_configs[asset]:
+            return self.asset_configs[asset][key]
+        return self.config.get(key, DEFAULT_CONFIG.get(key))
+    
+    def save_config(self, config_path: str):
+        """
+        Save current configuration to a file
         
-        # Adjust trailing stop based on confidence
-        # Higher confidence = tighter stops (smaller percentage)
-        confidence_factor = max(0.7, min(1.3, 2.0 - confidence))
-        trailing_stop_pct = base_trailing_stop_pct * confidence_factor
+        Args:
+            config_path: Path to save the configuration
+        """
+        try:
+            with open(config_path, 'w') as f:
+                json.dump(self.config, f, indent=4)
+            logger.info(f"Saved position sizing configuration to {config_path}")
+        except Exception as e:
+            logger.error(f"Error saving configuration to {config_path}: {e}")
+
+# Global configuration instance
+_config_instance = None
+
+def get_config() -> PositionSizingConfig:
+    """
+    Get the global configuration instance
+    
+    Returns:
+        PositionSizingConfig: Configuration instance
+    """
+    global _config_instance
+    if _config_instance is None:
+        # Check for asset-specific config file
+        config_path = os.environ.get('POSITION_SIZING_CONFIG', 'position_sizing_config_ultra_aggressive.json')
+        _config_instance = PositionSizingConfig(config_path)
+    return _config_instance
+
+def calculate_dynamic_leverage(
+    base_price: float,
+    signal_strength: float,
+    ml_confidence: float,
+    market_regime: str,
+    asset: str = 'SOL/USD'
+) -> float:
+    """
+    Calculate dynamic leverage based on signal strength, ML confidence and market regime
+    
+    Args:
+        base_price: Current price
+        signal_strength: Strength of the trading signal (0.0-1.0)
+        ml_confidence: Confidence score from ML model (0.0-1.0)
+        market_regime: Current market regime
+        asset: Trading pair symbol
         
-        # Adjust trailing stop based on ATR if available (for volatility-aware stops)
-        atr_stop = None
-        atr_factor = 1.0
-        if atr is not None:
-            # Use ATR-based trailing stop as a minimum sensible value
-            # Typical is 2-3x ATR for a trailing stop
-            atr_multiple = 2.0  
-            current_price = position_size / (position_pct * capital / base_trailing_stop_pct) if position_pct > 0 else 0
-            
-            if current_price > 0:
-                atr_stop = (atr * atr_multiple) / current_price
-                atr_factor = atr_stop / base_trailing_stop_pct if base_trailing_stop_pct > 0 else 1.0
-                
-                # Use the larger of percentage-based or ATR-based stop
-                trailing_stop_pct = max(trailing_stop_pct, atr_stop)
+    Returns:
+        float: Calculated leverage
+    """
+    config = get_config()
+    asset_config = config.get_asset_config(asset)
+    
+    # Get base leverage and limits
+    base_leverage = asset_config['base_leverage']
+    max_leverage = asset_config['max_leverage']
+    min_leverage = asset_config['min_leverage']
+    
+    # Combine signal strength and ML confidence
+    ml_influence = asset_config['ml_influence']
+    combined_confidence = (signal_strength * (1 - ml_influence)) + (ml_confidence * ml_influence)
+    
+    # Market regime factor
+    regime_factor = asset_config['market_regime_factors'].get(market_regime, 1.0)
+    
+    # Asset-specific volatility adjustment
+    volatility_adjustment = asset_config.get('volatility_adjustment', 1.0)
+    
+    # Calculate leverage
+    leverage_multiplier = combined_confidence * regime_factor * volatility_adjustment
+    dynamic_leverage = base_leverage * leverage_multiplier
+    
+    # Apply limits
+    dynamic_leverage = max(min_leverage, min(max_leverage, dynamic_leverage))
+    
+    logger.debug(f"Dynamic leverage calculation for {asset}:")
+    logger.debug(f"Base leverage: {base_leverage}, Signal strength: {signal_strength}, ML confidence: {ml_confidence}")
+    logger.debug(f"Market regime: {market_regime} (factor: {regime_factor})")
+    logger.debug(f"Volatility adjustment: {volatility_adjustment}")
+    logger.debug(f"Combined confidence: {combined_confidence}, Final leverage: {dynamic_leverage}")
+    
+    return dynamic_leverage
+
+def calculate_dynamic_margin_percent(
+    portfolio_value: float,
+    leverage: float,
+    signal_strength: float,
+    ml_confidence: float,
+    asset: str = 'SOL/USD'
+) -> float:
+    """
+    Calculate dynamic margin percentage based on portfolio value, leverage,
+    signal strength and ML confidence
+    
+    Args:
+        portfolio_value: Current portfolio value
+        leverage: Calculated leverage
+        signal_strength: Strength of the trading signal (0.0-1.0)
+        ml_confidence: Confidence score from ML model (0.0-1.0)
+        asset: Trading pair symbol
         
-        # Adjust trailing stop based on position size relative to max allowed
-        # Larger positions should have tighter stops
-        position_size_factor = 1.0
-        if position_pct > 0 and self.max_position_pct > 0:
-            rel_position_pct = position_pct / self.max_position_pct
-            # Scale from 1.2 (small position) to 0.8 (large position)
-            position_size_factor = 1.2 - 0.4 * min(1.0, rel_position_pct)
-            trailing_stop_pct *= position_size_factor
+    Returns:
+        float: Calculated margin percentage
+    """
+    config = get_config()
+    asset_config = config.get_asset_config(asset)
+    
+    # Get base margin percent and limits
+    base_margin = asset_config['base_margin_percent']
+    max_margin = asset_config['max_margin_cap']
+    min_margin = asset_config['min_margin_floor']
+    
+    # Combine signal strength and ML confidence
+    ml_influence = asset_config['ml_influence']
+    combined_confidence = (signal_strength * (1 - ml_influence)) + (ml_confidence * ml_influence)
+    
+    # Adjust margin percentage based on confidence
+    confidence_factor = 1.0 + (combined_confidence - 0.5) * 2.0
+    
+    # Adjust margin based on leverage (higher leverage = slightly lower margin)
+    leverage_factor = 1.0
+    if leverage > asset_config['base_leverage']:
+        # Gradually reduce margin as leverage increases
+        leverage_diff = (leverage - asset_config['base_leverage']) / (asset_config['max_leverage'] - asset_config['base_leverage'])
+        leverage_factor = max(0.8, 1.0 - (leverage_diff * 0.2))
+    
+    # Calculate margin percentage
+    margin_percent = base_margin * confidence_factor * leverage_factor
+    
+    # Apply limits
+    margin_percent = max(min_margin, min(max_margin, margin_percent))
+    
+    logger.debug(f"Dynamic margin calculation for {asset}:")
+    logger.debug(f"Base margin: {base_margin}, Signal strength: {signal_strength}, ML confidence: {ml_confidence}")
+    logger.debug(f"Combined confidence: {combined_confidence}, Confidence factor: {confidence_factor}")
+    logger.debug(f"Leverage factor: {leverage_factor}, Final margin percent: {margin_percent}")
+    
+    return margin_percent
+
+def adjust_limit_order_price(
+    base_price: float,
+    direction: str,
+    atr_value: float,
+    ml_confidence: float,
+    asset: str = 'SOL/USD'
+) -> float:
+    """
+    Adjust limit order price based on ATR and ML confidence
+    
+    Args:
+        base_price: Current price
+        direction: Trade direction ('buy' or 'sell')
+        atr_value: Current ATR value
+        ml_confidence: Confidence score from ML model (0.0-1.0)
+        asset: Trading pair symbol
         
-        # Prepare calculation details
-        details = {
-            "base_trailing_stop_pct": base_trailing_stop_pct,
-            "confidence": confidence,
-            "confidence_factor": confidence_factor,
-            "position_pct": position_pct,
-            "position_size_factor": position_size_factor,
-            "atr_stop": atr_stop,
-            "atr_factor": atr_factor,
-            "trailing_stop_pct": trailing_stop_pct,
-            "direction": direction
+    Returns:
+        float: Adjusted limit order price
+    """
+    config = get_config()
+    asset_config = config.get_asset_config(asset)
+    
+    # Base factor for limit order price adjustment
+    limit_factor = asset_config['limit_order_factor']
+    
+    # Adjust factor based on ML confidence
+    confidence_adjustment = 1.0 + (ml_confidence - 0.5) * 0.5
+    adjusted_factor = limit_factor * confidence_adjustment
+    
+    # Calculate price adjustment
+    price_adjustment = atr_value * adjusted_factor
+    
+    # Apply adjustment based on direction
+    if direction.lower() == 'buy':
+        limit_price = base_price - price_adjustment
+    else:  # sell
+        limit_price = base_price + price_adjustment
+    
+    logger.debug(f"Limit order price adjustment for {asset} ({direction}):")
+    logger.debug(f"Base price: {base_price}, ATR: {atr_value}, ML confidence: {ml_confidence}")
+    logger.debug(f"Base factor: {limit_factor}, Adjusted factor: {adjusted_factor}")
+    logger.debug(f"Price adjustment: {price_adjustment}, Final limit price: {limit_price}")
+    
+    return limit_price
+
+def calculate_stop_loss_price(
+    entry_price: float,
+    direction: str,
+    atr_value: float,
+    ml_confidence: float,
+    asset: str = 'SOL/USD'
+) -> float:
+    """
+    Calculate stop loss price based on ATR and ML confidence
+    
+    Args:
+        entry_price: Trade entry price
+        direction: Trade direction ('long' or 'short')
+        atr_value: Current ATR value
+        ml_confidence: Confidence score from ML model (0.0-1.0)
+        asset: Trading pair symbol
+        
+    Returns:
+        float: Calculated stop loss price
+    """
+    config = get_config()
+    asset_config = config.get_asset_config(asset)
+    
+    # Base multiplier for stop loss
+    stop_multiplier = asset_config['stop_loss_atr_multiplier']
+    
+    # Adjust multiplier based on ML confidence (higher confidence = wider stop)
+    confidence_adjustment = 1.0 + (ml_confidence - 0.5) * 0.6
+    adjusted_multiplier = stop_multiplier * confidence_adjustment
+    
+    # Calculate price adjustment
+    price_adjustment = atr_value * adjusted_multiplier
+    
+    # Apply adjustment based on direction
+    if direction.lower() == 'long':
+        stop_price = entry_price - price_adjustment
+    else:  # short
+        stop_price = entry_price + price_adjustment
+    
+    logger.debug(f"Stop loss calculation for {asset} ({direction}):")
+    logger.debug(f"Entry price: {entry_price}, ATR: {atr_value}, ML confidence: {ml_confidence}")
+    logger.debug(f"Base multiplier: {stop_multiplier}, Adjusted multiplier: {adjusted_multiplier}")
+    logger.debug(f"Price adjustment: {price_adjustment}, Final stop price: {stop_price}")
+    
+    return stop_price
+
+def calculate_take_profit_price(
+    entry_price: float,
+    direction: str,
+    atr_value: float,
+    ml_confidence: float,
+    asset: str = 'SOL/USD'
+) -> float:
+    """
+    Calculate take profit price based on ATR and ML confidence
+    
+    Args:
+        entry_price: Trade entry price
+        direction: Trade direction ('long' or 'short')
+        atr_value: Current ATR value
+        ml_confidence: Confidence score from ML model (0.0-1.0)
+        asset: Trading pair symbol
+        
+    Returns:
+        float: Calculated take profit price
+    """
+    config = get_config()
+    asset_config = config.get_asset_config(asset)
+    
+    # Base multiplier for take profit
+    tp_multiplier = asset_config['take_profit_atr_multiplier']
+    
+    # Adjust multiplier based on ML confidence (higher confidence = wider target)
+    confidence_adjustment = 1.0 + (ml_confidence - 0.5) * 1.0
+    adjusted_multiplier = tp_multiplier * confidence_adjustment
+    
+    # Calculate price adjustment
+    price_adjustment = atr_value * adjusted_multiplier
+    
+    # Apply adjustment based on direction
+    if direction.lower() == 'long':
+        tp_price = entry_price + price_adjustment
+    else:  # short
+        tp_price = entry_price - price_adjustment
+    
+    logger.debug(f"Take profit calculation for {asset} ({direction}):")
+    logger.debug(f"Entry price: {entry_price}, ATR: {atr_value}, ML confidence: {ml_confidence}")
+    logger.debug(f"Base multiplier: {tp_multiplier}, Adjusted multiplier: {adjusted_multiplier}")
+    logger.debug(f"Price adjustment: {price_adjustment}, Final take profit price: {tp_price}")
+    
+    return tp_price
+
+def get_position_sizing_summary(
+    portfolio_value: float,
+    asset: str,
+    price: float,
+    signal_strength: float,
+    ml_confidence: float,
+    market_regime: str,
+    atr_value: float
+) -> Dict:
+    """
+    Get a complete position sizing summary
+    
+    Args:
+        portfolio_value: Current portfolio value
+        asset: Trading pair symbol
+        price: Current asset price
+        signal_strength: Strength of the trading signal (0.0-1.0)
+        ml_confidence: Confidence score from ML model (0.0-1.0)
+        market_regime: Current market regime
+        atr_value: Current ATR value
+        
+    Returns:
+        Dict: Complete position sizing information
+    """
+    # Calculate dynamic leverage
+    leverage = calculate_dynamic_leverage(
+        base_price=price,
+        signal_strength=signal_strength,
+        ml_confidence=ml_confidence,
+        market_regime=market_regime,
+        asset=asset
+    )
+    
+    # Calculate dynamic margin percentage
+    margin_percent = calculate_dynamic_margin_percent(
+        portfolio_value=portfolio_value,
+        leverage=leverage,
+        signal_strength=signal_strength,
+        ml_confidence=ml_confidence,
+        asset=asset
+    )
+    
+    # Calculate margin amount
+    margin_amount = portfolio_value * margin_percent
+    
+    # Calculate position size
+    position_size = margin_amount * leverage
+    
+    # Calculate quantity at current price
+    quantity = position_size / price if price > 0 else 0
+    
+    # Calculate limit order prices for both directions
+    buy_limit_price = adjust_limit_order_price(
+        base_price=price,
+        direction='buy',
+        atr_value=atr_value,
+        ml_confidence=ml_confidence,
+        asset=asset
+    )
+    
+    sell_limit_price = adjust_limit_order_price(
+        base_price=price,
+        direction='sell',
+        atr_value=atr_value,
+        ml_confidence=ml_confidence,
+        asset=asset
+    )
+    
+    # Create summary
+    summary = {
+        'asset': asset,
+        'price': price,
+        'portfolio_value': portfolio_value,
+        'signal_strength': signal_strength,
+        'ml_confidence': ml_confidence,
+        'market_regime': market_regime,
+        'atr': atr_value,
+        'leverage': leverage,
+        'margin_percent': margin_percent,
+        'margin_amount': margin_amount,
+        'position_size': position_size,
+        'quantity': quantity,
+        'buy_limit_price': buy_limit_price,
+        'sell_limit_price': sell_limit_price,
+        'timestamp': time.time()
+    }
+    
+    logger.info(f"Position sizing summary for {asset}:")
+    logger.info(f"Signal strength: {signal_strength:.2f}, ML confidence: {ml_confidence:.2f}")
+    logger.info(f"Market regime: {market_regime}")
+    logger.info(f"Leverage: {leverage:.2f}x, Margin: {margin_percent:.2%} (${margin_amount:.2f})")
+    logger.info(f"Position size: ${position_size:.2f}, Quantity: {quantity:.6f}")
+    
+    return summary
+
+if __name__ == "__main__":
+    # Test configuration
+    logging.basicConfig(level=logging.DEBUG)
+    
+    # Create test configurations
+    test_configs = [
+        {
+            'portfolio_value': 20000,
+            'asset': 'SOL/USD',
+            'price': 125.50,
+            'signal_strength': 0.85,
+            'ml_confidence': 0.92,
+            'market_regime': 'normal_trending_up',
+            'atr_value': 0.18
+        },
+        {
+            'portfolio_value': 20000,
+            'asset': 'ETH/USD',
+            'price': 3450.75,
+            'signal_strength': 0.70,
+            'ml_confidence': 0.85,
+            'market_regime': 'volatile_trending_up',
+            'atr_value': 15.25
+        },
+        {
+            'portfolio_value': 20000,
+            'asset': 'BTC/USD',
+            'price': 62150.25,
+            'signal_strength': 0.60,
+            'ml_confidence': 0.78,
+            'market_regime': 'neutral',
+            'atr_value': 225.50
         }
+    ]
+    
+    # Run test calculations for each configuration
+    for cfg in test_configs:
+        summary = get_position_sizing_summary(**cfg)
         
-        logger.debug(f"Calculated trailing stop: {trailing_stop_pct:.2%}")
-        return trailing_stop_pct, details
+        print(f"\n{'='*80}\n{cfg['asset']} Position Sizing\n{'='*80}")
+        for key, value in summary.items():
+            if isinstance(value, float):
+                print(f"{key}: {value:.4f}")
+            else:
+                print(f"{key}: {value}")
