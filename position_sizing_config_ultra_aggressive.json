@@ -1,23 +1,41 @@
 {
-    "base_leverage": 35.0,
-    "max_leverage": 125.0,
-    "min_leverage": 20.0,
-    "base_margin_percent": 0.22,
-    "max_margin_cap": 0.65,
-    "min_margin_floor": 0.15,
-    "ml_influence": 0.75,
-    "confidence_threshold": 0.80,
-    "risk_factor": 1.0,
-    "market_regime_factors": {
-        "volatile_trending_up": 1.2,
-        "volatile_trending_down": 0.9,
-        "normal_trending_up": 1.8,
-        "normal_trending_down": 1.2,
-        "neutral": 1.4
+    "global": {
+        "min_leverage": 20.0,
+        "base_leverage": 45.0,
+        "max_leverage": 125.0,
+        "min_margin_floor": 0.18,
+        "base_margin_percent": 0.28,
+        "max_margin_cap": 0.50,
+        "signal_strength_multiplier": 2.2,
+        "ml_confidence_multiplier": 2.8,
+        "stop_loss_atr_multiplier": 1.1,
+        "take_profit_atr_multiplier": 3.5,
+        "market_regime_factors": {
+            "volatile_trending_up": 1.4,
+            "volatile_trending_down": 1.0,
+            "normal_trending_up": 2.2,
+            "normal_trending_down": 1.5,
+            "neutral": 1.8
+        }
     },
-    "signal_threshold": 0.08,
-    "stop_loss_atr_multiplier": 1.5,
-    "take_profit_atr_multiplier": 3.0,
-    "limit_order_factor": 0.70,
-    "volume_factor": 1.0
+    "assets": {
+        "SOL/USD": {
+            "min_leverage": 20.0,
+            "base_leverage": 50.0,
+            "max_leverage": 125.0,
+            "signal_strength_multiplier": 2.5
+        },
+        "ETH/USD": {
+            "min_leverage": 15.0,
+            "base_leverage": 40.0,
+            "max_leverage": 100.0,
+            "signal_strength_multiplier": 2.2
+        },
+        "BTC/USD": {
+            "min_leverage": 12.0,
+            "base_leverage": 35.0,
+            "max_leverage": 85.0,
+            "signal_strength_multiplier": 2.0
+        }
+    }
 }

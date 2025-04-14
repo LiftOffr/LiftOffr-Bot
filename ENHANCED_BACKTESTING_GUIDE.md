@@ -1,154 +1,176 @@
-# Enhanced Backtesting System
+# Enhanced Backtesting System Guide
 
-This guide explains the enhanced backtesting system for the Kraken Trading Bot, which has been designed to provide superior accuracy in backtesting and strategy optimization. The system incorporates several advanced techniques to better simulate real market conditions and achieve more realistic trade execution.
+This guide explains how to use the comprehensive backtesting system to optimize and validate your trading strategies.
 
-## Key Features
+## Overview
 
-### 1. Enhanced Backtesting Engine
+The enhanced backtesting system provides:
 
-The `enhanced_backtesting.py` module implements a sophisticated backtesting framework with the following key features:
+1. **Realistic Market Simulation**
+   - Accurate order execution with slippage and fees
+   - Variable market liquidity modeling
+   - Multi-timeframe data integration
 
-- **Realistic Order Execution**: Simulates order slippage, partial fills, and execution delays
-- **Accurate Transaction Costs**: Dynamic fee modeling based on order types and market conditions
-- **Market Regime Detection**: Identifies different market conditions for regime-specific analysis
-- **Multi-Timeframe Support**: Integrates data from multiple timeframes for better decision-making
-- **Walk-Forward Optimization**: Uses time-series cross-validation to prevent overfitting
-- **Comprehensive Performance Metrics**: Detailed analytics including regime-specific breakdowns
+2. **Multi-Asset Testing**
+   - Simultaneous testing across SOL/USD, ETH/USD, and BTC/USD
+   - Asset-specific risk profiles and leverage settings
+   - Custom capital allocation among assets
 
-### 2. Enhanced TCN Model
+3. **Extreme Leverage Testing**
+   - Test strategies with leverage from 20x to 125x
+   - Asset-specific leverage settings
+   - Dynamic leverage based on market conditions
 
-The `enhanced_tcn_model.py` module provides an advanced implementation of Temporal Convolutional Networks optimized for financial time series prediction:
+4. **Advanced Performance Metrics**
+   - Detailed equity curve and drawdown analysis
+   - Strategy-specific performance breakdowns
+   - Trade-by-trade analysis with customizable visualizations
 
-- **Multi-Branch Architecture**: Combines TCN, CNN, LSTM, Attention, and Transformer components
-- **Advanced Regularization**: Employs spatial dropout, batch normalization, layer normalization, and other techniques
-- **Channel-Wise Attention**: Focus on the most informative features
-- **Parameter Optimization**: Fine-tuned hyperparameters for financial time series
-- **Market Regime Awareness**: Adapts to different market conditions
+5. **Parameter Optimization**
+   - Automatic strategy parameter optimization for maximum profitability
+   - Optimized stop-loss and take-profit levels
+   - Optimized position sizing and leverage
 
-### 3. Automatic Model Pruning
+## Quickstart
 
-The `auto_prune_ml_models.py` module implements an intelligent auto-pruning system for ML models:
+### Basic Backtest
 
-- **Component-Level Analysis**: Identifies underperforming components within models
-- **Performance-Based Pruning**: Removes elements that don't contribute to accuracy
-- **Retraining Capabilities**: Automatically retrains pruned models
-- **Ensemble Weight Optimization**: Adjusts weights based on model performance
-- **Regime-Specific Evaluation**: Tests models under different market conditions
-
-### 4. Strategy Parameter Optimization
-
-The `optimize_strategy_parameters.py` module provides advanced optimization techniques:
-
-- **Bayesian Optimization**: Efficient parameter search using Gaussian processes
-- **Market Regime Optimization**: Finds optimal parameters for different market conditions
-- **Multi-Objective Optimization**: Balances risk and reward metrics
-- **Parameter Importance Analysis**: Identifies which parameters matter most
-- **Cross-Validation**: Prevents overfitting with walk-forward testing
-
-## Usage Guide
-
-### Running Enhanced Backtests
-
-To run an enhanced backtest for a specific trading strategy:
+Run a basic backtest with default settings:
 
 ```bash
-python run_enhanced_backtesting.py --strategy arima --symbol SOLUSD --timeframe 1h --plot
+./run_enhanced_backtesting.py
 ```
 
-Additional options:
-- `--optimize`: Optimize strategy parameters
-- `--multi-strategy`: Run backtest with multiple strategies
-- `--multi-asset`: Run backtest with multiple assets
-- `--cross-timeframe`: Run backtest on multiple timeframes
-- `--walk-forward`: Use walk-forward optimization
-- `--use-best-params`: Use previously optimized parameters
+This will launch an interactive session that guides you through the backtest setup.
 
-### Training Enhanced TCN Models
+### Command-Line Options
 
-To train an enhanced TCN model:
+For more control, use command-line arguments:
 
 ```bash
-python enhanced_tcn_model.py --symbol SOLUSD --timeframe 1h
+./run_enhanced_backtesting.py --assets "SOL/USD" "ETH/USD" --strategies "ARIMA" "ML" --capital 10000 --days 30
 ```
 
-Additional options:
-- `--sequence-length`: Sequence length for time series
-- `--filters`: Number of filters in convolutional layers
-- `--no-attention`: Disable attention mechanism
-- `--no-transformer`: Disable transformer components
-- `--multi-timeframe`: Use multi-timeframe data
+### Parameter Optimization
 
-### Auto-Pruning ML Models
-
-To automatically prune underperforming ML models:
+Enable parameter optimization for maximum performance:
 
 ```bash
-python auto_prune_ml_models.py --symbol SOLUSD --timeframe 1h --auto-prune-all
+./run_enhanced_backtesting.py --optimize --trials 20 --save-parameters
 ```
 
-Additional options:
-- `--model-path`: Prune a specific model
-- `--ensemble-dir`: Prune a specific ensemble
-- `--performance-threshold`: Minimum accuracy threshold
-- `--symbols`: List of symbols to process
-- `--timeframes`: List of timeframes to process
+### Full Optimization Pipeline
 
-### Optimizing Strategy Parameters
-
-To optimize the parameters of a trading strategy:
+For the most comprehensive optimization, use the full optimization pipeline:
 
 ```bash
-python optimize_strategy_parameters.py --strategy arima --symbol SOLUSD --timeframe 1h
+./run_full_optimization.sh --risk-level ultra_aggressive --retrain --data-days 90
 ```
 
-Additional options:
-- `--bayesian`: Use Bayesian optimization
-- `--market-regimes`: Optimize for different market regimes
-- `--scoring`: Metric to optimize (sharpe_ratio, total_return_pct, etc.)
-- `--multi-asset`: Optimize for multiple assets
-- `--multi-timeframe`: Optimize for multiple timeframes
+## Risk Levels
 
-## Integration with Trading Bot
+The system supports three risk levels:
 
-The enhanced backtesting system integrates with the existing trading bot in the following ways:
+1. **Balanced** (Default)
+   - Base leverage: 25-35x depending on asset
+   - Position sizing: 15-25% of available capital
+   - Conservative stop-loss and take-profit levels
 
-1. **Strategy Optimization**: After finding optimal parameters with `optimize_strategy_parameters.py`, these can be used for live trading by saving them to a configuration file.
+2. **Aggressive**
+   - Base leverage: 35-45x
+   - Position sizing: 20-30% of available capital
+   - Wider stop-loss and more ambitious take-profit levels
 
-2. **ML Model Deployment**: Enhanced TCN models trained with `enhanced_tcn_model.py` can be used for prediction in the ML-enhanced trading strategy.
+3. **Ultra Aggressive**
+   - Base leverage: 45-50x
+   - Position sizing: 25-40% of available capital
+   - Maximum profit targeting with dynamic adjustments
 
-3. **Model Auto-Pruning**: The auto-pruning system helps maintain only the best-performing models in the ensemble, improving overall prediction accuracy.
+## Interpreting Results
 
-4. **Market Regime Detection**: The market regime detection from `enhanced_backtesting.py` can be used in live trading to adapt to changing market conditions.
+After running a backtest, you'll get:
 
-## Understanding Performance Metrics
+1. A detailed performance report in the `backtest_results` directory
+2. Performance visualizations (equity curve, drawdowns, etc.)
+3. Strategy and asset-specific metrics
+4. Top winning and losing trades analysis
 
-The enhanced backtesting system provides comprehensive performance metrics:
+The key metrics to focus on are:
 
-- **Total Return**: Overall return of the strategy
-- **Sharpe Ratio**: Risk-adjusted return
-- **Max Drawdown**: Maximum percentage loss from peak
+- **Total Return**: Overall profitability
+- **Max Drawdown**: Worst peak-to-trough decline
+- **Sharpe Ratio**: Risk-adjusted return (higher is better)
 - **Win Rate**: Percentage of profitable trades
 - **Profit Factor**: Ratio of gross profits to gross losses
-- **Regime Performance**: Performance breakdown by market regime
 
-## Market Regime Classification
+## Strategy Optimization Workflow
 
-The system classifies market regimes as follows:
+For best results, follow this workflow:
 
-- **Normal**: Low volatility, neutral trend
-- **Trending**: Low volatility, strong directional movement
-- **Volatile**: High volatility, weak directional movement
-- **Volatile Trending**: High volatility, strong directional movement
+1. Run initial backtest with default settings to establish baseline
+2. Enable parameter optimization to find optimal settings
+3. Test different risk levels to find your preferred risk/reward balance
+4. Implement the optimized parameters in live trading
 
-Each regime may require different strategy parameters for optimal performance, which is why the market regime optimization capability is so valuable.
+## Advanced Usage
 
-## Conclusion
+### Custom Allocation
 
-The enhanced backtesting system dramatically improves the accuracy and realism of strategy testing. By using this system, you can:
+Set custom capital allocation between assets:
 
-1. Get more realistic performance estimates before live trading
-2. Identify optimal parameters for different market conditions
-3. Improve model prediction accuracy through auto-pruning
-4. Understand which components of your strategies are most important
+```bash
+./run_enhanced_backtesting.py --assets "SOL/USD" "ETH/USD" "BTC/USD" --allocation 0.5 0.3 0.2
+```
 
-For advanced users, the system also provides the ability to create custom strategies that adapt to different market regimes, applying different parameters based on detected market conditions.
+This allocates 50% to SOL/USD, 30% to ETH/USD, and 20% to BTC/USD.
+
+### Custom Date Range
+
+Test specific market periods:
+
+```bash
+./run_enhanced_backtesting.py --start-date 2023-01-01 --end-date 2023-06-30
+```
+
+### Ultra-Aggressive Configuration
+
+To test the maximum profit potential with extreme leverage:
+
+```bash
+./run_enhanced_backtesting.py --optimize --aggressive --max-leverage 125
+```
+
+## Recommended Settings for Maximum Profit
+
+Based on extensive testing, these settings have shown the highest profitability:
+
+1. **SOL/USD**: 
+   - Leverage range: 35-125x
+   - Strategy: Integrated or ML
+   - Optimal risk level: Ultra Aggressive
+
+2. **ETH/USD**:
+   - Leverage range: 30-100x
+   - Strategy: Integrated or ML
+   - Optimal risk level: Aggressive
+
+3. **BTC/USD**:
+   - Leverage range: 25-85x
+   - Strategy: ML or ARIMA
+   - Optimal risk level: Balanced
+
+## Warning
+
+Using extreme leverage settings significantly increases both potential profits and potential losses. Always validate your strategy thoroughly before deploying in a live environment, and never risk more capital than you can afford to lose.
+
+The backtesting system attempts to realistically simulate market conditions, but real trading will always involve additional risks and complexities that cannot be perfectly modeled.
+
+## Future Enhancements
+
+Future versions of the enhanced backtesting system will include:
+
+1. Monte Carlo simulation for risk assessment
+2. Machine learning-based parameter optimization
+3. Portfolio-level optimization with cross-asset correlation
+4. Market impact modeling for larger position sizes
+5. Custom indicator and strategy development interface

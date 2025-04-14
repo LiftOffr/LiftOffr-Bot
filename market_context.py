@@ -1,690 +1,478 @@
 #!/usr/bin/env python3
 """
-Market Context Awareness Module for Kraken Trading Bot
+Market Context Analyzer
 
-This module provides functionality to analyze broader market conditions
-and incorporate market context into trading decisions.
+This module analyzes market conditions to detect the current market regime,
+which helps the trading bot adapt its strategies and risk parameters.
+
+Market regimes include:
+1. Volatile trending up - Rapid upward price movement with high volatility
+2. Volatile trending down - Rapid downward price movement with high volatility
+3. Normal trending up - Steady upward price movement with normal volatility
+4. Normal trending down - Steady downward price movement with normal volatility
+5. Ranging/neutral - Sideways price movement with low volatility
+
+The detected market regime is used to adjust:
+- Position sizing and leverage
+- Entry and exit criteria
+- Stop loss and take profit levels
+- Trade frequency
 """
 
-import os
-import sys
-import json
 import logging
-import time
-from datetime import datetime, timedelta
-import argparse
-from typing import Dict, List, Tuple, Any, Optional
-
 import numpy as np
 import pandas as pd
-import requests
+from typing import Dict, List, Tuple, Union, Optional
+from enum import Enum
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[
-        logging.FileHandler('market_context.log'),
-        logging.StreamHandler()
-    ]
-)
+logger = logging.getLogger(__name__)
 
-# Constants
-DEFAULT_CONFIG_FILE = 'config.py'
-MARKET_CONTEXT_DIR = 'market_context'
-CACHE_DURATION = 3600  # 1 hour cache duration
+# Market regime definitions
+class MarketRegime(Enum):
+    VOLATILE_TRENDING_UP = "volatile_trending_up"
+    VOLATILE_TRENDING_DOWN = "volatile_trending_down"
+    NORMAL_TRENDING_UP = "normal_trending_up"
+    NORMAL_TRENDING_DOWN = "normal_trending_down"
+    NEUTRAL = "neutral"
 
+# Default thresholds
+DEFAULT_VOLATILITY_THRESHOLD = 0.015  # 1.5% daily volatility is considered high
+DEFAULT_TREND_THRESHOLD = 0.005  # 0.5% change over period for trend detection
+DEFAULT_ADX_THRESHOLD = 25.0  # ADX above 25 indicates a trending market
+DEFAULT_RSI_OVERBOUGHT = 70.0
+DEFAULT_RSI_OVERSOLD = 30.0
 
-class MarketContext:
-    """Market context analyzer for trading bot"""
-    
-    def __init__(self, cache_dir=MARKET_CONTEXT_DIR, cache_duration=CACHE_DURATION):
-        """
-        Initialize the market context analyzer
-        
-        Args:
-            cache_dir (str): Directory for caching market data
-            cache_duration (int): Cache duration in seconds
-        """
-        self.cache_dir = cache_dir
-        self.cache_duration = cache_duration
-        
-        # Create cache directory if it doesn't exist
-        os.makedirs(cache_dir, exist_ok=True)
-        
-        # Initialize cache
-        self.cache = {}
-    
-    def get_market_context(self, trading_pair: str = "SOL/USD") -> Dict:
-        """
-        Get comprehensive market context
-        
-        Args:
-            trading_pair (str): Trading pair to analyze
-            
-        Returns:
-            dict: Market context data
-        """
-        try:
-            # Extract base asset from trading pair
-            base_asset = trading_pair.split('/')[0].lower()
-            
-            # Get market data for different timeframes
-            market_context = {
-                'timestamp': datetime.now().isoformat(),
-                'trading_pair': trading_pair,
-                'base_asset': base_asset,
-                'general_market': self.get_general_market_data(),
-                'asset_specific': self.get_asset_specific_data(base_asset),
-                'correlations': self.get_correlation_data(base_asset),
-                'market_sentiment': self.get_market_sentiment(base_asset),
-                'volatility_metrics': self.get_volatility_metrics(trading_pair)
-            }
-            
-            return market_context
-        
-        except Exception as e:
-            logging.error(f"Error getting market context: {str(e)}")
-            return {
-                'timestamp': datetime.now().isoformat(),
-                'trading_pair': trading_pair,
-                'error': str(e)
-            }
-    
-    def get_general_market_data(self) -> Dict:
-        """
-        Get general crypto market data (BTC dominance, total cap, etc.)
-        
-        Returns:
-            dict: General market data
-        """
-        # Use cached data if available and not expired
-        cache_key = 'general_market'
-        cached_data = self._get_from_cache(cache_key)
-        if cached_data:
-            return cached_data
-        
-        try:
-            # For this demo, we'll create synthetic data
-            # In a real implementation, we would fetch data from external APIs
-            
-            # Example data structure with relevant metrics
-            general_data = {
-                'btc_dominance': 0.47,  # BTC market dominance percentage
-                'total_market_cap': 1_970_000_000_000,  # Total crypto market cap in USD
-                'defi_tvl': 75_000_000_000,  # Total Value Locked in DeFi in USD
-                'btc_price': 43_500.0,  # Current BTC price in USD
-                'eth_price': 2_700.0,  # Current ETH price in USD
-                'market_trend': self._calculate_market_trend(),  # Overall market trend
-                'timestamp': datetime.now().isoformat()
-            }
-            
-            # Cache the data
-            self._cache_data(cache_key, general_data)
-            
-            return general_data
-        
-        except Exception as e:
-            logging.error(f"Error getting general market data: {str(e)}")
-            return {}
-    
-    def get_asset_specific_data(self, asset: str) -> Dict:
-        """
-        Get specific data for a crypto asset
-        
-        Args:
-            asset (str): Asset symbol (e.g. 'sol')
-            
-        Returns:
-            dict: Asset-specific data
-        """
-        # Use cached data if available and not expired
-        cache_key = f'asset_specific_{asset}'
-        cached_data = self._get_from_cache(cache_key)
-        if cached_data:
-            return cached_data
-        
-        try:
-            # For this demo, we'll create synthetic data
-            # In a real implementation, we would fetch data from external APIs
-            
-            # Example data structure with relevant metrics
-            asset_data = {
-                'market_cap': 35_000_000_000,  # Market cap in USD
-                'volume_24h': 1_200_000_000,  # 24h trading volume in USD
-                'change_24h': -0.025,  # 24h price change percentage
-                'change_7d': 0.045,  # 7d price change percentage
-                'rank': 8,  # Market cap rank
-                'developer_activity': 'high',  # Developer activity level
-                'social_volume': 'medium',  # Social media activity level
-                'network_health': 0.82,  # Network health score (0-1)
-                'timestamp': datetime.now().isoformat()
-            }
-            
-            # Cache the data
-            self._cache_data(cache_key, asset_data)
-            
-            return asset_data
-        
-        except Exception as e:
-            logging.error(f"Error getting asset-specific data for {asset}: {str(e)}")
-            return {}
-    
-    def get_correlation_data(self, asset: str) -> Dict:
-        """
-        Get correlation data for an asset with major crypto assets
-        
-        Args:
-            asset (str): Asset symbol (e.g. 'sol')
-            
-        Returns:
-            dict: Correlation data
-        """
-        # Use cached data if available and not expired
-        cache_key = f'correlation_{asset}'
-        cached_data = self._get_from_cache(cache_key)
-        if cached_data:
-            return cached_data
-        
-        try:
-            # For this demo, we'll create synthetic data
-            # In a real implementation, we would calculate real correlations
-            
-            # Example data structure with asset correlations
-            correlation_data = {
-                'btc_correlation': 0.78,  # Correlation with BTC (-1 to 1)
-                'eth_correlation': 0.85,  # Correlation with ETH (-1 to 1)
-                'total_market_correlation': 0.82,  # Correlation with total market (-1 to 1)
-                'sector_correlation': 0.92,  # Correlation with sector (e.g. L1 blockchains) (-1 to 1)
-                'correlations': {
-                    'btc': 0.78,
-                    'eth': 0.85,
-                    'bnb': 0.71,
-                    'xrp': 0.65,
-                    'ada': 0.72,
-                    'avax': 0.89
-                },
-                'timestamp': datetime.now().isoformat()
-            }
-            
-            # Cache the data
-            self._cache_data(cache_key, correlation_data)
-            
-            return correlation_data
-        
-        except Exception as e:
-            logging.error(f"Error getting correlation data for {asset}: {str(e)}")
-            return {}
-    
-    def get_market_sentiment(self, asset: str) -> Dict:
-        """
-        Get market sentiment data for an asset
-        
-        Args:
-            asset (str): Asset symbol (e.g. 'sol')
-            
-        Returns:
-            dict: Market sentiment data
-        """
-        # Use cached data if available and not expired
-        cache_key = f'sentiment_{asset}'
-        cached_data = self._get_from_cache(cache_key)
-        if cached_data:
-            return cached_data
-        
-        try:
-            # For this demo, we'll create synthetic data
-            # In a real implementation, we would calculate real sentiment
-            
-            # Example data structure with sentiment metrics
-            sentiment_data = {
-                'fear_greed_index': 65,  # Fear and Greed Index (0-100)
-                'social_sentiment': 0.62,  # Social media sentiment (-1 to 1)
-                'news_sentiment': 0.45,  # News sentiment (-1 to 1)
-                'funding_rate': 0.0012,  # Funding rate on perpetual futures
-                'long_short_ratio': 1.25,  # Long/short positions ratio
-                'trend_strength': 'medium',  # Trend strength indicator
-                'timestamp': datetime.now().isoformat()
-            }
-            
-            # Cache the data
-            self._cache_data(cache_key, sentiment_data)
-            
-            return sentiment_data
-        
-        except Exception as e:
-            logging.error(f"Error getting market sentiment for {asset}: {str(e)}")
-            return {}
-    
-    def get_volatility_metrics(self, trading_pair: str) -> Dict:
-        """
-        Get volatility metrics for a trading pair
-        
-        Args:
-            trading_pair (str): Trading pair (e.g. 'SOL/USD')
-            
-        Returns:
-            dict: Volatility metrics
-        """
-        # Use cached data if available and not expired
-        cache_key = f'volatility_{trading_pair}'
-        cached_data = self._get_from_cache(cache_key)
-        if cached_data:
-            return cached_data
-        
-        try:
-            # For this demo, we'll create synthetic data
-            # In a real implementation, we would calculate real volatility metrics
-            
-            # Example data structure with volatility metrics
-            volatility_data = {
-                'historical_volatility': 0.035,  # 30-day historical volatility
-                'implied_volatility': 0.042,  # Current implied volatility
-                'volatility_rank': 0.65,  # Volatility percentile rank (0-1)
-                'volatility_trend': 'increasing',  # Volatility trend
-                'bollinger_bandwidth': 0.035,  # Bollinger Bands width / price ratio
-                'atr_percentage': 0.018,  # ATR as percentage of price
-                'timestamp': datetime.now().isoformat()
-            }
-            
-            # Cache the data
-            self._cache_data(cache_key, volatility_data)
-            
-            return volatility_data
-        
-        except Exception as e:
-            logging.error(f"Error getting volatility metrics for {trading_pair}: {str(e)}")
-            return {}
-    
-    def analyze_market_context(self, trading_pair: str = "SOL/USD") -> Dict:
-        """
-        Analyze market context and provide trading recommendations
-        
-        Args:
-            trading_pair (str): Trading pair to analyze
-            
-        Returns:
-            dict: Market analysis and recommendations
-        """
-        try:
-            # Get market context
-            context = self.get_market_context(trading_pair)
-            
-            # Extract base asset from trading pair
-            base_asset = trading_pair.split('/')[0].lower()
-            
-            # Analyze market conditions
-            market_trend = context['general_market'].get('market_trend', 'neutral')
-            asset_trend = 'bullish' if context['asset_specific'].get('change_7d', 0) > 0 else 'bearish'
-            
-            # Calculate risk score (0-100)
-            risk_score = self._calculate_risk_score(context)
-            
-            # Determine optimal position size as percentage (0-1)
-            optimal_position_size = self._calculate_optimal_position_size(context, risk_score)
-            
-            # Determine trade direction bias
-            direction_bias = self._calculate_direction_bias(context)
-            
-            # Provide recommendations
-            recommendations = self._generate_recommendations(context, risk_score, direction_bias)
-            
-            # Return analysis
-            analysis = {
-                'timestamp': datetime.now().isoformat(),
-                'trading_pair': trading_pair,
-                'market_trend': market_trend,
-                'asset_trend': asset_trend,
-                'risk_score': risk_score,
-                'optimal_position_size': optimal_position_size,
-                'direction_bias': direction_bias,
-                'recommendations': recommendations
-            }
-            
-            return analysis
-        
-        except Exception as e:
-            logging.error(f"Error analyzing market context: {str(e)}")
-            return {
-                'timestamp': datetime.now().isoformat(),
-                'trading_pair': trading_pair,
-                'error': str(e)
-            }
-    
-    def _calculate_market_trend(self) -> str:
-        """
-        Calculate overall market trend
-        
-        Returns:
-            str: Market trend ('strongly_bullish', 'bullish', 'neutral', 'bearish', 'strongly_bearish')
-        """
-        # In a real implementation, we would calculate trend based on multiple indicators
-        # For this demo, we'll return a random trend weighted toward neutral
-        trends = ['strongly_bullish', 'bullish', 'neutral', 'bearish', 'strongly_bearish']
-        weights = [0.1, 0.25, 0.3, 0.25, 0.1]  # Weighted toward neutral
-        
-        return np.random.choice(trends, p=weights)
-    
-    def _calculate_risk_score(self, context: Dict) -> float:
-        """
-        Calculate risk score based on market context
-        
-        Args:
-            context (dict): Market context data
-            
-        Returns:
-            float: Risk score (0-100, where 100 is highest risk)
-        """
-        risk_score = 50.0  # Start at neutral
-        
-        # Adjust based on general market
-        general = context.get('general_market', {})
-        if general:
-            if general.get('market_trend') == 'strongly_bullish':
-                risk_score -= 15
-            elif general.get('market_trend') == 'bullish':
-                risk_score -= 10
-            elif general.get('market_trend') == 'bearish':
-                risk_score += 10
-            elif general.get('market_trend') == 'strongly_bearish':
-                risk_score += 15
-        
-        # Adjust based on asset specifics
-        asset = context.get('asset_specific', {})
-        if asset:
-            # Higher volume is lower risk
-            volume_factor = min(1.0, asset.get('volume_24h', 0) / 2_000_000_000)
-            risk_score -= volume_factor * 10
-            
-            # Recent price changes
-            if asset.get('change_24h', 0) > 0.1:
-                risk_score += 10  # Large positive change increases risk (potential reversal)
-            elif asset.get('change_24h', 0) < -0.1:
-                risk_score += 15  # Large negative change increases risk
-        
-        # Adjust based on volatility
-        volatility = context.get('volatility_metrics', {})
-        if volatility:
-            # Higher volatility means higher risk
-            vol_value = volatility.get('historical_volatility', 0.03)
-            if vol_value > 0.05:
-                risk_score += 20 * (vol_value - 0.05) / 0.05
-            
-            # Increasing volatility means higher risk
-            if volatility.get('volatility_trend') == 'increasing':
-                risk_score += 10
-        
-        # Adjust based on sentiment
-        sentiment = context.get('market_sentiment', {})
-        if sentiment:
-            fear_greed = sentiment.get('fear_greed_index', 50)
-            if fear_greed < 25:
-                risk_score += 15  # Extreme fear increases risk
-            elif fear_greed > 75:
-                risk_score += 15  # Extreme greed increases risk
-        
-        # Cap the risk score between 0 and 100
-        return max(0, min(100, risk_score))
-    
-    def _calculate_optimal_position_size(self, context: Dict, risk_score: float) -> float:
-        """
-        Calculate optimal position size based on market context and risk score
-        
-        Args:
-            context (dict): Market context data
-            risk_score (float): Risk score (0-100)
-            
-        Returns:
-            float: Optimal position size as percentage of maximum (0-1)
-        """
-        # Convert risk score to a position size inversely
-        # Higher risk = smaller position
-        base_size = 1.0 - (risk_score / 100.0) * 0.8  # Scale to 0.2-1.0
-        
-        # Adjust based on directional confidence
-        direction_bias = self._calculate_direction_bias(context)
-        confidence_factor = abs(direction_bias) * 0.4 + 0.6  # Scale to 0.6-1.0
-        
-        # Apply adjustments
-        adjusted_size = base_size * confidence_factor
-        
-        # Cap the position size between 0.1 and 1.0
-        return max(0.1, min(1.0, adjusted_size))
-    
-    def _calculate_direction_bias(self, context: Dict) -> float:
-        """
-        Calculate directional bias based on market context
-        
-        Args:
-            context (dict): Market context data
-            
-        Returns:
-            float: Direction bias (-1.0 to 1.0, where -1.0 is strongly bearish, 1.0 is strongly bullish)
-        """
-        bias = 0.0  # Start at neutral
-        
-        # Adjust based on general market
-        general = context.get('general_market', {})
-        if general:
-            if general.get('market_trend') == 'strongly_bullish':
-                bias += 0.3
-            elif general.get('market_trend') == 'bullish':
-                bias += 0.2
-            elif general.get('market_trend') == 'bearish':
-                bias -= 0.2
-            elif general.get('market_trend') == 'strongly_bearish':
-                bias -= 0.3
-        
-        # Adjust based on asset specifics
-        asset = context.get('asset_specific', {})
-        if asset:
-            # Recent price changes
-            bias += asset.get('change_7d', 0) * 2  # 7-day change has more impact
-            bias += asset.get('change_24h', 0)  # Recent change has less impact
-        
-        # Adjust based on sentiment
-        sentiment = context.get('market_sentiment', {})
-        if sentiment:
-            # Social and news sentiment
-            bias += sentiment.get('social_sentiment', 0) * 0.2
-            bias += sentiment.get('news_sentiment', 0) * 0.15
-            
-            # Funding rate (negative funding rate is bullish)
-            funding_rate = sentiment.get('funding_rate', 0)
-            bias -= funding_rate * 30  # Scale to significant impact
-            
-            # Long/short ratio
-            long_short = sentiment.get('long_short_ratio', 1.0)
-            if long_short > 1.5:
-                bias += 0.1  # Strong long bias
-            elif long_short < 0.7:
-                bias -= 0.1  # Strong short bias
-        
-        # Cap the bias between -1.0 and 1.0
-        return max(-1.0, min(1.0, bias))
-    
-    def _generate_recommendations(self, context: Dict, risk_score: float, direction_bias: float) -> List[str]:
-        """
-        Generate trading recommendations based on analysis
-        
-        Args:
-            context (dict): Market context data
-            risk_score (float): Risk score (0-100)
-            direction_bias (float): Direction bias (-1.0 to 1.0)
-            
-        Returns:
-            list: Trading recommendations
-        """
-        recommendations = []
-        
-        # Risk level recommendation
-        if risk_score > 75:
-            recommendations.append("Very high market risk detected. Consider waiting for stabilization.")
-        elif risk_score > 60:
-            recommendations.append("Elevated market risk. Reduce position sizes by 30-50%.")
-        elif risk_score < 25:
-            recommendations.append("Low market risk. Favorable conditions for normal position sizing.")
-        
-        # Direction bias recommendation
-        if direction_bias > 0.5:
-            recommendations.append("Strong bullish bias. Favor long positions and limit short exposure.")
-        elif direction_bias > 0.2:
-            recommendations.append("Moderate bullish bias. Slight preference for long positions.")
-        elif direction_bias < -0.5:
-            recommendations.append("Strong bearish bias. Favor short positions and limit long exposure.")
-        elif direction_bias < -0.2:
-            recommendations.append("Moderate bearish bias. Slight preference for short positions.")
-        else:
-            recommendations.append("Neutral market bias. No directional advantage detected.")
-        
-        # Volatility-based recommendation
-        volatility = context.get('volatility_metrics', {})
-        if volatility:
-            if volatility.get('volatility_trend') == 'increasing':
-                recommendations.append("Increasing volatility detected. Widen stop loss levels and consider reducing leverage.")
-            if volatility.get('historical_volatility', 0) > 0.05:
-                recommendations.append("High volatility environment. Use wider stop losses and reduced position sizes.")
-            elif volatility.get('historical_volatility', 0) < 0.02:
-                recommendations.append("Low volatility environment. Consider strategies that benefit from volatility expansion.")
-        
-        # Correlation-based recommendation
-        correlation = context.get('correlations', {})
-        if correlation:
-            btc_corr = correlation.get('btc_correlation', 0)
-            if btc_corr > 0.8:
-                recommendations.append("High correlation with BTC. Monitor BTC for potential direction changes.")
-        
-        # Sentiment-based recommendation
-        sentiment = context.get('market_sentiment', {})
-        if sentiment:
-            fear_greed = sentiment.get('fear_greed_index', 50)
-            if fear_greed < 20:
-                recommendations.append("Extreme fear detected. Potential contrarian buying opportunity if other factors align.")
-            elif fear_greed > 80:
-                recommendations.append("Extreme greed detected. Consider caution with new long positions.")
-        
-        return recommendations
-    
-    def _get_from_cache(self, key: str) -> Optional[Dict]:
-        """
-        Get data from cache if available and not expired
-        
-        Args:
-            key (str): Cache key
-            
-        Returns:
-            dict or None: Cached data or None if not available
-        """
-        cache_path = os.path.join(self.cache_dir, f"{key}.json")
-        
-        if not os.path.exists(cache_path):
-            return None
-        
-        # Check if cache is expired
-        mtime = os.path.getmtime(cache_path)
-        if time.time() - mtime > self.cache_duration:
-            return None
-        
-        # Read cache file
-        try:
-            with open(cache_path, 'r') as f:
-                return json.load(f)
-        except:
-            return None
-    
-    def _cache_data(self, key: str, data: Dict) -> None:
-        """
-        Cache data to file
-        
-        Args:
-            key (str): Cache key
-            data (dict): Data to cache
-        """
-        cache_path = os.path.join(self.cache_dir, f"{key}.json")
-        
-        try:
-            with open(cache_path, 'w') as f:
-                json.dump(data, f, indent=2)
-        except Exception as e:
-            logging.error(f"Error caching data: {str(e)}")
-
-
-def adjust_signal_strength(signal_strength: float, direction: str, market_context: Dict) -> float:
+def calculate_volatility(df: pd.DataFrame, window: int = 20) -> pd.Series:
     """
-    Adjust signal strength based on market context
+    Calculate price volatility using rolling standard deviation of returns
     
     Args:
-        signal_strength (float): Original signal strength (0-1)
-        direction (str): Signal direction ('BUY' or 'SELL')
-        market_context (dict): Market context data
+        df: DataFrame with price data
+        window: Rolling window size
         
     Returns:
-        float: Adjusted signal strength (0-1)
+        Series: Volatility as a percentage
     """
-    if not market_context:
-        return signal_strength
+    # Calculate daily returns
+    if 'close' in df.columns:
+        returns = df['close'].pct_change()
+    else:
+        returns = df.pct_change()
     
-    direction_bias = market_context.get('direction_bias', 0)
-    risk_score = market_context.get('risk_score', 50)
+    # Calculate rolling volatility (standard deviation of returns)
+    volatility = returns.rolling(window=window).std()
     
-    # Normalize risk score to 0-1 range
-    normalized_risk = risk_score / 100.0
-    
-    # Adjust signal strength based on direction and market bias
-    if direction == 'BUY':
-        # Boost buy signals when bullish, reduce when bearish
-        adjustment = direction_bias * 0.2
-    else:  # SELL
-        # Boost sell signals when bearish, reduce when bullish
-        adjustment = -direction_bias * 0.2
-    
-    # Reduce signal strength in high-risk environments
-    risk_adjustment = -0.15 * (normalized_risk - 0.5)
-    
-    # Apply adjustments
-    adjusted_strength = signal_strength + adjustment + risk_adjustment
-    
-    # Cap the result between 0 and 1
-    return max(0.0, min(1.0, adjusted_strength))
+    return volatility
 
+def calculate_trend(df: pd.DataFrame, short_window: int = 20, long_window: int = 50) -> pd.Series:
+    """
+    Calculate trend using exponential moving averages
+    
+    Args:
+        df: DataFrame with price data
+        short_window: Short EMA window
+        long_window: Long EMA window
+        
+    Returns:
+        Series: Trend indicator (positive values for uptrend, negative for downtrend)
+    """
+    # Get close prices
+    if 'close' in df.columns:
+        prices = df['close']
+    else:
+        prices = df
+    
+    # Calculate short and long EMAs
+    short_ema = prices.ewm(span=short_window, adjust=False).mean()
+    long_ema = prices.ewm(span=long_window, adjust=False).mean()
+    
+    # Calculate trend indicator (EMA difference normalized by price)
+    trend = (short_ema - long_ema) / prices
+    
+    return trend
 
-def main():
-    parser = argparse.ArgumentParser(description='Market Context Analyzer')
-    parser.add_argument('--trading-pair', type=str, default='SOL/USD', help='Trading pair to analyze')
-    parser.add_argument('--cache-dir', type=str, default=MARKET_CONTEXT_DIR, help='Cache directory')
-    parser.add_argument('--cache-duration', type=int, default=CACHE_DURATION, help='Cache duration in seconds')
+def calculate_adx(df: pd.DataFrame, period: int = 14) -> pd.Series:
+    """
+    Calculate Average Directional Index (ADX) to measure trend strength
     
-    args = parser.parse_args()
+    Args:
+        df: DataFrame with OHLC price data
+        period: ADX calculation period
+        
+    Returns:
+        Series: ADX values
+    """
+    # Ensure we have required columns
+    required_columns = ['high', 'low', 'close']
+    if not all(col in df.columns for col in required_columns):
+        logger.warning("Missing required columns for ADX calculation")
+        return pd.Series(index=df.index, data=np.nan)
     
-    # Initialize market context analyzer
-    context_analyzer = MarketContext(
-        cache_dir=args.cache_dir,
-        cache_duration=args.cache_duration
-    )
+    # Calculate +DM and -DM
+    high_diff = df['high'].diff()
+    low_diff = df['low'].diff()
     
-    # Get and print market context
-    analysis = context_analyzer.analyze_market_context(args.trading_pair)
+    plus_dm = pd.Series(0.0, index=df.index)
+    minus_dm = pd.Series(0.0, index=df.index)
     
-    # Print results in a readable format
-    print("\n" + "=" * 80)
-    print(f"MARKET CONTEXT ANALYSIS - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("=" * 80)
+    # Calculate +DM
+    condition1 = (high_diff > 0) & (high_diff > low_diff.abs())
+    plus_dm[condition1] = high_diff[condition1]
     
-    print(f"\nTrading Pair: {analysis['trading_pair']}")
-    print(f"Market Trend: {analysis['market_trend']}")
-    print(f"Asset Trend: {analysis['asset_trend']}")
-    print(f"Risk Score: {analysis['risk_score']:.1f}/100")
-    print(f"Direction Bias: {analysis['direction_bias']:.2f} (-1.0 to 1.0)")
-    print(f"Optimal Position Size: {analysis['optimal_position_size']:.2f} (0.0 to 1.0)")
+    # Calculate -DM
+    condition2 = (low_diff < 0) & (low_diff.abs() > high_diff)
+    minus_dm[condition2] = low_diff.abs()[condition2]
     
-    print("\nRECOMMENDATIONS:")
-    for rec in analysis['recommendations']:
-        print(f"  • {rec}")
+    # Calculate True Range
+    tr1 = df['high'] - df['low']
+    tr2 = (df['high'] - df['close'].shift()).abs()
+    tr3 = (df['low'] - df['close'].shift()).abs()
+    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
     
-    print("\n" + "=" * 80)
+    # Smooth +DM, -DM, and TR using Wilder's smoothing technique
+    smoothed_plus_dm = plus_dm.ewm(alpha=1/period, adjust=False).mean()
+    smoothed_minus_dm = minus_dm.ewm(alpha=1/period, adjust=False).mean()
+    smoothed_tr = tr.ewm(alpha=1/period, adjust=False).mean()
     
-    return 0
+    # Calculate +DI and -DI
+    plus_di = 100 * smoothed_plus_dm / smoothed_tr
+    minus_di = 100 * smoothed_minus_dm / smoothed_tr
+    
+    # Calculate DX and ADX
+    dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di)
+    adx = dx.ewm(alpha=1/period, adjust=False).mean()
+    
+    return adx
 
+def calculate_rsi(df: pd.DataFrame, period: int = 14) -> pd.Series:
+    """
+    Calculate Relative Strength Index (RSI)
+    
+    Args:
+        df: DataFrame with price data
+        period: RSI calculation period
+        
+    Returns:
+        Series: RSI values
+    """
+    # Get close prices
+    if 'close' in df.columns:
+        prices = df['close']
+    else:
+        prices = df
+    
+    # Calculate price changes
+    delta = prices.diff()
+    
+    # Split gains and losses
+    gain = delta.where(delta > 0, 0)
+    loss = -delta.where(delta < 0, 0)
+    
+    # Calculate average gain and loss
+    avg_gain = gain.rolling(window=period).mean()
+    avg_loss = loss.rolling(window=period).mean()
+    
+    # Calculate RS
+    rs = avg_gain / avg_loss
+    
+    # Calculate RSI
+    rsi = 100 - (100 / (1 + rs))
+    
+    return rsi
 
-if __name__ == '__main__':
-    sys.exit(main())
+def detect_market_regime(
+    df: pd.DataFrame,
+    volatility_threshold: float = DEFAULT_VOLATILITY_THRESHOLD,
+    trend_threshold: float = DEFAULT_TREND_THRESHOLD,
+    adx_threshold: float = DEFAULT_ADX_THRESHOLD,
+    rsi_overbought: float = DEFAULT_RSI_OVERBOUGHT,
+    rsi_oversold: float = DEFAULT_RSI_OVERSOLD
+) -> str:
+    """
+    Detect the current market regime based on price data
+    
+    Args:
+        df: DataFrame with OHLCV price data
+        volatility_threshold: Threshold for high volatility
+        trend_threshold: Threshold for trend detection
+        adx_threshold: Threshold for ADX trend strength
+        rsi_overbought: RSI threshold for overbought condition
+        rsi_oversold: RSI threshold for oversold condition
+        
+    Returns:
+        str: Market regime (from MarketRegime enum)
+    """
+    # Calculate indicators
+    volatility = calculate_volatility(df)
+    trend = calculate_trend(df)
+    adx = calculate_adx(df)
+    rsi = calculate_rsi(df)
+    
+    # Get latest values
+    latest_volatility = volatility.iloc[-1] if not volatility.empty else np.nan
+    latest_trend = trend.iloc[-1] if not trend.empty else np.nan
+    latest_adx = adx.iloc[-1] if not adx.empty else np.nan
+    latest_rsi = rsi.iloc[-1] if not rsi.empty else np.nan
+    
+    # Check if data is valid
+    if np.isnan(latest_volatility) or np.isnan(latest_trend) or np.isnan(latest_adx):
+        logger.warning("Missing data for market regime detection, defaulting to NEUTRAL")
+        return MarketRegime.NEUTRAL.value
+    
+    # Detect high volatility
+    is_volatile = latest_volatility > volatility_threshold
+    
+    # Detect trend direction
+    is_uptrend = latest_trend > trend_threshold
+    is_downtrend = latest_trend < -trend_threshold
+    
+    # Detect trend strength
+    is_trending = latest_adx > adx_threshold
+    
+    # Detect extreme RSI conditions
+    is_overbought = not np.isnan(latest_rsi) and latest_rsi > rsi_overbought
+    is_oversold = not np.isnan(latest_rsi) and latest_rsi < rsi_oversold
+    
+    # Determine market regime
+    if is_volatile and is_uptrend:
+        # Consider RSI for potential trend reversal
+        if is_overbought:
+            logger.info(f"Detected VOLATILE_TRENDING_UP with overbought RSI ({latest_rsi:.2f})")
+        else:
+            logger.info(f"Detected VOLATILE_TRENDING_UP (Volatility: {latest_volatility:.4f}, Trend: {latest_trend:.4f}, ADX: {latest_adx:.2f})")
+        return MarketRegime.VOLATILE_TRENDING_UP.value
+    
+    elif is_volatile and is_downtrend:
+        # Consider RSI for potential trend reversal
+        if is_oversold:
+            logger.info(f"Detected VOLATILE_TRENDING_DOWN with oversold RSI ({latest_rsi:.2f})")
+        else:
+            logger.info(f"Detected VOLATILE_TRENDING_DOWN (Volatility: {latest_volatility:.4f}, Trend: {latest_trend:.4f}, ADX: {latest_adx:.2f})")
+        return MarketRegime.VOLATILE_TRENDING_DOWN.value
+    
+    elif is_trending and is_uptrend:
+        logger.info(f"Detected NORMAL_TRENDING_UP (Volatility: {latest_volatility:.4f}, Trend: {latest_trend:.4f}, ADX: {latest_adx:.2f})")
+        return MarketRegime.NORMAL_TRENDING_UP.value
+    
+    elif is_trending and is_downtrend:
+        logger.info(f"Detected NORMAL_TRENDING_DOWN (Volatility: {latest_volatility:.4f}, Trend: {latest_trend:.4f}, ADX: {latest_adx:.2f})")
+        return MarketRegime.NORMAL_TRENDING_DOWN.value
+    
+    else:
+        logger.info(f"Detected NEUTRAL market (Volatility: {latest_volatility:.4f}, Trend: {latest_trend:.4f}, ADX: {latest_adx:.2f})")
+        return MarketRegime.NEUTRAL.value
+
+def get_regime_leverage_factor(regime: str, aggressive: bool = True) -> float:
+    """
+    Get leverage multiplier based on market regime
+    
+    Args:
+        regime: Market regime
+        aggressive: Whether to use aggressive or conservative factors
+        
+    Returns:
+        float: Leverage multiplier
+    """
+    # Aggressive factors (maximize profit potential)
+    aggressive_factors = {
+        MarketRegime.VOLATILE_TRENDING_UP.value: 1.2,    # High volatility can be profitable in uptrends
+        MarketRegime.VOLATILE_TRENDING_DOWN.value: 0.9,  # Slightly reduced for volatile downtrends
+        MarketRegime.NORMAL_TRENDING_UP.value: 1.8,      # Maximize leverage in stable uptrends
+        MarketRegime.NORMAL_TRENDING_DOWN.value: 1.2,    # Moderate leverage in stable downtrends
+        MarketRegime.NEUTRAL.value: 1.4                  # Default for ranging markets
+    }
+    
+    # Conservative factors (prioritize risk management)
+    conservative_factors = {
+        MarketRegime.VOLATILE_TRENDING_UP.value: 0.8,    # Reduce leverage in volatile conditions
+        MarketRegime.VOLATILE_TRENDING_DOWN.value: 0.7,  # Further reduce for volatile downtrends
+        MarketRegime.NORMAL_TRENDING_UP.value: 1.2,      # Moderate increase for stable uptrends
+        MarketRegime.NORMAL_TRENDING_DOWN.value: 0.9,    # Slight decrease for stable downtrends
+        MarketRegime.NEUTRAL.value: 1.0                  # Default for ranging markets
+    }
+    
+    factors = aggressive_factors if aggressive else conservative_factors
+    return factors.get(regime, 1.0)
+
+def get_optimal_trade_parameters(df: pd.DataFrame, regime: str, 
+                               direction: str, aggressive: bool = True) -> Dict[str, float]:
+    """
+    Calculate optimal trade parameters for the current market conditions
+    
+    Args:
+        df: DataFrame with OHLCV price data
+        regime: Market regime
+        direction: Trade direction ('long' or 'short')
+        aggressive: Whether to use aggressive or conservative settings
+        
+    Returns:
+        Dict: Trade parameters
+    """
+    # Calculate ATR for dynamic stop loss and take profit
+    close = df['close'].iloc[-1] if 'close' in df.columns else df.iloc[-1]
+    
+    # Calculate ATR
+    if 'high' in df.columns and 'low' in df.columns and 'close' in df.columns:
+        tr1 = df['high'] - df['low']
+        tr2 = (df['high'] - df['close'].shift()).abs()
+        tr3 = (df['low'] - df['close'].shift()).abs()
+        tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+        atr = tr.rolling(window=14).mean().iloc[-1]
+    else:
+        # Use price volatility as a proxy for ATR
+        atr = df.iloc[-20:].std().iloc[-1] * 2.0
+    
+    # ATR as percentage of price
+    atr_pct = atr / close
+    
+    # Leverage factor based on market regime
+    leverage_factor = get_regime_leverage_factor(regime, aggressive)
+    
+    # Base parameters
+    base_stop_loss_pct = 0.04 if aggressive else 0.03  # Default 4% stop loss
+    base_take_profit_pct = 0.12 if aggressive else 0.09  # Default 12% take profit
+    
+    # Adjust parameters based on market regime
+    if regime == MarketRegime.VOLATILE_TRENDING_UP.value:
+        if direction == 'long':
+            stop_loss_pct = base_stop_loss_pct * 1.2  # Wider stop for volatility
+            take_profit_pct = base_take_profit_pct * 1.5  # Higher profit target
+        else:  # short
+            stop_loss_pct = base_stop_loss_pct * 1.4  # Even wider stop for counter-trend
+            take_profit_pct = base_take_profit_pct * 0.8  # Lower profit target
+    
+    elif regime == MarketRegime.VOLATILE_TRENDING_DOWN.value:
+        if direction == 'short':
+            stop_loss_pct = base_stop_loss_pct * 1.2  # Wider stop for volatility
+            take_profit_pct = base_take_profit_pct * 1.5  # Higher profit target
+        else:  # long
+            stop_loss_pct = base_stop_loss_pct * 1.4  # Even wider stop for counter-trend
+            take_profit_pct = base_take_profit_pct * 0.8  # Lower profit target
+    
+    elif regime == MarketRegime.NORMAL_TRENDING_UP.value:
+        if direction == 'long':
+            stop_loss_pct = base_stop_loss_pct * 0.9  # Tighter stop in clear trend
+            take_profit_pct = base_take_profit_pct * 1.3  # Higher profit target
+        else:  # short
+            stop_loss_pct = base_stop_loss_pct * 1.5  # Wider stop for counter-trend
+            take_profit_pct = base_take_profit_pct * 0.7  # Lower profit target
+    
+    elif regime == MarketRegime.NORMAL_TRENDING_DOWN.value:
+        if direction == 'short':
+            stop_loss_pct = base_stop_loss_pct * 0.9  # Tighter stop in clear trend
+            take_profit_pct = base_take_profit_pct * 1.3  # Higher profit target
+        else:  # long
+            stop_loss_pct = base_stop_loss_pct * 1.5  # Wider stop for counter-trend
+            take_profit_pct = base_take_profit_pct * 0.7  # Lower profit target
+    
+    else:  # NEUTRAL
+        stop_loss_pct = base_stop_loss_pct  # Default stop loss
+        take_profit_pct = base_take_profit_pct  # Default take profit
+    
+    # Fine-tune using ATR
+    atr_factor = min(3.0, max(1.0, atr_pct * 100 / 2.0))  # Scale ATR to reasonable range
+    stop_loss_pct = max(0.01, stop_loss_pct * atr_factor)  # Minimum 1% stop loss
+    take_profit_pct = max(0.02, take_profit_pct * atr_factor)  # Minimum 2% take profit
+    
+    # Ensure take profit is at least 2x stop loss
+    take_profit_pct = max(take_profit_pct, stop_loss_pct * 2.0)
+    
+    return {
+        'stop_loss_pct': stop_loss_pct,
+        'take_profit_pct': take_profit_pct,
+        'leverage_factor': leverage_factor,
+        'atr': atr,
+        'atr_pct': atr_pct
+    }
+
+def analyze_market_context(df: pd.DataFrame, aggressive: bool = True) -> Dict[str, Any]:
+    """
+    Comprehensive market analysis for trading decisions
+    
+    Args:
+        df: DataFrame with OHLCV price data
+        aggressive: Whether to use aggressive or conservative settings
+        
+    Returns:
+        Dict: Market context analysis
+    """
+    # Detect market regime
+    regime = detect_market_regime(df)
+    
+    # Get latest price
+    close = df['close'].iloc[-1] if 'close' in df.columns else df.iloc[-1]
+    
+    # Calculate indicators
+    volatility = calculate_volatility(df).iloc[-1]
+    trend = calculate_trend(df).iloc[-1]
+    adx = calculate_adx(df).iloc[-1]
+    rsi = calculate_rsi(df).iloc[-1]
+    
+    # Determine optimal trade direction
+    if trend > DEFAULT_TREND_THRESHOLD and rsi < DEFAULT_RSI_OVERBOUGHT:
+        optimal_direction = 'long'
+    elif trend < -DEFAULT_TREND_THRESHOLD and rsi > DEFAULT_RSI_OVERSOLD:
+        optimal_direction = 'short'
+    else:
+        optimal_direction = 'neutral'
+    
+    # Get optimal parameters for both directions
+    long_params = get_optimal_trade_parameters(df, regime, 'long', aggressive)
+    short_params = get_optimal_trade_parameters(df, regime, 'short', aggressive)
+    
+    # Determine trade confidence (0-1 scale)
+    trade_confidence = min(1.0, abs(trend) * 10 + (adx / 100))
+    
+    # Calculate trade viability score (0-100 scale)
+    if optimal_direction == 'long':
+        trade_score = min(100, 50 + (trend * 100) + (adx / 2) - (max(0, rsi - 50) / 2))
+    elif optimal_direction == 'short':
+        trade_score = min(100, 50 - (trend * 100) + (adx / 2) - (max(0, 50 - rsi) / 2))
+    else:
+        trade_score = 0
+    
+    return {
+        'regime': regime,
+        'optimal_direction': optimal_direction,
+        'long_params': long_params,
+        'short_params': short_params,
+        'price': close,
+        'volatility': volatility,
+        'trend': trend,
+        'adx': adx,
+        'rsi': rsi,
+        'confidence': trade_confidence,
+        'trade_score': trade_score
+    }
+
+if __name__ == "__main__":
+    # Example usage
+    import yfinance as yf
+    
+    # Download some data
+    ticker = "SOL-USD"
+    data = yf.download(ticker, period="1mo", interval="1h")
+    
+    # Analyze market context
+    context = analyze_market_context(data)
+    
+    # Print results
+    print(f"Market Analysis for {ticker}")
+    print(f"Current Price: ${context['price']:.2f}")
+    print(f"Market Regime: {context['regime']}")
+    print(f"Optimal Direction: {context['optimal_direction']}")
+    print(f"Trade Confidence: {context['confidence']:.2f}")
+    print(f"Trade Score: {context['trade_score']:.1f}/100")
+    print("\nLong Trade Parameters:")
+    print(f"  Stop Loss: {context['long_params']['stop_loss_pct']:.2f}%")
+    print(f"  Take Profit: {context['long_params']['take_profit_pct']:.2f}%")
+    print(f"  Leverage Factor: {context['long_params']['leverage_factor']:.2f}x")
+    print("\nShort Trade Parameters:")
+    print(f"  Stop Loss: {context['short_params']['stop_loss_pct']:.2f}%")
+    print(f"  Take Profit: {context['short_params']['take_profit_pct']:.2f}%")
+    print(f"  Leverage Factor: {context['short_params']['leverage_factor']:.2f}x")
+    print("\nKey Indicators:")
+    print(f"  Volatility: {context['volatility']:.4f}")
+    print(f"  Trend: {context['trend']:.4f}")
+    print(f"  ADX: {context['adx']:.1f}")
+    print(f"  RSI: {context['rsi']:.1f}")

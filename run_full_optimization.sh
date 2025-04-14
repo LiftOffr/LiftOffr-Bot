@@ -1,141 +1,147 @@
 #!/bin/bash
-# Run Full Optimization and Trading Script
-# This script automates the entire process of:
-# 1. Optimizing ML models for all assets
-# 2. Running hyper-optimized multi-asset trading
 
-# Set up logging
-LOG_FILE="full_optimization_$(date +%Y%m%d_%H%M%S).log"
-exec > >(tee -a "$LOG_FILE") 2>&1
+# Full Optimization Pipeline for Hyper-Optimized Trading Bot
+# This script runs the complete optimization pipeline for maximum profit:
+# 1. Fetches the latest historical data
+# 2. Trains and optimizes ML models for all assets
+# 3. Generates optimized position sizing configurations
+# 4. Runs comprehensive backtests to validate performance
+# 5. (Optionally) Starts live trading with optimized parameters
 
-echo "=========================================================="
-echo "STARTING FULL OPTIMIZATION AND TRADING PROCESS"
-echo "Started at: $(date)"
-echo "Log file: $LOG_FILE"
-echo "=========================================================="
-
-# Function to handle errors
-handle_error() {
-    echo "ERROR: $1"
-    echo "Process aborted at $(date)"
-    exit 1
-}
-
-# Step 1: Check environment and dependencies
-echo "Checking environment..."
-if [ ! -f "hyper_optimized_ml_training.py" ]; then
-    handle_error "Required file hyper_optimized_ml_training.py not found!"
-fi
-
-if [ ! -f "run_hyper_optimized_trading.py" ]; then
-    handle_error "Required file run_hyper_optimized_trading.py not found!"
-fi
-
-if [ ! -f "optimize_ml_for_all_assets.py" ]; then
-    handle_error "Required file optimize_ml_for_all_assets.py not found!"
-fi
-
-# Check for API keys
-if [ -z "$KRAKEN_API_KEY" ] || [ -z "$KRAKEN_API_SECRET" ]; then
-    echo "WARNING: Kraken API credentials not found in environment."
-    echo "Trading will run in sandbox mode."
-    SANDBOX_MODE="--sandbox"
-else
-    echo "Kraken API credentials found."
-    SANDBOX_MODE=""
-fi
-
-# Step 2: Parse command line arguments
-RISK_LEVEL="moderate"
-FETCH_DATA="--fetch-data"
-FORCE_RETRAIN=""
-ASSETS="SOL/USD ETH/USD BTC/USD"
-INITIAL_CAPITAL=20000
-LIVE_MODE=""
+# Default settings
+RISK_LEVEL="balanced"  # balanced, aggressive, or ultra_aggressive
+DATA_DAYS=90           # Days of historical data to use
+CAPITAL=20000          # Initial capital for backtesting/trading
+RETRAIN=false          # Whether to retrain ML models
+BACKTEST=true          # Whether to run backtests
+OPTIMIZE=true          # Whether to optimize parameters
+LIVE=false             # Whether to start live trading
+ASSETS="SOL/USD ETH/USD BTC/USD"  # Assets to trade
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
-    case $1 in
-        --risk-level)
-            RISK_LEVEL="$2"
-            shift 2
-            ;;
-        --no-fetch-data)
-            FETCH_DATA=""
-            shift
-            ;;
-        --retrain)
-            FORCE_RETRAIN="--retrain"
-            shift
-            ;;
-        --assets)
-            ASSETS="$2"
-            shift 2
-            ;;
-        --capital)
-            INITIAL_CAPITAL="$2"
-            shift 2
-            ;;
-        --live)
-            LIVE_MODE="--live"
-            SANDBOX_MODE=""
-            shift
-            ;;
-        *)
-            echo "Unknown option: $1"
-            exit 1
-            ;;
-    esac
+  case $1 in
+    --risk-level)
+      RISK_LEVEL="$2"
+      shift 2
+      ;;
+    --data-days)
+      DATA_DAYS="$2"
+      shift 2
+      ;;
+    --capital)
+      CAPITAL="$2"
+      shift 2
+      ;;
+    --retrain)
+      RETRAIN=true
+      shift
+      ;;
+    --no-backtest)
+      BACKTEST=false
+      shift
+      ;;
+    --no-optimize)
+      OPTIMIZE=false
+      shift
+      ;;
+    --live)
+      LIVE=true
+      shift
+      ;;
+    --assets)
+      ASSETS="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1"
+      exit 1
+      ;;
+  esac
 done
 
-echo "Configuration:"
-echo "Risk Level: $RISK_LEVEL"
-echo "Assets: $ASSETS"
-echo "Initial Capital: $INITIAL_CAPITAL"
-echo "Force Retrain: ${FORCE_RETRAIN:-No}"
-echo "Fetch Data: ${FETCH_DATA:-No}"
-echo "Live Mode: ${LIVE_MODE:-No}"
-echo "Sandbox Mode: ${SANDBOX_MODE:-No}"
+# Set risk level-specific configuration
+echo "Setting position sizing for risk level: $RISK_LEVEL"
+case $RISK_LEVEL in
+  aggressive)
+    cp position_sizing_config_ultra_aggressive.json position_sizing_config.json
+    echo "Using aggressive position sizing configuration"
+    ;;
+  ultra_aggressive)
+    python dynamic_position_sizing_ml.py  # Generate ultra-aggressive config
+    echo "Using ultra-aggressive position sizing configuration"
+    ;;
+  *)
+    # Use default balanced configuration
+    echo "Using balanced position sizing configuration"
+    ;;
+esac
 
-# Step 3: Run ML optimization
-echo ""
-echo "=========================================================="
-echo "STARTING ML OPTIMIZATION"
-echo "Started at: $(date)"
-echo "=========================================================="
-
-echo "Running ML optimization for all assets..."
-python optimize_ml_for_all_assets.py --assets $ASSETS --risk-level $RISK_LEVEL $FORCE_RETRAIN $FETCH_DATA
-
-if [ $? -ne 0 ]; then
-    handle_error "ML optimization failed!"
+# Validate Kraken API keys for live trading
+if $LIVE; then
+  if [ -z "$KRAKEN_API_KEY" ] || [ -z "$KRAKEN_API_SECRET" ]; then
+    echo "Error: Kraken API keys are required for live trading. Please set KRAKEN_API_KEY and KRAKEN_API_SECRET environment variables."
+    exit 1
+  fi
+  echo "Valid Kraken API keys detected for live trading"
 fi
 
-echo "ML optimization completed successfully at $(date)"
+# Step 1: Fetch historical data
+echo "==============================================="
+echo "Step 1: Fetching historical data for $DATA_DAYS days"
+echo "==============================================="
+python enhanced_historical_data_fetcher.py --days $DATA_DAYS --assets $ASSETS
 
-# Step 4: Run hyper-optimized trading
-echo ""
-echo "=========================================================="
-echo "STARTING HYPER-OPTIMIZED TRADING"
-echo "Started at: $(date)"
-echo "=========================================================="
+# Step 2: Optimize ML models (if enabled)
+if $RETRAIN; then
+  echo "==============================================="
+  echo "Step 2: Training and optimizing ML models"
+  echo "==============================================="
+  python optimize_ml_for_all_assets.py --assets $ASSETS
 
-echo "Running hyper-optimized trading..."
-python run_hyper_optimized_trading.py --assets $ASSETS --capital $INITIAL_CAPITAL $LIVE_MODE $SANDBOX_MODE
-
-if [ $? -ne 0 ]; then
-    handle_error "Hyper-optimized trading failed!"
+  # Step 3: Optimize dynamic position sizing
+  echo "==============================================="
+  echo "Step 3: Optimizing position sizing parameters"
+  echo "==============================================="
+  python dynamic_position_sizing_ml.py
 fi
 
-echo "Trading process completed successfully at $(date)"
+# Step 4: Run comprehensive backtests (if enabled)
+if $BACKTEST; then
+  echo "==============================================="
+  echo "Step 4: Running comprehensive backtests"
+  echo "==============================================="
+  
+  if $OPTIMIZE; then
+    # Run with parameter optimization
+    python run_enhanced_backtesting.py --optimize --trials 10 --capital $CAPITAL --days $DATA_DAYS --save-parameters
+  else
+    # Run without parameter optimization
+    python run_enhanced_backtesting.py --capital $CAPITAL --days $DATA_DAYS
+  fi
+fi
 
-# Final summary
-echo ""
-echo "=========================================================="
-echo "PROCESS COMPLETED SUCCESSFULLY"
-echo "Started at: $(cat "$LOG_FILE" | grep "STARTING FULL OPTIMIZATION" -A 2 | grep "Started at" | cut -d':' -f2-)"
-echo "Finished at: $(date)"
-echo "Log file: $LOG_FILE"
-echo "=========================================================="
+# Step 5: Start live trading (if enabled)
+if $LIVE; then
+  echo "==============================================="
+  echo "Step 5: Starting live trading"
+  echo "==============================================="
+  
+  # Start trading with optimized parameters
+  if [ "$RISK_LEVEL" == "ultra_aggressive" ]; then
+    echo "Starting live trading with ULTRA AGGRESSIVE risk profile"
+    python main.py --multi-strategy "integrated,ml,arima,adaptive" --capital $CAPITAL --live --aggressive
+  elif [ "$RISK_LEVEL" == "aggressive" ]; then
+    echo "Starting live trading with AGGRESSIVE risk profile"
+    python main.py --multi-strategy "integrated,ml,arima,adaptive" --capital $CAPITAL --live
+  else
+    echo "Starting live trading with BALANCED risk profile"
+    python main.py --multi-strategy "arima,adaptive" --capital $CAPITAL --live
+  fi
+else
+  echo "Live trading not enabled. Run with --live flag to start trading."
+fi
 
-exit 0
+echo "==============================================="
+echo "Full optimization pipeline complete"
+echo "==============================================="

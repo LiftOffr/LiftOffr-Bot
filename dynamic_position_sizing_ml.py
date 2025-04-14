@@ -1,554 +1,487 @@
+#!/usr/bin/env python3
 """
-Dynamic Position Sizing with ML Integration
+Dynamic Position Sizing Module with ML Integration
 
-This module enhances the dynamic position sizing capabilities by using
-ML model predictions and confidence scores to determine leverage and
-margin allocation for extreme leverage trading.
+This module provides advanced position sizing and leverage control based on:
+1. Signal strength from trading strategies
+2. ML model confidence
+3. Market regime analysis
+4. Asset-specific risk profiles
+5. Current volatility levels
 
-Features:
-1. ML-driven leverage calculation (up to 125x)
-2. Confidence-based margin percentage determination
-3. Market regime adjustment factors
-4. Asset-specific volatility considerations
-5. Risk management constraints
+The module optimizes risk:reward by dynamically adjusting:
+- Leverage (from 20x to 125x)
+- Position size (percentage of available capital)
+- Stop loss and take profit levels
 """
 
 import os
-import logging
+import sys
 import json
-import time
-from typing import Dict, Tuple, Optional
+import logging
 import numpy as np
+from typing import Dict, List, Optional, Any, Union
+from dataclasses import dataclass, field
 
-from config import LEVERAGE, MARGIN_PERCENT
+from market_context import (
+    analyze_market_context, 
+    get_optimal_trade_parameters,
+    get_regime_leverage_factor,
+    MarketRegime
+)
 
 logger = logging.getLogger(__name__)
 
-# Default leverage limits
-BASE_LEVERAGE = 35.0  # Default base leverage
-MAX_LEVERAGE = 125.0  # Maximum leverage (with high confidence)
-MIN_LEVERAGE = 20.0   # Minimum leverage floor
-
-# Market regime adjustment factors
-MARKET_REGIME_FACTORS = {
-    'volatile_trending_up': 1.2,    # Previously 0.8 (now we increase in volatile uptrends)
-    'volatile_trending_down': 0.9,  # Previously 0.7 (less reduction in volatile downtrends)
-    'normal_trending_up': 1.8,      # Previously 1.4 (much more aggressive in normal uptrends)
-    'normal_trending_down': 1.2,    # Previously 0.9 (now we increase even in downtrends)
-    'neutral': 1.4                  # Previously 1.1 (much more aggressive in sideways markets)
-}
-
-# Default position sizing configuration
+# Default configuration values
 DEFAULT_CONFIG = {
-    'base_leverage': BASE_LEVERAGE,
-    'max_leverage': MAX_LEVERAGE,
-    'min_leverage': MIN_LEVERAGE,
-    'base_margin_percent': 0.22,    # Enhanced from 0.20
-    'max_margin_cap': 0.65,         # Enhanced from 0.50
-    'min_margin_floor': 0.15,
-    'ml_influence': 0.75,           # Enhanced from 0.50
-    'confidence_threshold': 0.80,
-    'risk_factor': 1.0,
-    'market_regime_factors': MARKET_REGIME_FACTORS,
-    'signal_threshold': 0.08,       # Reduced from 0.20 for more signals
-    'stop_loss_atr_multiplier': 1.5,
-    'take_profit_atr_multiplier': 3.0,
-    'limit_order_factor': 0.70,     # Enhanced from 0.65
-    'volume_factor': 1.0
+    "min_leverage": 20.0,       # Minimum leverage to use
+    "base_leverage": 35.0,      # Base leverage (will be multiplied by factors)
+    "max_leverage": 125.0,      # Maximum leverage allowed
+    "min_margin_floor": 0.15,   # Minimum margin as % of available capital
+    "base_margin_percent": 0.22, # Base margin as % of available capital
+    "max_margin_cap": 0.40,     # Maximum margin as % of available capital
+    "signal_strength_multiplier": 1.5,  # Multiplier for signal strength
+    "ml_confidence_multiplier": 2.0,    # Multiplier for ML confidence
+    "stop_loss_atr_multiplier": 1.0,    # Multiplier for ATR-based stop loss
+    "take_profit_atr_multiplier": 3.0,  # Multiplier for ATR-based take profit
+    "market_regime_factors": {  # Leverage multipliers for market regimes
+        "volatile_trending_up": 1.2,    # High volatility uptrend
+        "volatile_trending_down": 0.9,  # High volatility downtrend
+        "normal_trending_up": 1.8,      # Normal volatility uptrend
+        "normal_trending_down": 1.2,    # Normal volatility downtrend
+        "neutral": 1.4                  # Neutral/ranging market
+    }
 }
 
-class PositionSizingConfig:
-    """Configuration class for dynamic position sizing parameters"""
-    
-    def __init__(self, config_path: Optional[str] = None):
-        """
-        Initialize with either default configuration or from a file
-        
-        Args:
-            config_path: Optional path to JSON configuration file
-        """
-        self.config = DEFAULT_CONFIG.copy()
-        
-        if config_path and os.path.exists(config_path):
-            try:
-                with open(config_path, 'r') as f:
-                    loaded_config = json.load(f)
-                    self.config.update(loaded_config)
-                logger.info(f"Loaded position sizing configuration from {config_path}")
-            except Exception as e:
-                logger.error(f"Error loading configuration from {config_path}: {e}")
-        
-        # Asset-specific configurations
-        self.asset_configs = {
-            'SOL/USD': {
-                'base_leverage': 35.0,
-                'max_leverage': 125.0,
-                'min_leverage': 20.0,
-                'volatility_adjustment': 1.1  # Higher volatility, slightly higher adjustment
-            },
-            'ETH/USD': {
-                'base_leverage': 30.0,
-                'max_leverage': 100.0,
-                'min_leverage': 15.0,
-                'volatility_adjustment': 1.0  # Medium volatility, neutral adjustment
-            },
-            'BTC/USD': {
-                'base_leverage': 25.0,
-                'max_leverage': 85.0,
-                'min_leverage': 12.0,
-                'volatility_adjustment': 0.9  # Lower volatility, slightly lower adjustment
-            }
-        }
-    
-    def get_asset_config(self, asset: str) -> Dict:
-        """
-        Get asset-specific configuration
-        
-        Args:
-            asset: Trading pair symbol
-            
-        Returns:
-            Dict: Configuration dictionary for the asset
-        """
-        # Start with base configuration
-        asset_config = self.config.copy()
-        
-        # Override with asset-specific values if available
-        if asset in self.asset_configs:
-            asset_config.update(self.asset_configs[asset])
-        
-        return asset_config
-    
-    def get_value(self, key: str, asset: Optional[str] = None) -> any:
-        """
-        Get a configuration value, using asset-specific value if available
-        
-        Args:
-            key: Configuration key
-            asset: Optional trading pair symbol
-            
-        Returns:
-            Value for the configuration key
-        """
-        if asset and asset in self.asset_configs and key in self.asset_configs[asset]:
-            return self.asset_configs[asset][key]
-        return self.config.get(key, DEFAULT_CONFIG.get(key))
-    
-    def save_config(self, config_path: str):
-        """
-        Save current configuration to a file
-        
-        Args:
-            config_path: Path to save the configuration
-        """
-        try:
-            with open(config_path, 'w') as f:
-                json.dump(self.config, f, indent=4)
-            logger.info(f"Saved position sizing configuration to {config_path}")
-        except Exception as e:
-            logger.error(f"Error saving configuration to {config_path}: {e}")
+# Asset-specific configurations (overrides global config)
+DEFAULT_ASSET_CONFIGS = {
+    "SOL/USD": {
+        "min_leverage": 20.0,  # More volatile, but we want exposure
+        "base_leverage": 35.0,
+        "max_leverage": 125.0,
+        "signal_strength_multiplier": 1.8  # Respond more to SOL signals
+    },
+    "ETH/USD": {
+        "min_leverage": 15.0,  # Moderate volatility
+        "base_leverage": 30.0,
+        "max_leverage": 100.0,
+        "signal_strength_multiplier": 1.6  # Moderate response to signals
+    },
+    "BTC/USD": {
+        "min_leverage": 12.0,  # Lower volatility
+        "base_leverage": 25.0,
+        "max_leverage": 85.0,
+        "signal_strength_multiplier": 1.4  # More conservative with BTC
+    }
+}
 
-# Global configuration instance
+@dataclass
+class PositionSizingConfig:
+    """Configuration for dynamic position sizing"""
+    config: Dict[str, Any] = field(default_factory=lambda: DEFAULT_CONFIG.copy())
+    asset_configs: Dict[str, Dict[str, Any]] = field(default_factory=lambda: DEFAULT_ASSET_CONFIGS.copy())
+    
+    def get_asset_config(self, asset: str) -> Dict[str, Any]:
+        """Get configuration for a specific asset, falling back to global config"""
+        if asset in self.asset_configs:
+            # Start with global config
+            result = self.config.copy()
+            # Override with asset-specific config
+            result.update(self.asset_configs[asset])
+            return result
+        else:
+            return self.config.copy()
+    
+    def save_config(self, filename: str = "position_sizing_config.json") -> None:
+        """Save configuration to file"""
+        with open(filename, 'w') as f:
+            json.dump({
+                "global": self.config,
+                "assets": self.asset_configs
+            }, f, indent=4)
+    
+    def load_config(self, filename: str = "position_sizing_config.json") -> bool:
+        """Load configuration from file"""
+        try:
+            with open(filename, 'r') as f:
+                data = json.load(f)
+                if "global" in data:
+                    self.config.update(data["global"])
+                if "assets" in data:
+                    for asset, config in data["assets"].items():
+                        if asset in self.asset_configs:
+                            self.asset_configs[asset].update(config)
+                        else:
+                            self.asset_configs[asset] = config
+                return True
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            logger.warning(f"Could not load position sizing config: {e}")
+            return False
+
+# Singleton config instance
 _config_instance = None
 
 def get_config() -> PositionSizingConfig:
-    """
-    Get the global configuration instance
-    
-    Returns:
-        PositionSizingConfig: Configuration instance
-    """
+    """Get the global config instance"""
     global _config_instance
     if _config_instance is None:
-        # Check for asset-specific config file
-        config_path = os.environ.get('POSITION_SIZING_CONFIG', 'position_sizing_config_ultra_aggressive.json')
-        _config_instance = PositionSizingConfig(config_path)
+        _config_instance = PositionSizingConfig()
+        
+        # Try to load from the ultra-aggressive config first
+        if not _config_instance.load_config("position_sizing_config_ultra_aggressive.json"):
+            # Fall back to the regular config
+            _config_instance.load_config("position_sizing_config.json")
+    
     return _config_instance
+
+def calculate_dynamic_position_size(
+    available_capital: float,
+    signal_strength: float,
+    ml_confidence: float,
+    market_regime: str,
+    asset: str = "SOL/USD"
+) -> float:
+    """
+    Calculate the optimal position size as a percentage of available capital
+    
+    Args:
+        available_capital: Available capital for this trade
+        signal_strength: Signal strength from strategy (0.0-1.0)
+        ml_confidence: Confidence from ML model (0.0-1.0)
+        market_regime: Current market regime
+        asset: Asset being traded
+        
+    Returns:
+        float: Position size as a percentage of available capital (0.0-1.0)
+    """
+    # Get config for this asset
+    config = get_config().get_asset_config(asset)
+    
+    # Base margin percentage
+    base_margin = config["base_margin_percent"]
+    
+    # Adjust based on signal strength
+    signal_adjustment = signal_strength * config["signal_strength_multiplier"]
+    
+    # Adjust based on ML confidence
+    ml_adjustment = ml_confidence * config["ml_confidence_multiplier"]
+    
+    # Adjust based on market regime
+    regime_adjustment = config["market_regime_factors"].get(market_regime, 1.0)
+    
+    # Calculate adjusted margin
+    adjusted_margin = base_margin * (1.0 + signal_adjustment + ml_adjustment) * regime_adjustment
+    
+    # Apply limits
+    min_margin = config["min_margin_floor"]
+    max_margin = config["max_margin_cap"]
+    
+    position_size = max(min_margin, min(adjusted_margin, max_margin))
+    
+    logger.debug(f"Position size for {asset}: {position_size:.2%} of ${available_capital:.2f}")
+    logger.debug(f"Adjustments - Signal: {signal_adjustment:.2f}, ML: {ml_adjustment:.2f}, "
+                f"Regime: {regime_adjustment:.2f}")
+    
+    return position_size
 
 def calculate_dynamic_leverage(
     base_price: float,
     signal_strength: float,
     ml_confidence: float,
     market_regime: str,
-    asset: str = 'SOL/USD'
+    asset: str = "SOL/USD"
 ) -> float:
     """
-    Calculate dynamic leverage based on signal strength, ML confidence and market regime
+    Calculate the optimal leverage based on current market conditions
     
     Args:
-        base_price: Current price
-        signal_strength: Strength of the trading signal (0.0-1.0)
-        ml_confidence: Confidence score from ML model (0.0-1.0)
+        base_price: Current asset price
+        signal_strength: Signal strength from strategy (0.0-1.0)
+        ml_confidence: Confidence from ML model (0.0-1.0)
         market_regime: Current market regime
-        asset: Trading pair symbol
+        asset: Asset being traded
         
     Returns:
-        float: Calculated leverage
+        float: Leverage amount
     """
-    config = get_config()
-    asset_config = config.get_asset_config(asset)
+    # Get config for this asset
+    config = get_config().get_asset_config(asset)
     
-    # Get base leverage and limits
-    base_leverage = asset_config['base_leverage']
-    max_leverage = asset_config['max_leverage']
-    min_leverage = asset_config['min_leverage']
+    # Base leverage
+    base_leverage = config["base_leverage"]
     
-    # Combine signal strength and ML confidence
-    ml_influence = asset_config['ml_influence']
-    combined_confidence = (signal_strength * (1 - ml_influence)) + (ml_confidence * ml_influence)
+    # Adjust based on signal strength (higher signal = more leverage)
+    signal_adjustment = signal_strength * config["signal_strength_multiplier"]
     
-    # Market regime factor
-    regime_factor = asset_config['market_regime_factors'].get(market_regime, 1.0)
+    # Adjust based on ML confidence (higher confidence = more leverage)
+    ml_adjustment = ml_confidence * config["ml_confidence_multiplier"]
     
-    # Asset-specific volatility adjustment
-    volatility_adjustment = asset_config.get('volatility_adjustment', 1.0)
+    # Adjust based on market regime
+    regime_adjustment = config["market_regime_factors"].get(market_regime, 1.0)
     
-    # Calculate leverage
-    leverage_multiplier = combined_confidence * regime_factor * volatility_adjustment
-    dynamic_leverage = base_leverage * leverage_multiplier
+    # Calculate adjusted leverage
+    adjusted_leverage = base_leverage * (1.0 + signal_adjustment + ml_adjustment) * regime_adjustment
     
     # Apply limits
-    dynamic_leverage = max(min_leverage, min(max_leverage, dynamic_leverage))
+    min_leverage = config["min_leverage"]
+    max_leverage = config["max_leverage"]
     
-    logger.debug(f"Dynamic leverage calculation for {asset}:")
-    logger.debug(f"Base leverage: {base_leverage}, Signal strength: {signal_strength}, ML confidence: {ml_confidence}")
-    logger.debug(f"Market regime: {market_regime} (factor: {regime_factor})")
-    logger.debug(f"Volatility adjustment: {volatility_adjustment}")
-    logger.debug(f"Combined confidence: {combined_confidence}, Final leverage: {dynamic_leverage}")
+    leverage = max(min_leverage, min(adjusted_leverage, max_leverage))
     
-    return dynamic_leverage
+    logger.debug(f"Leverage for {asset}: {leverage:.2f}x at ${base_price:.2f}")
+    logger.debug(f"Adjustments - Signal: {signal_adjustment:.2f}, ML: {ml_adjustment:.2f}, "
+                f"Regime: {regime_adjustment:.2f}")
+    
+    return leverage
 
-def calculate_dynamic_margin_percent(
-    portfolio_value: float,
-    leverage: float,
+def calculate_stop_loss(
+    price: float,
+    direction: str,
+    atr: float,
     signal_strength: float,
-    ml_confidence: float,
-    asset: str = 'SOL/USD'
+    market_regime: str,
+    asset: str = "SOL/USD"
 ) -> float:
     """
-    Calculate dynamic margin percentage based on portfolio value, leverage,
-    signal strength and ML confidence
+    Calculate the optimal stop loss price
     
     Args:
-        portfolio_value: Current portfolio value
-        leverage: Calculated leverage
-        signal_strength: Strength of the trading signal (0.0-1.0)
-        ml_confidence: Confidence score from ML model (0.0-1.0)
-        asset: Trading pair symbol
+        price: Entry price
+        direction: 'long' or 'short'
+        atr: Average True Range value
+        signal_strength: Signal strength (0.0-1.0)
+        market_regime: Current market regime
+        asset: Asset being traded
         
     Returns:
-        float: Calculated margin percentage
+        float: Stop loss price
     """
-    config = get_config()
-    asset_config = config.get_asset_config(asset)
+    # Get config for this asset
+    config = get_config().get_asset_config(asset)
     
-    # Get base margin percent and limits
-    base_margin = asset_config['base_margin_percent']
-    max_margin = asset_config['max_margin_cap']
-    min_margin = asset_config['min_margin_floor']
+    # Calculate ATR-based stop distance
+    atr_multiplier = config["stop_loss_atr_multiplier"]
     
-    # Combine signal strength and ML confidence
-    ml_influence = asset_config['ml_influence']
-    combined_confidence = (signal_strength * (1 - ml_influence)) + (ml_confidence * ml_influence)
+    # Adjust based on market regime
+    regime_factor = config["market_regime_factors"].get(market_regime, 1.0)
     
-    # Adjust margin percentage based on confidence
-    confidence_factor = 1.0 + (combined_confidence - 0.5) * 2.0
+    # Adjust based on signal strength (stronger signal = tighter stop)
+    signal_factor = 1.0 - (signal_strength * 0.3)  # 0.7-1.0 range
     
-    # Adjust margin based on leverage (higher leverage = slightly lower margin)
-    leverage_factor = 1.0
-    if leverage > asset_config['base_leverage']:
-        # Gradually reduce margin as leverage increases
-        leverage_diff = (leverage - asset_config['base_leverage']) / (asset_config['max_leverage'] - asset_config['base_leverage'])
-        leverage_factor = max(0.8, 1.0 - (leverage_diff * 0.2))
+    # Calculate stop distance
+    stop_distance = atr * atr_multiplier * signal_factor * regime_factor
     
-    # Calculate margin percentage
-    margin_percent = base_margin * confidence_factor * leverage_factor
-    
-    # Apply limits
-    margin_percent = max(min_margin, min(max_margin, margin_percent))
-    
-    logger.debug(f"Dynamic margin calculation for {asset}:")
-    logger.debug(f"Base margin: {base_margin}, Signal strength: {signal_strength}, ML confidence: {ml_confidence}")
-    logger.debug(f"Combined confidence: {combined_confidence}, Confidence factor: {confidence_factor}")
-    logger.debug(f"Leverage factor: {leverage_factor}, Final margin percent: {margin_percent}")
-    
-    return margin_percent
-
-def adjust_limit_order_price(
-    base_price: float,
-    direction: str,
-    atr_value: float,
-    ml_confidence: float,
-    asset: str = 'SOL/USD'
-) -> float:
-    """
-    Adjust limit order price based on ATR and ML confidence
-    
-    Args:
-        base_price: Current price
-        direction: Trade direction ('buy' or 'sell')
-        atr_value: Current ATR value
-        ml_confidence: Confidence score from ML model (0.0-1.0)
-        asset: Trading pair symbol
-        
-    Returns:
-        float: Adjusted limit order price
-    """
-    config = get_config()
-    asset_config = config.get_asset_config(asset)
-    
-    # Base factor for limit order price adjustment
-    limit_factor = asset_config['limit_order_factor']
-    
-    # Adjust factor based on ML confidence
-    confidence_adjustment = 1.0 + (ml_confidence - 0.5) * 0.5
-    adjusted_factor = limit_factor * confidence_adjustment
-    
-    # Calculate price adjustment
-    price_adjustment = atr_value * adjusted_factor
-    
-    # Apply adjustment based on direction
-    if direction.lower() == 'buy':
-        limit_price = base_price - price_adjustment
-    else:  # sell
-        limit_price = base_price + price_adjustment
-    
-    logger.debug(f"Limit order price adjustment for {asset} ({direction}):")
-    logger.debug(f"Base price: {base_price}, ATR: {atr_value}, ML confidence: {ml_confidence}")
-    logger.debug(f"Base factor: {limit_factor}, Adjusted factor: {adjusted_factor}")
-    logger.debug(f"Price adjustment: {price_adjustment}, Final limit price: {limit_price}")
-    
-    return limit_price
-
-def calculate_stop_loss_price(
-    entry_price: float,
-    direction: str,
-    atr_value: float,
-    ml_confidence: float,
-    asset: str = 'SOL/USD'
-) -> float:
-    """
-    Calculate stop loss price based on ATR and ML confidence
-    
-    Args:
-        entry_price: Trade entry price
-        direction: Trade direction ('long' or 'short')
-        atr_value: Current ATR value
-        ml_confidence: Confidence score from ML model (0.0-1.0)
-        asset: Trading pair symbol
-        
-    Returns:
-        float: Calculated stop loss price
-    """
-    config = get_config()
-    asset_config = config.get_asset_config(asset)
-    
-    # Base multiplier for stop loss
-    stop_multiplier = asset_config['stop_loss_atr_multiplier']
-    
-    # Adjust multiplier based on ML confidence (higher confidence = wider stop)
-    confidence_adjustment = 1.0 + (ml_confidence - 0.5) * 0.6
-    adjusted_multiplier = stop_multiplier * confidence_adjustment
-    
-    # Calculate price adjustment
-    price_adjustment = atr_value * adjusted_multiplier
-    
-    # Apply adjustment based on direction
+    # Calculate stop price
     if direction.lower() == 'long':
-        stop_price = entry_price - price_adjustment
+        stop_price = price - stop_distance
     else:  # short
-        stop_price = entry_price + price_adjustment
+        stop_price = price + stop_distance
     
-    logger.debug(f"Stop loss calculation for {asset} ({direction}):")
-    logger.debug(f"Entry price: {entry_price}, ATR: {atr_value}, ML confidence: {ml_confidence}")
-    logger.debug(f"Base multiplier: {stop_multiplier}, Adjusted multiplier: {adjusted_multiplier}")
-    logger.debug(f"Price adjustment: {price_adjustment}, Final stop price: {stop_price}")
+    logger.debug(f"{direction.capitalize()} stop loss for {asset}: ${stop_price:.2f} "
+                f"(${stop_distance:.2f} from entry)")
     
     return stop_price
 
-def calculate_take_profit_price(
-    entry_price: float,
-    direction: str,
-    atr_value: float,
-    ml_confidence: float,
-    asset: str = 'SOL/USD'
-) -> float:
-    """
-    Calculate take profit price based on ATR and ML confidence
-    
-    Args:
-        entry_price: Trade entry price
-        direction: Trade direction ('long' or 'short')
-        atr_value: Current ATR value
-        ml_confidence: Confidence score from ML model (0.0-1.0)
-        asset: Trading pair symbol
-        
-    Returns:
-        float: Calculated take profit price
-    """
-    config = get_config()
-    asset_config = config.get_asset_config(asset)
-    
-    # Base multiplier for take profit
-    tp_multiplier = asset_config['take_profit_atr_multiplier']
-    
-    # Adjust multiplier based on ML confidence (higher confidence = wider target)
-    confidence_adjustment = 1.0 + (ml_confidence - 0.5) * 1.0
-    adjusted_multiplier = tp_multiplier * confidence_adjustment
-    
-    # Calculate price adjustment
-    price_adjustment = atr_value * adjusted_multiplier
-    
-    # Apply adjustment based on direction
-    if direction.lower() == 'long':
-        tp_price = entry_price + price_adjustment
-    else:  # short
-        tp_price = entry_price - price_adjustment
-    
-    logger.debug(f"Take profit calculation for {asset} ({direction}):")
-    logger.debug(f"Entry price: {entry_price}, ATR: {atr_value}, ML confidence: {ml_confidence}")
-    logger.debug(f"Base multiplier: {tp_multiplier}, Adjusted multiplier: {adjusted_multiplier}")
-    logger.debug(f"Price adjustment: {price_adjustment}, Final take profit price: {tp_price}")
-    
-    return tp_price
-
-def get_position_sizing_summary(
-    portfolio_value: float,
-    asset: str,
+def calculate_take_profit(
     price: float,
+    direction: str,
+    atr: float,
     signal_strength: float,
     ml_confidence: float,
     market_regime: str,
-    atr_value: float
-) -> Dict:
+    asset: str = "SOL/USD"
+) -> float:
     """
-    Get a complete position sizing summary
+    Calculate the optimal take profit price
     
     Args:
-        portfolio_value: Current portfolio value
-        asset: Trading pair symbol
-        price: Current asset price
-        signal_strength: Strength of the trading signal (0.0-1.0)
-        ml_confidence: Confidence score from ML model (0.0-1.0)
+        price: Entry price
+        direction: 'long' or 'short'
+        atr: Average True Range value
+        signal_strength: Signal strength (0.0-1.0)
+        ml_confidence: ML model confidence (0.0-1.0)
         market_regime: Current market regime
-        atr_value: Current ATR value
+        asset: Asset being traded
         
     Returns:
-        Dict: Complete position sizing information
+        float: Take profit price
     """
-    # Calculate dynamic leverage
+    # Get config for this asset
+    config = get_config().get_asset_config(asset)
+    
+    # Calculate ATR-based take profit distance
+    atr_multiplier = config["take_profit_atr_multiplier"]
+    
+    # Adjust based on market regime
+    regime_factor = config["market_regime_factors"].get(market_regime, 1.0)
+    
+    # Adjust based on signal strength and ML confidence
+    signal_factor = 1.0 + (signal_strength * 0.5)  # 1.0-1.5 range
+    ml_factor = 1.0 + (ml_confidence * 0.5)  # 1.0-1.5 range
+    
+    # Calculate take profit distance
+    tp_distance = atr * atr_multiplier * signal_factor * ml_factor * regime_factor
+    
+    # Calculate take profit price
+    if direction.lower() == 'long':
+        tp_price = price + tp_distance
+    else:  # short
+        tp_price = price - tp_distance
+    
+    logger.debug(f"{direction.capitalize()} take profit for {asset}: ${tp_price:.2f} "
+                f"(${tp_distance:.2f} from entry)")
+    
+    return tp_price
+
+def get_optimal_trade_parameters_ml(
+    price_data: Dict[str, Any],
+    direction: str,
+    signal_strength: float,
+    ml_confidence: float,
+    asset: str = "SOL/USD"
+) -> Dict[str, float]:
+    """
+    Calculate optimal trade parameters using ML and market context
+    
+    Args:
+        price_data: Dictionary with price data (OHLCV)
+        direction: Trade direction ('long' or 'short')
+        signal_strength: Signal strength from strategy (0.0-1.0)
+        ml_confidence: Confidence from ML model (0.0-1.0)
+        asset: Asset being traded
+        
+    Returns:
+        Dict: Trade parameters (leverage, margin_pct, stop_loss_pct, take_profit_pct)
+    """
+    # Analyze market context
+    market_context = analyze_market_context(price_data)
+    market_regime = market_context['regime']
+    
+    # Get config for this asset
+    config = get_config().get_asset_config(asset)
+    
+    # Calculate leverage
     leverage = calculate_dynamic_leverage(
-        base_price=price,
+        base_price=market_context['price'],
         signal_strength=signal_strength,
         ml_confidence=ml_confidence,
         market_regime=market_regime,
         asset=asset
     )
     
-    # Calculate dynamic margin percentage
-    margin_percent = calculate_dynamic_margin_percent(
-        portfolio_value=portfolio_value,
-        leverage=leverage,
+    # Calculate position size
+    margin_pct = calculate_dynamic_position_size(
+        available_capital=100.0,  # Placeholder, will be scaled by actual capital
         signal_strength=signal_strength,
         ml_confidence=ml_confidence,
+        market_regime=market_regime,
         asset=asset
     )
     
-    # Calculate margin amount
-    margin_amount = portfolio_value * margin_percent
+    # Get optimal trade parameters for current market conditions
+    optimal_params = market_context['long_params'] if direction == 'long' else market_context['short_params']
     
-    # Calculate position size
-    position_size = margin_amount * leverage
+    # Calculate risk percentages
+    stop_loss_pct = optimal_params['stop_loss_pct']
+    take_profit_pct = optimal_params['take_profit_pct']
     
-    # Calculate quantity at current price
-    quantity = position_size / price if price > 0 else 0
-    
-    # Calculate limit order prices for both directions
-    buy_limit_price = adjust_limit_order_price(
-        base_price=price,
-        direction='buy',
-        atr_value=atr_value,
-        ml_confidence=ml_confidence,
-        asset=asset
-    )
-    
-    sell_limit_price = adjust_limit_order_price(
-        base_price=price,
-        direction='sell',
-        atr_value=atr_value,
-        ml_confidence=ml_confidence,
-        asset=asset
-    )
-    
-    # Create summary
-    summary = {
-        'asset': asset,
-        'price': price,
-        'portfolio_value': portfolio_value,
-        'signal_strength': signal_strength,
-        'ml_confidence': ml_confidence,
-        'market_regime': market_regime,
-        'atr': atr_value,
+    return {
         'leverage': leverage,
-        'margin_percent': margin_percent,
-        'margin_amount': margin_amount,
-        'position_size': position_size,
-        'quantity': quantity,
-        'buy_limit_price': buy_limit_price,
-        'sell_limit_price': sell_limit_price,
-        'timestamp': time.time()
+        'margin_pct': margin_pct,
+        'stop_loss_pct': stop_loss_pct,
+        'take_profit_pct': take_profit_pct,
+        'market_regime': market_regime,
+        'atr': optimal_params['atr'],
+        'confidence': max(signal_strength, ml_confidence)
     }
+
+def save_ultra_aggressive_config():
+    """Create and save an ultra-aggressive position sizing configuration"""
+    config = PositionSizingConfig()
     
-    logger.info(f"Position sizing summary for {asset}:")
-    logger.info(f"Signal strength: {signal_strength:.2f}, ML confidence: {ml_confidence:.2f}")
-    logger.info(f"Market regime: {market_regime}")
-    logger.info(f"Leverage: {leverage:.2f}x, Margin: {margin_percent:.2%} (${margin_amount:.2f})")
-    logger.info(f"Position size: ${position_size:.2f}, Quantity: {quantity:.6f}")
+    # Update global parameters for ultra-aggressive trading
+    config.config.update({
+        "min_leverage": 20.0,       # Minimum leverage to use
+        "base_leverage": 45.0,      # Base leverage (will be multiplied by factors)
+        "max_leverage": 125.0,      # Maximum leverage allowed
+        "min_margin_floor": 0.18,   # Minimum margin as % of available capital
+        "base_margin_percent": 0.28, # Base margin as % of available capital
+        "max_margin_cap": 0.50,     # Maximum margin as % of available capital
+        "signal_strength_multiplier": 2.2,  # Higher multiplier for signal strength
+        "ml_confidence_multiplier": 2.8,    # Higher multiplier for ML confidence
+        "stop_loss_atr_multiplier": 1.1,    # Slightly wider stops
+        "take_profit_atr_multiplier": 3.5,  # More ambitious take profits
+        "market_regime_factors": {  # More aggressive leverage multipliers
+            "volatile_trending_up": 1.4,    # Higher leverage in volatile uptrends
+            "volatile_trending_down": 1.0,   # Same leverage in volatile downtrends
+            "normal_trending_up": 2.2,      # Much higher leverage in normal uptrends
+            "normal_trending_down": 1.5,    # Higher leverage in normal downtrends
+            "neutral": 1.8                  # Higher leverage in neutral markets
+        }
+    })
     
-    return summary
+    # Update asset-specific configs
+    config.asset_configs["SOL/USD"].update({
+        "min_leverage": 20.0,
+        "base_leverage": 50.0,    # Significantly higher base leverage for SOL
+        "max_leverage": 125.0,    # Maximum leverage for SOL
+        "signal_strength_multiplier": 2.5  # More responsive to SOL signals
+    })
+    
+    config.asset_configs["ETH/USD"].update({
+        "min_leverage": 15.0,
+        "base_leverage": 40.0,    # Higher base leverage for ETH
+        "max_leverage": 100.0,    # High leverage for ETH
+        "signal_strength_multiplier": 2.2  # More responsive to ETH signals
+    })
+    
+    config.asset_configs["BTC/USD"].update({
+        "min_leverage": 12.0,
+        "base_leverage": 35.0,    # Higher base leverage for BTC
+        "max_leverage": 85.0,     # Moderate leverage for BTC (still high)
+        "signal_strength_multiplier": 2.0  # More responsive to BTC signals
+    })
+    
+    # Save the ultra-aggressive config
+    config.save_config("position_sizing_config_ultra_aggressive.json")
+    logger.info("Created ultra-aggressive position sizing configuration")
 
 if __name__ == "__main__":
-    # Test configuration
-    logging.basicConfig(level=logging.DEBUG)
+    # Configure logging for standalone testing
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s [%(levelname)s] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
     
-    # Create test configurations
-    test_configs = [
-        {
-            'portfolio_value': 20000,
-            'asset': 'SOL/USD',
-            'price': 125.50,
-            'signal_strength': 0.85,
-            'ml_confidence': 0.92,
-            'market_regime': 'normal_trending_up',
-            'atr_value': 0.18
-        },
-        {
-            'portfolio_value': 20000,
-            'asset': 'ETH/USD',
-            'price': 3450.75,
-            'signal_strength': 0.70,
-            'ml_confidence': 0.85,
-            'market_regime': 'volatile_trending_up',
-            'atr_value': 15.25
-        },
-        {
-            'portfolio_value': 20000,
-            'asset': 'BTC/USD',
-            'price': 62150.25,
-            'signal_strength': 0.60,
-            'ml_confidence': 0.78,
-            'market_regime': 'neutral',
-            'atr_value': 225.50
-        }
-    ]
+    # Generate ultra-aggressive config
+    save_ultra_aggressive_config()
     
-    # Run test calculations for each configuration
-    for cfg in test_configs:
-        summary = get_position_sizing_summary(**cfg)
-        
-        print(f"\n{'='*80}\n{cfg['asset']} Position Sizing\n{'='*80}")
-        for key, value in summary.items():
-            if isinstance(value, float):
-                print(f"{key}: {value:.4f}")
-            else:
-                print(f"{key}: {value}")
+    # Test the module
+    config = get_config()
+    
+    # Print current configuration
+    print("\nCurrent Configuration:")
+    print(f"Base Leverage: {config.config['base_leverage']}x")
+    print(f"Max Leverage: {config.config['max_leverage']}x")
+    print("\nAsset-specific settings:")
+    for asset, asset_config in config.asset_configs.items():
+        print(f"\n{asset}:")
+        print(f"  Base Leverage: {asset_config.get('base_leverage', config.config['base_leverage'])}x")
+        print(f"  Max Leverage: {asset_config.get('max_leverage', config.config['max_leverage'])}x")
+    
+    # Test dynamic leverage calculation
+    print("\nTesting dynamic leverage calculation:")
+    for asset in config.asset_configs.keys():
+        for signal in [0.3, 0.6, 0.9]:
+            for conf in [0.4, 0.7, 0.95]:
+                for regime in MarketRegime:
+                    leverage = calculate_dynamic_leverage(
+                        base_price=100.0,
+                        signal_strength=signal,
+                        ml_confidence=conf,
+                        market_regime=regime.value,
+                        asset=asset
+                    )
+                    print(f"{asset} - Signal: {signal:.1f}, Conf: {conf:.1f}, "
+                          f"Regime: {regime.value} -> Leverage: {leverage:.1f}x")
