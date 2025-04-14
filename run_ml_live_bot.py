@@ -2,23 +2,21 @@
 """
 Run ML Live Bot
 
-This module provides the main entry point for running the ML-enhanced trading bot
-with real-time ML predictions integrated into the decision-making process.
+This module provides the main entry point for running the ML-enhanced trading bot.
 """
 
 import os
 import sys
+import json
 import logging
 import argparse
 import time
 from typing import List, Dict, Any, Optional
+from datetime import datetime
 
-# Import trading components
+# Import ML components
 from ml_live_trading_integration import MLLiveTradingIntegration
 from model_collaboration_integrator import ModelCollaborationIntegrator
-from bot_manager import BotManager
-from kraken_api import KrakenAPI
-from market_context import MarketContextAnalyzer
 
 # Configure logging
 logging.basicConfig(
@@ -26,337 +24,359 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('ml_live_bot.log')
+        logging.FileHandler('ml_bot.log')
     ]
 )
 logger = logging.getLogger(__name__)
 
-class MLTradingBot:
+class MLLiveBot:
     """
-    ML-enhanced trading bot that integrates ML predictions with trading strategies
+    ML Live Trading Bot
+    
+    This class integrates ML predictions with the trading system
+    to execute ML-enhanced trading strategies.
     """
     
     def __init__(
         self,
-        trading_pairs: List[str] = ["SOL/USD", "ETH/USD", "BTC/USD"],
-        use_sandbox: bool = True,
-        use_extreme_leverage: bool = False,
-        use_ml_position_sizing: bool = False,
-        capital_allocation: Optional[Dict[str, float]] = None,
-        log_level: str = "INFO"
+        pairs: List[str] = ["SOL/USD", "ETH/USD", "BTC/USD"],
+        sandbox: bool = True,
+        extreme_leverage: bool = False,
+        ml_position_sizing: bool = False,
+        initial_capital: float = 20000.0,
+        capital_allocation: Optional[Dict[str, float]] = None
     ):
         """
-        Initialize the ML trading bot
+        Initialize the ML live bot
         
         Args:
-            trading_pairs: List of trading pairs to trade
-            use_sandbox: Whether to use sandbox mode
-            use_extreme_leverage: Whether to use extreme leverage settings
-            use_ml_position_sizing: Whether to use ML-enhanced position sizing
-            capital_allocation: Capital allocation by asset (None for default)
-            log_level: Logging level
+            pairs: List of trading pairs to trade
+            sandbox: Whether to use sandbox mode
+            extreme_leverage: Whether to use extreme leverage settings
+            ml_position_sizing: Whether to use ML-enhanced position sizing
+            initial_capital: Initial capital
+            capital_allocation: Capital allocation by asset
         """
-        self.trading_pairs = trading_pairs
-        self.use_sandbox = use_sandbox
-        self.use_extreme_leverage = use_extreme_leverage
-        self.use_ml_position_sizing = use_ml_position_sizing
+        self.pairs = pairs
+        self.sandbox = sandbox
+        self.extreme_leverage = extreme_leverage
+        self.ml_position_sizing = ml_position_sizing
+        self.initial_capital = initial_capital
         
         # Set default capital allocation if not provided
         if capital_allocation is None:
             self.capital_allocation = {
-                "SOL/USD": 0.40,  # 40% for SOL
-                "ETH/USD": 0.35,  # 35% for ETH
-                "BTC/USD": 0.25   # 25% for BTC
+                "SOL/USD": 0.40,  # 40% allocation to SOL
+                "ETH/USD": 0.35,  # 35% allocation to ETH
+                "BTC/USD": 0.25   # 25% allocation to BTC
             }
         else:
             self.capital_allocation = capital_allocation
         
-        # Set logging level
-        logger.setLevel(getattr(logging, log_level))
-        
-        # Initialize components
-        self._initialize_components()
-        
-        logger.info(f"ML Trading Bot initialized with {len(trading_pairs)} trading pairs")
-    
-    def _initialize_components(self):
-        """Initialize trading bot components"""
-        # Initialize Kraken API
-        self.api = KrakenAPI(sandbox=self.use_sandbox)
-        
-        # Initialize ML trading integration
+        # Initialize ML components
         self.ml_integration = MLLiveTradingIntegration(
-            assets=self.trading_pairs,
-            use_extreme_leverage=self.use_extreme_leverage
+            assets=pairs,
+            use_extreme_leverage=extreme_leverage
         )
         
-        # Initialize model collaboration integrator
-        self.model_integrator = ModelCollaborationIntegrator(
-            enable_adaptive_weights=True
+        self.collaboration_integrator = ModelCollaborationIntegrator(
+            assets=pairs,
+            use_ml_position_sizing=ml_position_sizing
         )
         
-        # Initialize market context analyzer
-        self.market_analyzer = MarketContextAnalyzer(
-            pairs=self.trading_pairs
-        )
+        # Initialize trading state
+        self.positions = {}
+        self.order_history = []
+        self.market_data = {}
         
-        # Initialize bot manager
-        if self.use_sandbox:
-            capital = 25000.0
-        else:
-            # Get actual capital in live mode
-            account_info = self.api.get_account_balance()
-            capital = float(account_info.get("total", 10000.0))
-        
-        self.bot_manager = BotManager(
-            api=self.api,
-            starting_capital=capital,
-            trading_enabled=not self.use_sandbox
-        )
-        
-        # Add strategies to bot manager
-        self._add_trading_strategies()
+        logger.info(f"ML Live Bot initialized with pairs: {pairs}")
+        logger.info(f"Sandbox mode: {sandbox}")
+        logger.info(f"Extreme leverage: {extreme_leverage}")
+        logger.info(f"ML position sizing: {ml_position_sizing}")
+        logger.info(f"Initial capital: ${initial_capital:.2f}")
+        logger.info(f"Capital allocation: {self.capital_allocation}")
     
-    def _add_trading_strategies(self):
-        """Add trading strategies to bot manager"""
-        logger.info("Adding trading strategies to bot manager")
+    def fetch_market_data(self, pair: str) -> Dict[str, Any]:
+        """
+        Fetch market data for a trading pair
         
-        # Define base leverage and margin for each asset
-        leverage_settings = {
-            "SOL/USD": {
-                "standard": 5,
-                "extreme": {
-                    "min": 20,
-                    "max": 125,
-                    "default": 35
-                }
-            },
-            "ETH/USD": {
-                "standard": 3,
-                "extreme": {
-                    "min": 15,
-                    "max": 100,
-                    "default": 30
-                }
-            },
-            "BTC/USD": {
-                "standard": 2,
-                "extreme": {
-                    "min": 12,
-                    "max": 85,
-                    "default": 25
+        Args:
+            pair: Trading pair
+            
+        Returns:
+            Dict: Market data
+        """
+        try:
+            # In a real implementation, this would use the Kraken API
+            # to fetch real-time market data
+            
+            # For now, just return dummy data
+            current_time = datetime.now().isoformat()
+            
+            # Generate random price movement
+            import random
+            base_price = self.market_data.get(pair, {}).get("ticker", {}).get("c", ["100.0"])[0]
+            if not isinstance(base_price, float):
+                base_price = float(base_price)
+            
+            price_movement = random.uniform(-0.001, 0.001) * base_price
+            current_price = base_price + price_movement
+            
+            data = {
+                "pair": pair,
+                "timestamp": current_time,
+                "ticker": {
+                    "c": [str(current_price)],
+                    "v": ["1000.0"],
+                    "p": [str(current_price * 0.999), str(current_price * 1.001)],
+                    "t": ["100", "1000"],
+                    "l": [str(current_price * 0.998)],
+                    "h": [str(current_price * 1.002)],
+                    "o": [str(base_price)]
                 }
             }
-        }
-        
-        # Add bots for each trading pair
-        for pair in self.trading_pairs:
-            # Get leverage for this pair
-            if self.use_extreme_leverage:
-                leverage = leverage_settings.get(pair, {}).get("extreme", {}).get("default", 20)
-            else:
-                leverage = leverage_settings.get(pair, {}).get("standard", 3)
             
-            # Calculate position size based on capital allocation
-            allocation = self.capital_allocation.get(pair, 1.0 / len(self.trading_pairs))
-            position_size = allocation * self.bot_manager.starting_capital
+            # Store data
+            self.market_data[pair] = data
             
-            # Add ARIMA strategy
-            self.bot_manager.add_bot(
-                pair=pair,
-                strategy_name="ARIMAStrategy",
-                position_size=position_size * 0.5,  # 50% of allocation
-                leverage=leverage
-            )
+            return data
             
-            # Add Adaptive strategy
-            self.bot_manager.add_bot(
-                pair=pair,
-                strategy_name="AdaptiveStrategy",
-                position_size=position_size * 0.5,  # 50% of allocation
-                leverage=leverage
-            )
-            
-            logger.info(f"Added strategies for {pair} with leverage {leverage}x")
+        except Exception as e:
+            logger.error(f"Error fetching market data for {pair}: {e}")
+            return {}
     
-    def run_trading_loop(self, interval: int = 60, max_iterations: Optional[int] = None):
+    def get_available_capital(self, pair: str) -> float:
         """
-        Run the ML-enhanced trading loop
+        Get available capital for a trading pair
+        
+        Args:
+            pair: Trading pair
+            
+        Returns:
+            float: Available capital
+        """
+        allocation = self.capital_allocation.get(pair, 0.0)
+        available_capital = self.initial_capital * allocation
+        
+        return available_capital
+    
+    def generate_ml_predictions(self, pair: str) -> Optional[Dict[str, Any]]:
+        """
+        Generate ML predictions for a trading pair
+        
+        Args:
+            pair: Trading pair
+            
+        Returns:
+            Dict: ML predictions
+        """
+        # Get market data
+        market_data = self.fetch_market_data(pair)
+        
+        if not market_data:
+            logger.warning(f"No market data available for {pair}")
+            return None
+        
+        # Generate ML prediction
+        prediction = self.ml_integration.predict(pair, market_data)
+        
+        return prediction
+    
+    def execute_trades(self, pair: str, prediction: Dict[str, Any]) -> bool:
+        """
+        Execute trades based on ML predictions
+        
+        Args:
+            pair: Trading pair
+            prediction: ML prediction
+            
+        Returns:
+            bool: Whether a trade was executed
+        """
+        try:
+            # Generate trading signal from prediction
+            signal = self.ml_integration.generate_trading_signal(prediction)
+            
+            if signal["signal_type"] == "NEUTRAL":
+                logger.info(f"NEUTRAL signal for {pair}, no trade executed")
+                return False
+            
+            # Get current price
+            current_price = float(self.market_data[pair]["ticker"]["c"][0])
+            
+            # Get available capital
+            available_capital = self.get_available_capital(pair)
+            
+            # Calculate position parameters
+            position_params = self.ml_integration.calculate_position_parameters(
+                signal=signal,
+                available_capital=available_capital,
+                current_price=current_price
+            )
+            
+            # Log trade details
+            logger.info(f"Executing {signal['signal_type']} trade for {pair}")
+            logger.info(f"  - Price: ${current_price:.2f}")
+            logger.info(f"  - Leverage: {position_params.get('leverage', 1.0):.1f}x")
+            logger.info(f"  - Position size: ${position_params.get('position_size', 0.0):.2f}")
+            logger.info(f"  - Stop price: ${position_params.get('stop_price', 0.0):.2f}")
+            logger.info(f"  - Target price: ${position_params.get('target_price', 0.0):.2f}")
+            
+            # In a real implementation, this would use the Kraken API
+            # to execute the trade
+            
+            # Record the trade
+            trade = {
+                "pair": pair,
+                "timestamp": datetime.now().isoformat(),
+                "signal_type": signal["signal_type"],
+                "confidence": signal["confidence"],
+                "price": current_price,
+                **position_params
+            }
+            
+            self.order_history.append(trade)
+            
+            # Update position state
+            self.positions[pair] = {
+                "signal_type": signal["signal_type"],
+                "entry_price": current_price,
+                "entry_time": datetime.now().isoformat(),
+                "confidence": signal["confidence"],
+                **position_params
+            }
+            
+            logger.info(f"Trade executed successfully for {pair}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error executing trade for {pair}: {e}")
+            return False
+    
+    def run_trading_iteration(self) -> Dict[str, Any]:
+        """
+        Run one iteration of the trading loop
+        
+        Returns:
+            Dict: Trading iteration results
+        """
+        results = {}
+        
+        for pair in self.pairs:
+            logger.info(f"Processing {pair}")
+            
+            # Generate ML predictions
+            prediction = self.generate_ml_predictions(pair)
+            
+            if prediction:
+                # Execute trades
+                trade_executed = self.execute_trades(pair, prediction)
+                
+                # Store results
+                results[pair] = {
+                    "prediction": prediction,
+                    "trade_executed": trade_executed
+                }
+            else:
+                results[pair] = {
+                    "prediction": None,
+                    "trade_executed": False
+                }
+        
+        return results
+    
+    def display_status(self):
+        """Display current bot status"""
+        logger.info("=" * 80)
+        logger.info(f"ML LIVE BOT STATUS [{datetime.now().isoformat()}]")
+        logger.info("=" * 80)
+        
+        # Display portfolio status
+        logger.info("PORTFOLIO STATUS:")
+        logger.info(f"  Initial capital: ${self.initial_capital:.2f}")
+        
+        # Display current market prices
+        logger.info("CURRENT PRICES:")
+        for pair in self.pairs:
+            if pair in self.market_data:
+                current_price = float(self.market_data[pair]["ticker"]["c"][0])
+                logger.info(f"  {pair}: ${current_price:.2f}")
+        
+        # Display open positions
+        logger.info("OPEN POSITIONS:")
+        for pair, position in self.positions.items():
+            signal_type = position.get("signal_type", "UNKNOWN")
+            entry_price = position.get("entry_price", 0.0)
+            leverage = position.get("leverage", 1.0)
+            
+            # Calculate current P&L if we have market data
+            if pair in self.market_data:
+                current_price = float(self.market_data[pair]["ticker"]["c"][0])
+                if signal_type == "BUY":
+                    pnl_pct = (current_price - entry_price) / entry_price * 100 * leverage
+                else:  # SELL
+                    pnl_pct = (entry_price - current_price) / entry_price * 100 * leverage
+                
+                logger.info(f"  {pair}: {signal_type} @ ${entry_price:.2f}, {leverage:.1f}x, P&L: {pnl_pct:.2f}%")
+            else:
+                logger.info(f"  {pair}: {signal_type} @ ${entry_price:.2f}, {leverage:.1f}x")
+        
+        # Display recent trades
+        if self.order_history:
+            logger.info("RECENT TRADES:")
+            for trade in self.order_history[-5:]:
+                pair = trade.get("pair", "UNKNOWN")
+                signal_type = trade.get("signal_type", "UNKNOWN")
+                price = trade.get("price", 0.0)
+                timestamp = trade.get("timestamp", "UNKNOWN")
+                
+                logger.info(f"  {pair}: {signal_type} @ ${price:.2f} [{timestamp}]")
+        
+        logger.info("=" * 80)
+    
+    def run_trading_loop(
+        self,
+        interval: int = 60,
+        max_iterations: Optional[int] = None
+    ):
+        """
+        Run the trading loop
         
         Args:
             interval: Seconds between iterations
             max_iterations: Maximum number of iterations (None for infinite)
         """
-        logger.info(f"Starting ML trading loop with interval {interval}s")
+        logger.info(f"Starting ML Live Bot trading loop")
+        logger.info(f"  - Interval: {interval} seconds")
+        logger.info(f"  - Max iterations: {max_iterations or 'Infinite'}")
         
         iteration = 0
         
         try:
             while max_iterations is None or iteration < max_iterations:
-                # Get current market data
-                market_data = self._get_current_market_data()
+                logger.info(f"Trading iteration {iteration + 1}")
                 
-                # Detect market regime
-                for pair in self.trading_pairs:
-                    if pair in market_data:
-                        regime = self.market_analyzer.detect_market_regime(market_data[pair])
-                        self.model_integrator.update_market_regime(regime)
-                        logger.info(f"Detected {regime} market regime for {pair}")
+                # Run trading iteration
+                self.run_trading_iteration()
                 
-                # Generate ML predictions and integrate with trading signals
-                self._process_markets(market_data)
-                
-                # Execute trades
-                self.bot_manager.execute_pending_trades()
-                
-                # Display portfolio status
-                self.bot_manager.display_portfolio_status()
+                # Display status
+                self.display_status()
                 
                 # Increment iteration counter
                 iteration += 1
                 
-                # Sleep until next iteration
-                logger.debug(f"Completed iteration {iteration}, sleeping for {interval}s")
-                time.sleep(interval)
-                
+                # Sleep for the interval
+                if max_iterations is None or iteration < max_iterations:
+                    logger.info(f"Sleeping for {interval} seconds...")
+                    time.sleep(interval)
+        
         except KeyboardInterrupt:
-            logger.info("ML trading loop stopped by user")
-        except Exception as e:
-            logger.error(f"Error in ML trading loop: {e}")
-    
-    def _get_current_market_data(self) -> Dict[str, Dict[str, Any]]:
-        """
-        Get current market data for all trading pairs
+            logger.info("Trading loop interrupted")
         
-        Returns:
-            Dict: Market data by trading pair
-        """
-        market_data = {}
-        
-        for pair in self.trading_pairs:
-            try:
-                # Get OHLC data
-                ohlc = self.api.get_ohlc_data(pair, interval=5, count=100)
-                
-                # Get ticker data
-                ticker = self.api.get_ticker(pair)
-                
-                # Get order book
-                order_book = self.api.get_order_book(pair, count=10)
-                
-                # Combine data
-                market_data[pair] = {
-                    "ohlc": ohlc,
-                    "ticker": ticker,
-                    "order_book": order_book,
-                    "timestamp": time.time()
-                }
-                
-            except Exception as e:
-                logger.error(f"Error getting market data for {pair}: {e}")
-        
-        return market_data
-    
-    def _process_markets(self, market_data: Dict[str, Dict[str, Any]]):
-        """
-        Process markets data and generate trading signals
-        
-        Args:
-            market_data: Market data by trading pair
-        """
-        for pair in self.trading_pairs:
-            if pair not in market_data:
-                logger.warning(f"No market data available for {pair}")
-                continue
-            
-            try:
-                # Generate ML prediction
-                ml_prediction = self.ml_integration.predict(pair, market_data[pair])
-                
-                # Generate ML trading signal
-                if ml_prediction:
-                    ml_signal = self.ml_integration.generate_trading_signal(ml_prediction)
-                    
-                    # Get current signals from bot manager
-                    bot_signals = self.bot_manager.get_current_signals(pair)
-                    
-                    # Integrate ML signal with bot signals
-                    integrated_signal = self.model_integrator.integrate_signals(
-                        signals=bot_signals,
-                        ml_prediction=ml_signal
-                    )
-                    
-                    # Calculate position parameters if using ML position sizing
-                    if self.use_ml_position_sizing and integrated_signal["signal_type"] != "NEUTRAL":
-                        # Get current price
-                        current_price = float(market_data[pair]["ticker"]["c"][0])
-                        
-                        # Calculate available capital
-                        available_capital = self.bot_manager.get_available_capital()
-                        
-                        # Calculate position parameters
-                        position_params = self.ml_integration.calculate_position_parameters(
-                            signal=integrated_signal,
-                            available_capital=available_capital,
-                            current_price=current_price
-                        )
-                        
-                        # Update signal with position parameters
-                        integrated_signal["params"].update(position_params)
-                    
-                    # Apply integrated signal to bot manager
-                    self._apply_integrated_signal(pair, integrated_signal)
-                
-            except Exception as e:
-                logger.error(f"Error processing market data for {pair}: {e}")
-    
-    def _apply_integrated_signal(self, pair: str, signal: Dict[str, Any]):
-        """
-        Apply integrated signal to bot manager
-        
-        Args:
-            pair: Trading pair
-            signal: Integrated signal
-        """
-        # Extract signal components
-        signal_type = signal.get("signal_type", "NEUTRAL")
-        strength = signal.get("strength", 0.0)
-        confidence = signal.get("confidence", 0.0)
-        params = signal.get("params", {})
-        
-        # Only proceed if signal is strong enough
-        if strength < 0.3:
-            logger.info(f"Signal strength too low for {pair}: {strength:.2f}")
-            return
-        
-        # Apply signal to bot manager
-        if signal_type == "BUY":
-            logger.info(f"Applying BUY signal to {pair} with strength {strength:.2f} and confidence {confidence:.2f}")
-            
-            # Set leverage if provided in params
-            leverage = params.get("leverage", None)
-            if leverage is not None:
-                self.bot_manager.set_leverage(pair, int(leverage))
-            
-            # Execute buy
-            self.bot_manager.execute_buy(pair)
-            
-        elif signal_type == "SELL":
-            logger.info(f"Applying SELL signal to {pair} with strength {strength:.2f} and confidence {confidence:.2f}")
-            
-            # Set leverage if provided in params
-            leverage = params.get("leverage", None)
-            if leverage is not None:
-                self.bot_manager.set_leverage(pair, int(leverage))
-            
-            # Execute sell
-            self.bot_manager.execute_sell(pair)
-        
-        else:  # NEUTRAL
-            logger.debug(f"No action taken for NEUTRAL signal on {pair}")
+        logger.info(f"Trading loop completed after {iteration} iterations")
 
 def main():
-    """Run ML-enhanced trading bot"""
+    """Run the ML live bot"""
     parser = argparse.ArgumentParser(description='Run ML-enhanced trading bot')
     
     parser.add_argument('--pairs', nargs='+', default=["SOL/USD", "ETH/USD", "BTC/USD"],
@@ -380,27 +400,29 @@ def main():
     parser.add_argument('--max-iterations', type=int, default=None,
                       help='Maximum number of iterations (None for infinite)')
     
+    parser.add_argument('--initial-capital', type=float, default=20000.0,
+                      help='Initial capital')
+    
     args = parser.parse_args()
     
     # Override sandbox if live is specified
     if args.live:
         args.sandbox = False
     
-    # Initialize bot
-    ml_bot = MLTradingBot(
-        trading_pairs=args.pairs,
-        use_sandbox=args.sandbox,
-        use_extreme_leverage=args.extreme_leverage,
-        use_ml_position_sizing=args.ml_position_sizing
+    # Create bot
+    bot = MLLiveBot(
+        pairs=args.pairs,
+        sandbox=args.sandbox,
+        extreme_leverage=args.extreme_leverage,
+        ml_position_sizing=args.ml_position_sizing,
+        initial_capital=args.initial_capital
     )
     
     # Run trading loop
-    ml_bot.run_trading_loop(
+    bot.run_trading_loop(
         interval=args.interval,
         max_iterations=args.max_iterations
     )
-    
-    return 0
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

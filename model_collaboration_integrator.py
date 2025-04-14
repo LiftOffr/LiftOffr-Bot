@@ -2,17 +2,17 @@
 """
 Model Collaboration Integrator
 
-This module provides the integration layer between ML models and trading strategies,
-enabling collaborative decision making based on market regimes and strategy performance.
+This module provides a central hub for connecting ML predictions to trading signals.
 """
 
 import os
 import sys
 import json
 import logging
-import datetime
-from typing import Dict, List, Any, Optional, Tuple
-import numpy as np
+import time
+import random
+from typing import List, Dict, Any, Optional, Tuple
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(
@@ -27,534 +27,534 @@ logger = logging.getLogger(__name__)
 
 class ModelCollaborationIntegrator:
     """
-    Integrator for ML models and trading strategies that facilitates
-    collaborative decision making based on market regimes.
+    Model Collaboration Integrator
+    
+    A central hub for connecting ML predictions to trading signals.
+    This integrator arbitrates between:
+    1. Multiple ML models (transformer, TCN, LSTM)
+    2. Traditional strategies (ARIMA, Adaptive)
+    3. Different assets (SOL/USD, ETH/USD, BTC/USD)
     """
     
     def __init__(
         self,
-        config_path: str = "models/ensemble/strategy_ensemble_weights.json",
-        strategies: Optional[List[str]] = None,
-        enable_adaptive_weights: bool = True,
-        learning_rate: float = 0.01,
-        log_level: str = "INFO"
+        assets: List[str] = ["SOL/USD", "ETH/USD", "BTC/USD"],
+        strategies: List[str] = ["MLStrategy", "ARIMAStrategy", "AdaptiveStrategy"],
+        use_ml_position_sizing: bool = False
     ):
         """
         Initialize the model collaboration integrator
         
         Args:
-            config_path: Path to collaboration configuration
-            strategies: List of strategy names (if None, load from config)
-            enable_adaptive_weights: Whether to allow adaptive weights
-            learning_rate: Rate at which to update strategy weights
-            log_level: Logging level
+            assets: Trading assets to support
+            strategies: Trading strategies to arbitrate
+            use_ml_position_sizing: Whether to use ML for position sizing
         """
-        self.config_path = config_path
+        self.assets = assets
         self.strategies = strategies
-        self.enable_adaptive_weights = enable_adaptive_weights
-        self.learning_rate = learning_rate
+        self.use_ml_position_sizing = use_ml_position_sizing
         
-        # Set logging level
-        logger.setLevel(getattr(logging, log_level))
+        # Store the latest predictions and signals
+        self.ml_predictions = {}
+        self.strategy_signals = {}
+        self.arbitrated_signals = {}
         
-        # Load configuration
-        self.config = self._load_config()
+        # Track performance for adaptive weighting
+        self.performance_history = {}
+        self.strategy_weights = self._initialize_strategy_weights()
         
-        # Set default strategy weights if not found in config
-        if "strategy_weights" not in self.config:
-            self.config["strategy_weights"] = self._initialize_strategy_weights()
+        # Configure market regime detection
+        self.market_regimes = {}
+        self.regime_weights = self._initialize_regime_weights()
         
-        # Set default regime if not provided
-        self.current_regime = self.config.get("default_regime", "neutral")
-        
-        # Initialize performance tracking
-        if "performance" not in self.config:
-            self.config["performance"] = {}
-        
-        logger.info(f"Model Collaboration Integrator initialized with {len(self.config['strategy_weights'])} strategies")
-    
-    def _load_config(self) -> Dict[str, Any]:
-        """
-        Load collaboration configuration
-        
-        Returns:
-            Dict: Collaboration configuration
-        """
-        default_config = {
-            "strategy_weights": {},
-            "default_regime": "neutral",
-            "regimes": ["trending_bullish", "trending_bearish", "volatile", "neutral", "ranging"],
-            "performance": {},
-            "last_updated": datetime.datetime.now().isoformat()
-        }
-        
-        try:
-            # Create directory for config if it doesn't exist
-            os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
-            
-            # Load from file if it exists
-            if os.path.exists(self.config_path):
-                with open(self.config_path, 'r') as f:
-                    config = json.load(f)
-                logger.info(f"Loaded collaboration configuration from {self.config_path}")
-            else:
-                # Create default config file
-                config = default_config
-                with open(self.config_path, 'w') as f:
-                    json.dump(config, f, indent=4)
-                logger.info(f"Created default collaboration configuration at {self.config_path}")
-            
-            return config
-            
-        except Exception as e:
-            logger.error(f"Error loading collaboration configuration: {e}")
-            return default_config
+        logger.info(f"Model Collaboration Integrator initialized with {len(assets)} assets and {len(strategies)} strategies")
     
     def _initialize_strategy_weights(self) -> Dict[str, Dict[str, float]]:
         """
         Initialize strategy weights
         
         Returns:
-            Dict: Strategy weights by regime
+            Dict: Strategy weights by asset and strategy
         """
-        # Get list of regimes
-        regimes = self.config.get("regimes", ["trending_bullish", "trending_bearish", "volatile", "neutral", "ranging"])
-        
-        # Get list of strategies
-        strategies = self.strategies or ["ARIMAStrategy", "AdaptiveStrategy", "IntegratedStrategy", "MLStrategy"]
-        
-        # Initialize weights
         weights = {}
         
-        for regime in regimes:
-            regime_weights = {}
+        for asset in self.assets:
+            asset_weights = {}
             
-            # Set initial weights based on regime
-            for strategy in strategies:
-                if "ARIMA" in strategy:
-                    # ARIMA works well in ranging and trending markets
-                    if regime in ["ranging", "trending_bullish", "trending_bearish"]:
-                        regime_weights[strategy] = 0.3
-                    else:
-                        regime_weights[strategy] = 0.2
-                elif "Adaptive" in strategy:
-                    # Adaptive works well in volatile markets
-                    if regime in ["volatile"]:
-                        regime_weights[strategy] = 0.3
-                    else:
-                        regime_weights[strategy] = 0.2
-                elif "Integrated" in strategy:
-                    # Integrated works well in all markets
-                    regime_weights[strategy] = 0.25
-                elif "ML" in strategy:
-                    # ML strategy starts with a conservative weight
-                    regime_weights[strategy] = 0.25
+            # Set default weights based on strategy type
+            for strategy in self.strategies:
+                if strategy == "MLStrategy":
+                    asset_weights[strategy] = 0.60  # 60% weight to ML
+                elif strategy == "ARIMAStrategy":
+                    asset_weights[strategy] = 0.25  # 25% weight to ARIMA
+                elif strategy == "AdaptiveStrategy":
+                    asset_weights[strategy] = 0.15  # 15% weight to Adaptive
                 else:
-                    # Unknown strategy gets a default weight
-                    regime_weights[strategy] = 0.1
+                    asset_weights[strategy] = 0.10  # 10% weight to other strategies
             
-            # Normalize weights to sum to 1.0
-            total_weight = sum(regime_weights.values())
-            for strategy in regime_weights:
-                regime_weights[strategy] /= total_weight
-            
-            weights[regime] = regime_weights
+            weights[asset] = asset_weights
         
         return weights
     
-    def update_market_regime(self, regime: str):
+    def _initialize_regime_weights(self) -> Dict[str, Dict[str, float]]:
         """
-        Update current market regime
+        Initialize regime weights for different market conditions
         
-        Args:
-            regime: Market regime
-        """
-        # Validate regime
-        regimes = self.config.get("regimes", ["trending_bullish", "trending_bearish", "volatile", "neutral", "ranging"])
-        
-        if regime not in regimes:
-            logger.warning(f"Unknown regime: {regime}, defaulting to neutral")
-            regime = "neutral"
-        
-        self.current_regime = regime
-        logger.info(f"Updated market regime to {regime}")
-    
-    def get_strategy_weights(self, regime: Optional[str] = None) -> Dict[str, float]:
-        """
-        Get strategy weights for a specific regime
-        
-        Args:
-            regime: Market regime (None for current)
-            
         Returns:
-            Dict: Strategy weights
+            Dict: Regime weights by market regime and strategy
         """
-        if regime is None:
-            regime = self.current_regime
-        
-        # Get weights for regime
-        weights = self.config.get("strategy_weights", {}).get(regime, {})
-        
-        if not weights:
-            logger.warning(f"No weights found for regime: {regime}, using defaults")
-            weights = self._initialize_strategy_weights().get(regime, {})
-        
-        return weights
-    
-    def register_performance(
-        self,
-        strategy: str,
-        outcome: float,
-        signal_type: str,
-        regime: str,
-        details: Optional[Dict[str, Any]] = None
-    ):
-        """
-        Register strategy performance for adaptive weight adjustment
-        
-        Args:
-            strategy: Strategy name
-            outcome: Performance outcome (-1 to 1, where 1 is best)
-            signal_type: Signal type (BUY, SELL, NEUTRAL)
-            regime: Market regime
-            details: Additional performance details
-        """
-        if not self.enable_adaptive_weights:
-            return
-        
-        # Validate outcome
-        outcome = max(-1.0, min(1.0, outcome))
-        
-        # Update performance tracking
-        if strategy not in self.config["performance"]:
-            self.config["performance"][strategy] = []
-        
-        # Add performance record
-        performance_record = {
-            "strategy": strategy,
-            "outcome": outcome,
-            "signal_type": signal_type,
-            "regime": regime,
-            "timestamp": datetime.datetime.now().isoformat(),
-            "details": details or {}
+        weights = {
+            "trending_up": {
+                "MLStrategy": 0.60,
+                "ARIMAStrategy": 0.30,
+                "AdaptiveStrategy": 0.10
+            },
+            "trending_down": {
+                "MLStrategy": 0.65,
+                "ARIMAStrategy": 0.25,
+                "AdaptiveStrategy": 0.10
+            },
+            "volatile": {
+                "MLStrategy": 0.70,
+                "ARIMAStrategy": 0.20,
+                "AdaptiveStrategy": 0.10
+            },
+            "sideways": {
+                "MLStrategy": 0.55,
+                "ARIMAStrategy": 0.25,
+                "AdaptiveStrategy": 0.20
+            },
+            "uncertain": {
+                "MLStrategy": 0.50,
+                "ARIMAStrategy": 0.30,
+                "AdaptiveStrategy": 0.20
+            }
         }
         
-        self.config["performance"][strategy].append(performance_record)
-        
-        # Limit history size
-        max_history = 1000
-        if len(self.config["performance"][strategy]) > max_history:
-            self.config["performance"][strategy] = self.config["performance"][strategy][-max_history:]
-        
-        # Update weights based on performance
-        self._update_weights_based_on_performance(strategy, outcome, regime)
-        
-        # Save updated config
-        self._save_config()
-        
-        logger.info(f"Registered performance for {strategy} in {regime} regime: {outcome:.2f}")
+        return weights
     
-    def _update_weights_based_on_performance(
+    def detect_market_regime(
         self,
-        strategy: str,
-        outcome: float,
-        regime: str
-    ):
+        asset: str,
+        market_data: Dict[str, Any]
+    ) -> str:
         """
-        Update strategy weights based on performance
+        Detect the current market regime
         
         Args:
-            strategy: Strategy name
-            outcome: Performance outcome (-1 to 1, where 1 is best)
-            regime: Market regime
-        """
-        if strategy not in self.config["strategy_weights"].get(regime, {}):
-            logger.warning(f"Strategy {strategy} not found in weights for regime {regime}")
-            return
-        
-        # Get current weights
-        weights = self.config["strategy_weights"].get(regime, {})
-        
-        # Calculate weight adjustment
-        adjustment = outcome * self.learning_rate
-        
-        # Update weight for this strategy
-        weights[strategy] = max(0.05, min(0.95, weights[strategy] + adjustment))
-        
-        # Adjust other weights to maintain sum of 1.0
-        total_weight = sum(weights.values())
-        scaling_factor = 1.0 / total_weight
-        
-        for s in weights:
-            weights[s] *= scaling_factor
-        
-        # Update config
-        self.config["strategy_weights"][regime] = weights
-    
-    def _save_config(self):
-        """Save configuration to file"""
-        try:
-            self.config["last_updated"] = datetime.datetime.now().isoformat()
+            asset: Trading asset
+            market_data: Market data
             
-            with open(self.config_path, 'w') as f:
-                json.dump(self.config, f, indent=4)
-        except Exception as e:
-            logger.error(f"Error saving collaboration configuration: {e}")
-    
-    def get_performance_metrics(self) -> Dict[str, Any]:
-        """
-        Get performance metrics for all strategies
-        
         Returns:
-            Dict: Performance metrics
+            str: Market regime
         """
-        metrics = {}
-        
-        for strategy, performances in self.config.get("performance", {}).items():
-            if not performances:
-                continue
+        try:
+            # In a real implementation, this would analyze the market data
+            # to determine the current market regime.
             
-            # Calculate overall metrics
-            outcomes = [p.get("outcome", 0.0) for p in performances]
-            metrics[strategy] = {
-                "mean_outcome": sum(outcomes) / len(outcomes),
-                "count": len(outcomes),
-                "positive_rate": sum(1 for o in outcomes if o > 0) / len(outcomes),
-                "negative_rate": sum(1 for o in outcomes if o < 0) / len(outcomes)
+            # For demonstration, randomly choose a regime with a bias toward volatile
+            regimes = ["trending_up", "trending_down", "volatile", "sideways", "uncertain"]
+            weights = [0.2, 0.2, 0.3, 0.2, 0.1]  # Bias toward volatile
+            
+            regime = random.choices(regimes, weights=weights, k=1)[0]
+            
+            # Store the detected regime
+            self.market_regimes[asset] = regime
+            
+            logger.info(f"Detected {regime} market regime for {asset}")
+            return regime
+            
+        except Exception as e:
+            logger.error(f"Error detecting market regime for {asset}: {e}")
+            return "uncertain"
+    
+    def register_ml_prediction(
+        self,
+        asset: str,
+        prediction: Dict[str, Any]
+    ) -> None:
+        """
+        Register an ML prediction
+        
+        Args:
+            asset: Trading asset
+            prediction: ML prediction
+        """
+        self.ml_predictions[asset] = prediction
+        logger.info(f"Registered ML prediction for {asset}")
+    
+    def register_strategy_signal(
+        self,
+        asset: str,
+        strategy: str,
+        signal: Dict[str, Any]
+    ) -> None:
+        """
+        Register a strategy signal
+        
+        Args:
+            asset: Trading asset
+            strategy: Strategy name
+            signal: Strategy signal
+        """
+        # Initialize if needed
+        if asset not in self.strategy_signals:
+            self.strategy_signals[asset] = {}
+        
+        self.strategy_signals[asset][strategy] = signal
+        logger.info(f"Registered {signal.get('signal_type', 'UNKNOWN')} signal from {strategy} for {asset}")
+    
+    def _combine_signals(
+        self,
+        asset: str,
+        market_regime: str
+    ) -> Dict[str, Any]:
+        """
+        Combine signals from all strategies for an asset
+        
+        Args:
+            asset: Trading asset
+            market_regime: Current market regime
+            
+        Returns:
+            Dict: Combined signal
+        """
+        if asset not in self.strategy_signals or not self.strategy_signals[asset]:
+            return {
+                "signal_type": "NEUTRAL",
+                "strength": 0.0,
+                "confidence": 0.0,
+                "asset": asset,
+                "strategy": "Combined",
+                "params": {}
             }
-            
-            # Calculate regime-specific metrics
-            regime_metrics = {}
-            for regime in self.config.get("regimes", []):
-                regime_outcomes = [p.get("outcome", 0.0) for p in performances if p.get("regime") == regime]
-                
-                if regime_outcomes:
-                    regime_metrics[regime] = {
-                        "mean_outcome": sum(regime_outcomes) / len(regime_outcomes),
-                        "count": len(regime_outcomes),
-                        "positive_rate": sum(1 for o in regime_outcomes if o > 0) / len(regime_outcomes),
-                        "negative_rate": sum(1 for o in regime_outcomes if o < 0) / len(regime_outcomes)
-                    }
-            
-            metrics[strategy]["regime_metrics"] = regime_metrics
         
-        return metrics
+        # Get regime weights
+        regime_weights = self.regime_weights.get(market_regime, {})
+        
+        # Get asset-specific weights
+        asset_weights = self.strategy_weights.get(asset, {})
+        
+        # Combine weights with preference to the regime
+        combined_weights = {}
+        for strategy in self.strategies:
+            regime_weight = regime_weights.get(strategy, 0.5)
+            asset_weight = asset_weights.get(strategy, 0.5)
+            combined_weights[strategy] = (regime_weight * 0.7) + (asset_weight * 0.3)
+        
+        # Normalize weights to sum to 1.0
+        weight_sum = sum(combined_weights.values())
+        if weight_sum > 0:
+            combined_weights = {k: v / weight_sum for k, v in combined_weights.items()}
+        
+        # Initialize vote counters
+        signal_votes = {
+            "BUY": {"weight": 0.0, "count": 0, "strength": 0.0, "confidence": 0.0},
+            "SELL": {"weight": 0.0, "count": 0, "strength": 0.0, "confidence": 0.0},
+            "NEUTRAL": {"weight": 0.0, "count": 0, "strength": 0.0, "confidence": 0.0}
+        }
+        
+        # Gather votes
+        for strategy, signal in self.strategy_signals[asset].items():
+            signal_type = signal.get("signal_type", "NEUTRAL")
+            strength = signal.get("strength", 0.0)
+            confidence = signal.get("confidence", 0.5)
+            
+            weight = combined_weights.get(strategy, 0.0)
+            
+            # Add vote
+            signal_votes[signal_type]["weight"] += weight
+            signal_votes[signal_type]["count"] += 1
+            signal_votes[signal_type]["strength"] += strength * weight
+            signal_votes[signal_type]["confidence"] += confidence * weight
+        
+        # Determine the combined signal
+        best_signal = "NEUTRAL"
+        best_weight = 0.0
+        
+        for signal_type, vote in signal_votes.items():
+            if vote["weight"] > best_weight:
+                best_weight = vote["weight"]
+                best_signal = signal_type
+        
+        # Calculate strength and confidence
+        strength = 0.0
+        confidence = 0.5
+        
+        if signal_votes[best_signal]["count"] > 0:
+            strength = signal_votes[best_signal]["strength"] / signal_votes[best_signal]["weight"] if signal_votes[best_signal]["weight"] > 0 else 0.0
+            confidence = signal_votes[best_signal]["confidence"] / signal_votes[best_signal]["weight"] if signal_votes[best_signal]["weight"] > 0 else 0.5
+        
+        # Build combined signal
+        combined_signal = {
+            "signal_type": best_signal,
+            "strength": strength,
+            "confidence": confidence,
+            "asset": asset,
+            "strategy": "Combined",
+            "market_regime": market_regime,
+            "params": {
+                "strategy_weights": combined_weights,
+                "signal_votes": signal_votes
+            }
+        }
+        
+        return combined_signal
     
     def arbitrate_signals(
         self,
-        signals: Dict[str, Dict[str, Any]],
-        regime: Optional[str] = None
+        asset: str,
+        market_data: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Arbitrate between multiple competing signals
+        Arbitrate between strategy signals for an asset
         
         Args:
-            signals: Signals by strategy
-            regime: Market regime (None for current)
+            asset: Trading asset
+            market_data: Optional market data
             
         Returns:
             Dict: Arbitrated signal
         """
-        if not signals:
+        try:
+            # Detect market regime if we have market data
+            market_regime = "uncertain"
+            if market_data:
+                market_regime = self.detect_market_regime(asset, market_data)
+            elif asset in self.market_regimes:
+                market_regime = self.market_regimes[asset]
+            
+            # Combine signals
+            combined_signal = self._combine_signals(asset, market_regime)
+            
+            # Store the arbitrated signal
+            self.arbitrated_signals[asset] = combined_signal
+            
+            logger.info(f"Arbitrated {combined_signal['signal_type']} signal for {asset} in {market_regime} regime")
+            return combined_signal
+            
+        except Exception as e:
+            logger.error(f"Error arbitrating signals for {asset}: {e}")
             return {
                 "signal_type": "NEUTRAL",
                 "strength": 0.0,
-                "strategy": "Collaboration",
-                "confidence": 0.0
+                "confidence": 0.0,
+                "asset": asset,
+                "strategy": "Combined",
+                "params": {}
             }
-        
-        # Use current regime if not specified
-        if regime is None:
-            regime = self.current_regime
-        
-        # Get strategy weights for this regime
-        weights = self.get_strategy_weights(regime)
-        
-        # Calculate weighted signals
-        buy_score = 0.0
-        sell_score = 0.0
-        neutral_score = 0.0
-        weighted_strength = 0.0
-        weighted_confidence = 0.0
-        weighted_params = {}
-        
-        for strategy, signal in signals.items():
-            # Get strategy weight
-            weight = weights.get(strategy, 0.1)
-            
-            # Get signal properties
-            signal_type = signal.get("signal_type", "NEUTRAL")
-            strength = signal.get("strength", 0.0)
-            
-            # Optional confidence
-            confidence = signal.get("confidence", strength)
-            
-            # Calculate weighted contribution
-            weighted_value = weight * strength
-            
-            # Add to signal type scores
-            if signal_type == "BUY":
-                buy_score += weighted_value
-            elif signal_type == "SELL":
-                sell_score += weighted_value
-            else:  # NEUTRAL
-                neutral_score += weighted_value
-            
-            # Add to weighted strength and confidence
-            weighted_strength += weight * strength
-            weighted_confidence += weight * confidence
-            
-            # Merge params (for leverage, position size, etc.)
-            for key, value in signal.get("params", {}).items():
-                if key in weighted_params:
-                    weighted_params[key] = weighted_params[key] + (weight * value)
-                else:
-                    weighted_params[key] = weight * value
-        
-        # Determine final signal type
-        final_type = "NEUTRAL"
-        max_score = max(buy_score, sell_score, neutral_score)
-        
-        if max_score == buy_score and buy_score > neutral_score:
-            final_type = "BUY"
-        elif max_score == sell_score and sell_score > neutral_score:
-            final_type = "SELL"
-        
-        # Build final signal
-        final_signal = {
-            "signal_type": final_type,
-            "strength": weighted_strength,
-            "strategy": "Collaboration",
-            "confidence": weighted_confidence,
-            "params": weighted_params,
-            "regime": regime,
-            "component_signals": signals
-        }
-        
-        logger.info(f"Arbitrated signals: BUY={buy_score:.2f}, SELL={sell_score:.2f}, NEUTRAL={neutral_score:.2f} → {final_type}")
-        return final_signal
     
-    def integrate_signals(
+    def update_strategy_performance(
         self,
-        signals: Dict[str, Dict[str, Any]],
-        ml_prediction: Optional[Dict[str, Any]] = None,
-        regime: Optional[str] = None
-    ) -> Dict[str, Any]:
+        asset: str,
+        strategy: str,
+        trade_result: Dict[str, Any]
+    ) -> None:
         """
-        Integrate strategy signals with ML prediction
+        Update strategy performance
         
         Args:
-            signals: Signals by strategy
-            ml_prediction: ML prediction (if available)
-            regime: Market regime (None for current)
-            
-        Returns:
-            Dict: Integrated signal
+            asset: Trading asset
+            strategy: Strategy name
+            trade_result: Trade result
         """
-        # If ML prediction is available, add it to signals
-        if ml_prediction:
-            ml_signal = {
-                "signal_type": ml_prediction.get("signal_type", "NEUTRAL"),
-                "strength": ml_prediction.get("strength", 0.0),
-                "confidence": ml_prediction.get("confidence", 0.0),
-                "strategy": "MLStrategy",
-                "params": ml_prediction.get("params", {})
-            }
+        try:
+            # Initialize if needed
+            if asset not in self.performance_history:
+                self.performance_history[asset] = {}
             
-            signals["MLStrategy"] = ml_signal
-        
-        # Arbitrate between signals
-        return self.arbitrate_signals(signals, regime)
+            if strategy not in self.performance_history[asset]:
+                self.performance_history[asset][strategy] = []
+            
+            # Add trade result to performance history
+            self.performance_history[asset][strategy].append(trade_result)
+            
+            # Limit history size
+            max_history = 100
+            if len(self.performance_history[asset][strategy]) > max_history:
+                self.performance_history[asset][strategy] = self.performance_history[asset][strategy][-max_history:]
+            
+            # Update strategy weights based on performance
+            self._update_strategy_weights(asset)
+            
+            logger.info(f"Updated performance for {strategy} on {asset}")
+            
+        except Exception as e:
+            logger.error(f"Error updating strategy performance for {strategy} on {asset}: {e}")
     
-    def resolve_conflicts(
-        self,
-        signals: Dict[str, Dict[str, Any]],
-        regime: Optional[str] = None
-    ) -> Dict[str, Any]:
+    def _update_strategy_weights(self, asset: str) -> None:
         """
-        Resolve conflicts between strategy signals
+        Update strategy weights based on performance
         
         Args:
-            signals: Signals by strategy
-            regime: Market regime (None for current)
+            asset: Trading asset
+        """
+        # Initialize if needed
+        if asset not in self.strategy_weights:
+            self.strategy_weights[asset] = {}
+            for strategy in self.strategies:
+                self.strategy_weights[asset][strategy] = 1.0 / len(self.strategies)
+        
+        if asset not in self.performance_history:
+            return
+        
+        # Calculate performance scores
+        performance_scores = {}
+        
+        for strategy in self.strategies:
+            if strategy not in self.performance_history[asset] or not self.performance_history[asset][strategy]:
+                performance_scores[strategy] = 0.0
+                continue
             
-        Returns:
-            Dict: Resolved signal
-        """
-        # Simple wrapper around arbitrate_signals for clearer API
-        return self.arbitrate_signals(signals, regime)
+            # Consider only recent trades
+            recent_trades = self.performance_history[asset][strategy][-20:]
+            
+            # Calculate score based on profitability
+            profit_sum = sum(trade.get("profit_pct", 0.0) for trade in recent_trades)
+            win_count = sum(1 for trade in recent_trades if trade.get("profit_pct", 0.0) > 0)
+            
+            # Calculate win rate and average profit
+            win_rate = win_count / len(recent_trades) if recent_trades else 0.0
+            avg_profit = profit_sum / len(recent_trades) if recent_trades else 0.0
+            
+            # Calculate score (higher is better)
+            score = (win_rate * 0.6) + (avg_profit * 0.4 * 10)  # Scale profit
+            performance_scores[strategy] = max(0.1, score)  # Minimum weight of 0.1
+        
+        # Normalize scores to get weights
+        score_sum = sum(performance_scores.values())
+        if score_sum > 0:
+            new_weights = {strategy: score / score_sum for strategy, score in performance_scores.items()}
+            
+            # Apply gradual changes (70% new, 30% old) to avoid drastic shifts
+            for strategy in self.strategies:
+                old_weight = self.strategy_weights[asset].get(strategy, 0.0)
+                new_weight = new_weights.get(strategy, 0.0)
+                self.strategy_weights[asset][strategy] = (new_weight * 0.7) + (old_weight * 0.3)
+            
+            # Re-normalize to ensure they sum to 1.0
+            weight_sum = sum(self.strategy_weights[asset].values())
+            if weight_sum > 0:
+                self.strategy_weights[asset] = {k: v / weight_sum for k, v in self.strategy_weights[asset].items()}
+            
+            logger.info(f"Updated strategy weights for {asset}: {self.strategy_weights[asset]}")
     
-    def get_collaborative_confidence(
+    def get_enhanced_position_size(
         self,
-        signal: Dict[str, Any]
-    ) -> float:
+        asset: str,
+        signal: Dict[str, Any],
+        base_position_size: float
+    ) -> Tuple[float, Dict[str, Any]]:
         """
-        Get collaborative confidence score for a signal
+        Get enhanced position size based on ML confidence
         
         Args:
+            asset: Trading asset
             signal: Trading signal
+            base_position_size: Base position size
             
         Returns:
-            float: Confidence score (0-1)
+            Tuple[float, Dict]: Enhanced position size and details
         """
-        # Extract from arbitrated signal if available
-        if "confidence" in signal:
-            return signal["confidence"]
+        if not self.use_ml_position_sizing:
+            return base_position_size, {
+                "position_sizing": "base",
+                "position_size": base_position_size
+            }
         
-        # Otherwise calculate from strength
-        return signal.get("strength", 0.0)
+        try:
+            # Get confidence from signal
+            confidence = signal.get("confidence", 0.5)
+            
+            # Get market regime
+            market_regime = signal.get("market_regime", "uncertain")
+            
+            # Adjust base size based on market regime
+            regime_factors = {
+                "trending_up": 1.5,    # Increase size in uptrends
+                "trending_down": 1.2,  # Moderately increase in downtrends
+                "volatile": 1.8,       # Largest increase in volatile markets
+                "sideways": 0.8,       # Reduce size in sideways markets
+                "uncertain": 0.5       # Smallest size in uncertain markets
+            }
+            
+            regime_factor = regime_factors.get(market_regime, 1.0)
+            
+            # Adjust by confidence
+            # Scale from 0.5-1.0 range to 0.0-1.0 range
+            confidence_adjusted = (confidence - 0.5) * 2.0 if confidence > 0.5 else 0.0
+            
+            # Calculate confidence factor (0.5-1.5 range)
+            confidence_factor = 0.5 + confidence_adjusted
+            
+            # Combine factors
+            combined_factor = regime_factor * confidence_factor
+            
+            # Apply to base position size (max: 2.5x, min: 0.25x)
+            enhanced_size = base_position_size * combined_factor
+            enhanced_size = max(0.25 * base_position_size, min(2.5 * base_position_size, enhanced_size))
+            
+            details = {
+                "position_sizing": "enhanced",
+                "base_size": base_position_size,
+                "confidence": confidence,
+                "confidence_factor": confidence_factor,
+                "market_regime": market_regime,
+                "regime_factor": regime_factor,
+                "combined_factor": combined_factor,
+                "position_size": enhanced_size
+            }
+            
+            logger.info(f"Enhanced position size for {asset}: {enhanced_size:.2f} (base: {base_position_size:.2f}, factor: {combined_factor:.2f})")
+            return enhanced_size, details
+            
+        except Exception as e:
+            logger.error(f"Error calculating enhanced position size for {asset}: {e}")
+            return base_position_size, {
+                "position_sizing": "base",
+                "position_size": base_position_size
+            }
 
 def main():
     """Test the model collaboration integrator"""
-    logging.basicConfig(level=logging.INFO)
+    integrator = ModelCollaborationIntegrator()
     
-    # Create integrator
-    integrator = ModelCollaborationIntegrator(
-        enable_adaptive_weights=True
-    )
+    # Register ML prediction
+    integrator.register_ml_prediction("SOL/USD", {
+        "direction": "BUY",
+        "confidence": 0.85,
+        "prediction": 1.2
+    })
     
-    # Create test signals
-    signals = {
-        "ARIMAStrategy": {
-            "signal_type": "BUY",
-            "strength": 0.7,
-            "strategy": "ARIMAStrategy",
-            "pair": "SOL/USD",
-            "params": {"leverage": 5.0}
-        },
-        "AdaptiveStrategy": {
-            "signal_type": "NEUTRAL",
-            "strength": 0.3,
-            "strategy": "AdaptiveStrategy",
-            "pair": "SOL/USD",
-            "params": {"leverage": 0.0}
-        },
-        "IntegratedStrategy": {
-            "signal_type": "BUY",
-            "strength": 0.6,
-            "strategy": "IntegratedStrategy",
-            "pair": "SOL/USD",
-            "params": {"leverage": 10.0}
-        }
-    }
+    # Register strategy signals
+    integrator.register_strategy_signal("SOL/USD", "MLStrategy", {
+        "signal_type": "BUY",
+        "strength": 0.85,
+        "confidence": 0.85
+    })
+    
+    integrator.register_strategy_signal("SOL/USD", "ARIMAStrategy", {
+        "signal_type": "BUY",
+        "strength": 0.70,
+        "confidence": 0.70
+    })
+    
+    integrator.register_strategy_signal("SOL/USD", "AdaptiveStrategy", {
+        "signal_type": "NEUTRAL",
+        "strength": 0.30,
+        "confidence": 0.50
+    })
     
     # Arbitrate signals
-    arbitrated = integrator.arbitrate_signals(signals)
+    signal = integrator.arbitrate_signals("SOL/USD")
     
-    # Print result
-    print(json.dumps(arbitrated, indent=2))
+    # Get enhanced position size
+    position_size, details = integrator.get_enhanced_position_size("SOL/USD", signal, 1000.0)
     
-    # Register performance
-    integrator.register_performance(
-        strategy="ARIMAStrategy",
-        outcome=0.5,
-        signal_type="BUY",
-        regime="trending_bullish"
-    )
-    
-    # Print updated weights
-    print("Updated weights:")
-    print(json.dumps(integrator.get_strategy_weights("trending_bullish"), indent=2))
+    # Print results
+    print(f"Arbitrated Signal: {signal['signal_type']} with {signal['confidence']:.2f} confidence")
+    print(f"Enhanced Position Size: ${position_size:.2f}")
+    print(f"Details: {json.dumps(details, indent=2)}")
 
 if __name__ == "__main__":
     main()

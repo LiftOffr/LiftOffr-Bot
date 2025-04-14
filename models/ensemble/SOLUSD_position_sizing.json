@@ -1,0 +1,22 @@
+{
+    "asset": "SOL/USD",
+    "created": "2025-04-14T02:41:53.979465",
+    "extreme_leverage": true,
+    "leverage_range": {
+        "min": 20,
+        "max": 125,
+        "default": 35
+    },
+    "position_sizing": {
+        "base_size": 0.05,
+        "min_size": 0.01,
+        "max_size": 0.2,
+        "confidence_scaling": true
+    },
+    "risk_parameters": {
+        "max_drawdown": 0.15,
+        "profit_target": 0.3,
+        "stop_loss": 0.04,
+        "trailing_stop": true
+    }
+}
