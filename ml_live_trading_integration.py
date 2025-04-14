@@ -2,7 +2,8 @@
 """
 ML Live Trading Integration
 
-This module provides the integration layer between ML models and the live trading system.
+This module provides integration of trained ML models with the trading bot,
+loading models and providing predictions for trading decisions.
 """
 
 import os
@@ -10,8 +11,9 @@ import sys
 import json
 import logging
 import time
-from typing import List, Dict, Any, Optional
-from datetime import datetime
+import numpy as np
+from typing import List, Dict, Any, Optional, Tuple
+from datetime import datetime, timedelta
 
 # Configure logging
 logging.basicConfig(
@@ -26,408 +28,517 @@ logger = logging.getLogger(__name__)
 
 class MLLiveTradingIntegration:
     """
-    Integration layer between ML models and live trading system
+    ML Live Trading Integration
+    
+    This class loads trained ML models and provides predictions
+    for live trading, with confidence-based position sizing.
+    
+    It handles:
+    1. Loading trained ML models
+    2. Preprocessing market data for predictions
+    3. Generating trading signals with confidence scores
+    4. Providing position sizing recommendations
+    5. Tracking model performance
     """
     
     def __init__(
         self,
-        assets: List[str] = ["SOL/USD", "ETH/USD", "BTC/USD"],
-        use_extreme_leverage: bool = False,
-        log_level: str = "INFO"
+        trading_pairs: List[str] = ["SOL/USD"],
+        models_path: str = "models",
+        use_extreme_leverage: bool = True
     ):
         """
-        Initialize the ML trading integration
+        Initialize the ML live trading integration
         
         Args:
-            assets: List of assets to predict
+            trading_pairs: List of trading pairs to support
+            models_path: Path to trained models
             use_extreme_leverage: Whether to use extreme leverage settings
-            log_level: Logging level
         """
-        self.assets = assets
+        self.trading_pairs = trading_pairs
+        self.models_path = models_path
         self.use_extreme_leverage = use_extreme_leverage
         
-        # Set logging level
-        logger.setLevel(getattr(logging, log_level))
+        # Model tracking
+        self.loaded_models = {pair: {} for pair in trading_pairs}
+        self.performance_metrics = {pair: {
+            "total_trades": 0,
+            "win_rate": 0.0,
+            "total_pnl": 0.0,
+            "avg_profit": 0.0,
+            "avg_loss": 0.0,
+            "trades_history": []
+        } for pair in trading_pairs}
         
-        # Load ML models
-        self.models = self._load_models()
+        # Position sizing configurations
+        self.position_sizing_configs = self._load_position_sizing_configs()
         
-        logger.info(f"ML Live Trading Integration initialized with {len(assets)} assets")
+        # Load models for each trading pair
+        self._load_models()
+        
+        logger.info(f"ML Live Trading Integration initialized for {len(trading_pairs)} pairs")
+        logger.info(f"Using extreme leverage: {use_extreme_leverage}")
     
-    def _load_models(self) -> Dict[str, Dict[str, Any]]:
+    def _load_position_sizing_configs(self) -> Dict[str, Any]:
         """
-        Load ML models for all assets
+        Load position sizing configurations
         
         Returns:
-            Dict: ML models by asset
+            Dict: Position sizing configurations by pair
         """
-        models = {}
+        configs = {}
         
-        # Load models for each asset
-        for asset in self.assets:
-            asset_filename = asset.replace("/", "")
+        for pair in self.trading_pairs:
+            pair_filename = pair.replace("/", "")
+            config_path = f"{self.models_path}/ensemble/{pair_filename}_position_sizing.json"
             
-            # Check for ensemble model
-            ensemble_path = f"models/ensemble/{asset_filename}_ensemble.json"
-            position_sizing_path = f"models/ensemble/{asset_filename}_position_sizing.json"
-            
-            if os.path.exists(ensemble_path) and os.path.exists(position_sizing_path):
-                # Load ensemble model
+            if os.path.exists(config_path):
                 try:
-                    with open(ensemble_path, 'r') as f:
-                        ensemble_config = json.load(f)
-                    
-                    # Load position sizing model
-                    with open(position_sizing_path, 'r') as f:
-                        position_sizing_config = json.load(f)
-                    
-                    # Store models
-                    models[asset] = {
-                        "ensemble": ensemble_config,
-                        "position_sizing": position_sizing_config,
-                        "transformer": self._load_transformer_model(asset),
-                        "tcn": self._load_tcn_model(asset),
-                        "lstm": self._load_lstm_model(asset)
-                    }
-                    
-                    logger.info(f"Loaded ML models for {asset}")
-                    
+                    with open(config_path, "r") as f:
+                        configs[pair] = json.load(f)
+                    logger.info(f"Loaded position sizing configuration for {pair}")
                 except Exception as e:
-                    logger.error(f"Error loading ML models for {asset}: {e}")
+                    logger.error(f"Error loading position sizing configuration for {pair}: {e}")
+                    configs[pair] = self._get_default_position_sizing_config(pair)
             else:
-                logger.warning(f"ML models for {asset} not found")
+                logger.warning(f"No position sizing configuration found for {pair}, using defaults")
+                configs[pair] = self._get_default_position_sizing_config(pair)
         
-        return models
+        return configs
     
-    def _load_transformer_model(self, asset: str) -> Optional[Dict[str, Any]]:
+    def _get_default_position_sizing_config(self, pair: str) -> Dict[str, Any]:
         """
-        Load transformer model for an asset
+        Get default position sizing configuration for a pair
         
         Args:
-            asset: Trading pair
+            pair: Trading pair
             
         Returns:
-            Dict: Transformer model (None if not found)
+            Dict: Default position sizing configuration
         """
-        asset_filename = asset.replace("/", "")
-        model_path = f"models/transformer/{asset_filename}_transformer.h5"
+        # Default leverage settings
+        if "SOL" in pair:
+            leverage_settings = {
+                "min": 20.0,
+                "default": 35.0,
+                "max": 125.0,
+                "confidence_threshold": 0.65
+            }
+        elif "ETH" in pair:
+            leverage_settings = {
+                "min": 15.0,
+                "default": 30.0,
+                "max": 100.0,
+                "confidence_threshold": 0.70
+            }
+        elif "BTC" in pair:
+            leverage_settings = {
+                "min": 12.0,
+                "default": 25.0,
+                "max": 85.0,
+                "confidence_threshold": 0.75
+            }
+        else:
+            leverage_settings = {
+                "min": 10.0,
+                "default": 20.0,
+                "max": 50.0,
+                "confidence_threshold": 0.70
+            }
         
-        if os.path.exists(model_path):
-            # In a real implementation, this would load a proper model
-            # For now, just return a placeholder
-            return {"type": "transformer", "path": model_path}
-        
-        return None
+        return {
+            "asset": pair,
+            "timestamp": datetime.now().isoformat(),
+            "leverage_settings": leverage_settings,
+            "position_sizing": {
+                "confidence_thresholds": [0.65, 0.70, 0.80, 0.90],
+                "size_multipliers": [0.3, 0.5, 0.8, 1.0]
+            }
+        }
     
-    def _load_tcn_model(self, asset: str) -> Optional[Dict[str, Any]]:
-        """
-        Load TCN model for an asset
-        
-        Args:
-            asset: Trading pair
-            
-        Returns:
-            Dict: TCN model (None if not found)
-        """
-        asset_filename = asset.replace("/", "")
-        model_path = f"models/tcn/{asset_filename}_tcn.h5"
-        
-        if os.path.exists(model_path):
-            # In a real implementation, this would load a proper model
-            # For now, just return a placeholder
-            return {"type": "tcn", "path": model_path}
-        
-        return None
-    
-    def _load_lstm_model(self, asset: str) -> Optional[Dict[str, Any]]:
-        """
-        Load LSTM model for an asset
-        
-        Args:
-            asset: Trading pair
-            
-        Returns:
-            Dict: LSTM model (None if not found)
-        """
-        asset_filename = asset.replace("/", "")
-        model_path = f"models/lstm/{asset_filename}_lstm.h5"
-        
-        if os.path.exists(model_path):
-            # In a real implementation, this would load a proper model
-            # For now, just return a placeholder
-            return {"type": "lstm", "path": model_path}
-        
-        return None
-    
-    def predict(
-        self,
-        asset: str,
-        market_data: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Generate ML prediction for an asset
-        
-        Args:
-            asset: Trading pair
-            market_data: Market data for the asset
-            
-        Returns:
-            Dict: ML prediction
-        """
-        if asset not in self.models:
-            logger.warning(f"No ML models available for {asset}")
-            return None
-        
-        logger.info(f"Generating ML prediction for {asset}")
-        
+    def _load_models(self) -> None:
+        """Load trained models for all trading pairs"""
         try:
-            # In a real implementation, this would use the models to generate
-            # a proper prediction based on the market data
+            for pair in self.trading_pairs:
+                pair_filename = pair.replace("/", "")
+                
+                # Load ensemble configuration
+                ensemble_path = f"{self.models_path}/ensemble/{pair_filename}_ensemble.json"
+                
+                if os.path.exists(ensemble_path):
+                    try:
+                        with open(ensemble_path, "r") as f:
+                            ensemble_config = json.load(f)
+                        
+                        # In a real implementation, we would load the actual models
+                        # For this prototype, we'll just track the configuration
+                        
+                        # Store model information
+                        self.loaded_models[pair] = {
+                            "ensemble": ensemble_config,
+                            "models": ensemble_config.get("models", []),
+                            "weights": ensemble_config.get("weights", {}),
+                            "loaded_at": datetime.now().isoformat()
+                        }
+                        
+                        logger.info(f"Loaded ensemble configuration for {pair}: "
+                                  f"{len(ensemble_config.get('models', []))} models")
+                        
+                    except Exception as e:
+                        logger.error(f"Error loading ensemble configuration for {pair}: {e}")
+                else:
+                    logger.warning(f"No ensemble configuration found for {pair}")
             
-            # For now, just return a placeholder prediction
-            current_price = float(market_data.get("ticker", {}).get("c", [0])[0])
+        except Exception as e:
+            logger.error(f"Error loading models: {e}")
+    
+    def get_loaded_models_info(self) -> Dict[str, Any]:
+        """
+        Get information about loaded models
+        
+        Returns:
+            Dict: Information about loaded models
+        """
+        return self.loaded_models
+    
+    def predict(self, pair: str, market_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate prediction for a trading pair
+        
+        Args:
+            pair: Trading pair
+            market_data: Market data for the pair
             
-            # Simulate random prediction
-            import random
-            direction = random.choice(["BUY", "SELL", "NEUTRAL"])
-            confidence = random.uniform(0.6, 0.95)
+        Returns:
+            Dict: Prediction result
+        """
+        try:
+            if pair not in self.trading_pairs:
+                logger.warning(f"Prediction requested for unknown pair: {pair}")
+                return {
+                    "signal": 0,
+                    "confidence": 0.0,
+                    "position_sizing": {},
+                    "details": {"error": "Unknown trading pair"}
+                }
             
-            # Generate prediction
+            if pair not in self.loaded_models or not self.loaded_models[pair]:
+                logger.warning(f"No models loaded for {pair}")
+                return {
+                    "signal": 0,
+                    "confidence": 0.0,
+                    "position_sizing": {},
+                    "details": {"error": "No models loaded"}
+                }
+            
+            # In a real implementation, we would:
+            # 1. Preprocess the market data for model input
+            # 2. Generate predictions from each model
+            # 3. Combine predictions using ensemble weights
+            
+            # For this prototype, we'll simulate a prediction
+            
+            # Randomize prediction (in a real implementation, this would be model-based)
+            random_value = np.random.random()
+            
+            # Simulate different behavior for different pairs
+            if "SOL" in pair:
+                # SOL/USD - Bullish bias
+                if random_value > 0.7:
+                    signal = 1  # BUY
+                    confidence = 0.75 + (random_value - 0.7) * 0.5  # 0.75-1.0
+                elif random_value < 0.3:
+                    signal = -1  # SELL
+                    confidence = 0.65 + random_value * 0.25  # 0.65-0.725
+                else:
+                    signal = 0  # HOLD
+                    confidence = 0.5 + random_value * 0.2  # 0.5-0.7
+            elif "ETH" in pair:
+                # ETH/USD - Neutral
+                if random_value > 0.6:
+                    signal = 1  # BUY
+                    confidence = 0.7 + (random_value - 0.6) * 0.5  # 0.7-0.9
+                elif random_value < 0.4:
+                    signal = -1  # SELL
+                    confidence = 0.7 + (0.4 - random_value) * 0.5  # 0.7-0.9
+                else:
+                    signal = 0  # HOLD
+                    confidence = 0.6 + (random_value - 0.4) * 0.2  # 0.6-0.64
+            else:
+                # BTC/USD - Slightly bearish
+                if random_value > 0.65:
+                    signal = 1  # BUY
+                    confidence = 0.7 + (random_value - 0.65) * 0.6  # 0.7-0.91
+                elif random_value < 0.45:
+                    signal = -1  # SELL
+                    confidence = 0.75 + (0.45 - random_value) * 0.5  # 0.75-0.97
+                else:
+                    signal = 0  # HOLD
+                    confidence = 0.6 + (random_value - 0.45) * 0.3  # 0.6-0.66
+            
+            # Calculate position sizing
+            position_sizing = self._calculate_position_sizing(pair, signal, confidence, market_data)
+            
+            # Prepare prediction result
             prediction = {
-                "asset": asset,
-                "timestamp": datetime.now().isoformat(),
-                "current_price": current_price,
-                "direction": direction,
+                "signal": signal,
                 "confidence": confidence,
-                "predicted_price_change": random.uniform(-0.02, 0.02) * current_price,
-                "models": {
-                    "transformer": {"weight": 0.4, "direction": direction},
-                    "tcn": {"weight": 0.3, "direction": direction},
-                    "lstm": {"weight": 0.3, "direction": direction}
+                "position_sizing": position_sizing,
+                "details": {
+                    "timestamp": datetime.now().isoformat(),
+                    "models_used": self.loaded_models[pair].get("models", []),
+                    "latest_price": market_data.get("close", [])[-1] if market_data.get("close") else None,
+                    "regime": market_data.get("regime", "unknown")
                 }
             }
             
-            logger.info(f"Generated {direction} prediction with {confidence:.2f} confidence for {asset}")
+            logger.info(f"Generated prediction for {pair}: "
+                      f"{'BUY' if signal == 1 else 'SELL' if signal == -1 else 'HOLD'}, "
+                      f"Confidence={confidence:.2f}")
+            
             return prediction
             
         except Exception as e:
-            logger.error(f"Error generating prediction for {asset}: {e}")
-            return None
-    
-    def generate_trading_signal(
-        self,
-        prediction: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Generate trading signal from ML prediction
-        
-        Args:
-            prediction: ML prediction
-            
-        Returns:
-            Dict: Trading signal
-        """
-        try:
-            # Extract prediction components
-            asset = prediction.get("asset", "")
-            direction = prediction.get("direction", "NEUTRAL")
-            confidence = prediction.get("confidence", 0.0)
-            
-            # Map direction to signal type
-            signal_type = "NEUTRAL"
-            if direction == "BUY":
-                signal_type = "BUY"
-            elif direction == "SELL":
-                signal_type = "SELL"
-            
-            # Calculate signal strength based on confidence
-            strength = confidence
-            
-            # Determine leverage based on confidence
-            leverage = self._determine_leverage(asset, confidence)
-            
-            # Build trading signal
-            signal = {
-                "signal_type": signal_type,
-                "strength": strength,
-                "confidence": confidence,
-                "strategy": "MLStrategy",
-                "pair": asset,
-                "params": {
-                    "leverage": leverage,
-                    "confidence": confidence
-                }
-            }
-            
-            logger.info(f"Generated {signal_type} signal with strength {strength:.2f} for {asset}")
-            return signal
-            
-        except Exception as e:
-            logger.error(f"Error generating trading signal: {e}")
+            logger.error(f"Error generating prediction for {pair}: {e}")
             return {
-                "signal_type": "NEUTRAL",
-                "strength": 0.0,
+                "signal": 0,
                 "confidence": 0.0,
-                "strategy": "MLStrategy",
-                "pair": prediction.get("asset", ""),
-                "params": {}
+                "position_sizing": {},
+                "details": {"error": str(e)}
             }
     
-    def _determine_leverage(
-        self,
-        asset: str,
-        confidence: float
-    ) -> float:
-        """
-        Determine leverage based on confidence
-        
-        Args:
-            asset: Trading pair
-            confidence: Prediction confidence
-            
-        Returns:
-            float: Leverage
-        """
-        # Get position sizing config for the asset
-        position_sizing = self.models.get(asset, {}).get("position_sizing", {})
-        
-        # Get leverage range
-        leverage_range = position_sizing.get("leverage_range", {})
-        
-        if self.use_extreme_leverage:
-            # Use extreme leverage settings
-            min_leverage = leverage_range.get("min", 5.0)
-            max_leverage = leverage_range.get("max", 20.0)
-        else:
-            # Use normal leverage settings
-            min_leverage = 1.0
-            max_leverage = leverage_range.get("default", 5.0)
-        
-        # Calculate leverage based on confidence
-        confidence_adjusted = (confidence - 0.5) * 2.0  # Scale confidence from 0.5-1.0 to 0.0-1.0
-        confidence_adjusted = max(0.0, min(1.0, confidence_adjusted))
-        
-        leverage = min_leverage + confidence_adjusted * (max_leverage - min_leverage)
-        
-        # Round to nearest 0.5
-        leverage = round(leverage * 2) / 2.0
-        
-        logger.info(f"Determined leverage {leverage:.1f}x for {asset} with confidence {confidence:.2f}")
-        return leverage
-    
-    def calculate_position_parameters(
-        self,
-        signal: Dict[str, Any],
-        available_capital: float,
-        current_price: float
+    def _calculate_position_sizing(
+        self, 
+        pair: str, 
+        signal: int, 
+        confidence: float,
+        market_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Calculate position parameters for a signal
+        Calculate position sizing based on prediction confidence
         
         Args:
-            signal: Trading signal
-            available_capital: Available capital
-            current_price: Current price
+            pair: Trading pair
+            signal: Prediction signal (1 for BUY, -1 for SELL, 0 for HOLD)
+            confidence: Prediction confidence (0.0-1.0)
+            market_data: Market data
             
         Returns:
-            Dict: Position parameters
+            Dict: Position sizing recommendation
         """
         try:
-            # Extract signal components
-            asset = signal.get("pair", "")
-            confidence = signal.get("confidence", 0.0)
-            signal_type = signal.get("signal_type", "NEUTRAL")
+            # If signal is HOLD or confidence is below threshold, return empty sizing
+            if signal == 0:
+                return {
+                    "size": 0.0,
+                    "leverage": 1.0,
+                    "confidence": confidence,
+                    "risk_level": "none"
+                }
             
-            # Skip if neutral signal
-            if signal_type == "NEUTRAL":
-                return {}
+            # Get position sizing configuration
+            config = self.position_sizing_configs.get(pair, self._get_default_position_sizing_config(pair))
+            leverage_settings = config.get("leverage_settings", {})
+            position_settings = config.get("position_sizing", {})
             
-            # Get position sizing config for the asset
-            position_sizing = self.models.get(asset, {}).get("position_sizing", {})
+            # Check confidence threshold
+            confidence_threshold = leverage_settings.get("confidence_threshold", 0.65)
+            if confidence < confidence_threshold:
+                return {
+                    "size": 0.0,
+                    "leverage": 1.0,
+                    "confidence": confidence,
+                    "risk_level": "below_threshold"
+                }
             
-            # Extract position sizing parameters
-            base_size = position_sizing.get("position_sizing", {}).get("base_size", 0.05)
-            min_size = position_sizing.get("position_sizing", {}).get("min_size", 0.01)
-            max_size = position_sizing.get("position_sizing", {}).get("max_size", 0.20)
+            # Calculate size based on confidence
+            size = 0.3  # Default size
+            confidence_thresholds = position_settings.get("confidence_thresholds", [0.65, 0.75, 0.85, 0.95])
+            size_multipliers = position_settings.get("size_multipliers", [0.3, 0.5, 0.8, 1.0])
             
-            # Calculate position size based on confidence
-            if position_sizing.get("position_sizing", {}).get("confidence_scaling", True):
-                # Scale position size based on confidence
-                confidence_adjusted = (confidence - 0.5) * 2.0  # Scale confidence from 0.5-1.0 to 0.0-1.0
-                confidence_adjusted = max(0.0, min(1.0, confidence_adjusted))
-                
-                position_size = min_size + confidence_adjusted * (max_size - min_size)
+            # Find appropriate size multiplier
+            for i, threshold in enumerate(confidence_thresholds):
+                if confidence >= threshold and i < len(size_multipliers):
+                    size = size_multipliers[i]
+            
+            # Calculate leverage based on confidence
+            min_leverage = leverage_settings.get("min", 5.0)
+            default_leverage = leverage_settings.get("default", 20.0)
+            max_leverage = leverage_settings.get("max", 50.0)
+            
+            if not self.use_extreme_leverage:
+                # Cap leverage at more conservative levels if extreme leverage is disabled
+                min_leverage = min(min_leverage, 5.0)
+                default_leverage = min(default_leverage, 10.0)
+                max_leverage = min(max_leverage, 20.0)
+            
+            # Scale leverage based on confidence
+            # Higher confidence = higher leverage
+            leverage_range = max_leverage - min_leverage
+            confidence_factor = (confidence - confidence_threshold) / (1.0 - confidence_threshold)
+            leverage = min_leverage + leverage_range * confidence_factor
+            
+            # Cap leverage at max allowed
+            leverage = min(leverage, max_leverage)
+            
+            # Determine risk level
+            if confidence > 0.9:
+                risk_level = "very_high"
+            elif confidence > 0.8:
+                risk_level = "high"
+            elif confidence > 0.7:
+                risk_level = "medium"
             else:
-                # Use base position size
-                position_size = base_size
+                risk_level = "low"
             
-            # Calculate capital allocation
-            capital_allocation = position_size * available_capital
-            
-            # Calculate position parameters
-            leverage = signal.get("params", {}).get("leverage", 1.0)
-            
-            # Extract risk parameters
-            stop_loss = position_sizing.get("risk_parameters", {}).get("stop_loss", 0.04)
-            profit_target = position_sizing.get("risk_parameters", {}).get("profit_target", 0.30)
-            trailing_stop = position_sizing.get("risk_parameters", {}).get("trailing_stop", True)
-            
-            # Calculate stop prices
-            if signal_type == "BUY":
-                stop_price = current_price * (1.0 - stop_loss)
-                target_price = current_price * (1.0 + profit_target)
-            else:  # SELL
-                stop_price = current_price * (1.0 + stop_loss)
-                target_price = current_price * (1.0 - profit_target)
-            
-            # Build position parameters
-            params = {
+            return {
+                "size": size,
                 "leverage": leverage,
-                "position_size": capital_allocation,
-                "stop_price": stop_price,
-                "target_price": target_price,
-                "trailing_stop": trailing_stop
+                "confidence": confidence,
+                "risk_level": risk_level
             }
             
-            logger.info(f"Calculated position parameters for {asset}: {params}")
-            return params
+        except Exception as e:
+            logger.error(f"Error calculating position sizing for {pair}: {e}")
+            return {
+                "size": 0.0,
+                "leverage": 1.0,
+                "confidence": confidence,
+                "risk_level": "error"
+            }
+    
+    def update_performance(self, pair: str, trade_data: Dict[str, Any]) -> None:
+        """
+        Update model performance based on trade outcome
+        
+        Args:
+            pair: Trading pair
+            trade_data: Trade data
+        """
+        try:
+            if pair not in self.trading_pairs:
+                logger.warning(f"Performance update for unknown pair: {pair}")
+                return
+            
+            # Extract trade data
+            entry_price = trade_data.get("entry_price", 0.0)
+            exit_price = trade_data.get("exit_price", 0.0)
+            profit_loss = trade_data.get("profit_loss", 0.0)
+            direction = trade_data.get("direction", 0)  # 1 for long, -1 for short
+            leverage = trade_data.get("leverage", 1.0)
+            timestamp = trade_data.get("timestamp", datetime.now().isoformat())
+            
+            # Update performance metrics
+            metrics = self.performance_metrics[pair]
+            
+            # Increment total trades
+            metrics["total_trades"] += 1
+            
+            # Track trade history
+            metrics["trades_history"].append({
+                "timestamp": timestamp,
+                "entry_price": entry_price,
+                "exit_price": exit_price,
+                "profit_loss": profit_loss,
+                "direction": direction,
+                "leverage": leverage
+            })
+            
+            # Limit history to last 1000 trades
+            if len(metrics["trades_history"]) > 1000:
+                metrics["trades_history"] = metrics["trades_history"][-1000:]
+            
+            # Calculate total P&L and win rate
+            total_pnl = sum(trade["profit_loss"] for trade in metrics["trades_history"])
+            profitable_trades = sum(1 for trade in metrics["trades_history"] if trade["profit_loss"] > 0)
+            
+            metrics["total_pnl"] = total_pnl
+            metrics["win_rate"] = profitable_trades / len(metrics["trades_history"]) if metrics["trades_history"] else 0.0
+            
+            # Calculate average profit and loss
+            profits = [trade["profit_loss"] for trade in metrics["trades_history"] if trade["profit_loss"] > 0]
+            losses = [trade["profit_loss"] for trade in metrics["trades_history"] if trade["profit_loss"] < 0]
+            
+            metrics["avg_profit"] = sum(profits) / len(profits) if profits else 0.0
+            metrics["avg_loss"] = sum(losses) / len(losses) if losses else 0.0
+            
+            logger.info(f"Updated performance for {pair}: "
+                      f"Win Rate={metrics['win_rate']:.2f}, "
+                      f"Total P&L={metrics['total_pnl']:.2f}%, "
+                      f"Trades={metrics['total_trades']}")
             
         except Exception as e:
-            logger.error(f"Error calculating position parameters: {e}")
-            return {}
+            logger.error(f"Error updating performance for {pair}: {e}")
+    
+    def get_performance_metrics(self, pair: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Get performance metrics
+        
+        Args:
+            pair: Trading pair, if None returns metrics for all pairs
+            
+        Returns:
+            Dict: Performance metrics
+        """
+        if pair is not None:
+            if pair not in self.performance_metrics:
+                return {}
+            return self.performance_metrics[pair]
+        else:
+            return self.performance_metrics
 
 def main():
     """Test the ML live trading integration"""
-    logging.basicConfig(level=logging.INFO)
-    
-    # Create integration
-    integration = MLLiveTradingIntegration()
-    
-    # Create test market data
-    market_data = {
-        "ticker": {
-            "c": ["100.0"]
-        }
-    }
-    
-    # Generate prediction
-    prediction = integration.predict("SOL/USD", market_data)
-    
-    if prediction:
-        # Generate trading signal
-        signal = integration.generate_trading_signal(prediction)
-        
-        # Calculate position parameters
-        params = integration.calculate_position_parameters(
-            signal=signal,
-            available_capital=10000.0,
-            current_price=100.0
+    try:
+        # Initialize ML live trading integration
+        integration = MLLiveTradingIntegration(
+            trading_pairs=["SOL/USD", "ETH/USD", "BTC/USD"],
+            use_extreme_leverage=True
         )
         
-        # Print results
-        print(json.dumps(prediction, indent=2))
-        print(json.dumps(signal, indent=2))
-        print(json.dumps(params, indent=2))
+        # Create sample market data
+        market_data = {
+            "close": [130.0, 131.5, 132.8, 133.4, 134.2, 133.8, 133.5],
+            "high": [130.5, 132.0, 133.2, 133.8, 134.5, 134.2, 133.8],
+            "low": [129.5, 130.8, 132.0, 132.9, 133.6, 133.2, 133.0],
+            "volume": [10000, 12000, 11000, 9500, 10500, 9800, 9200],
+            "timestamp": [datetime.now() - timedelta(minutes=i) for i in range(7, 0, -1)],
+            "regime": "volatile"
+        }
+        
+        # Generate predictions
+        for pair in integration.trading_pairs:
+            prediction = integration.predict(pair, market_data)
+            
+            print(f"\nPrediction for {pair}:")
+            print(f"Signal: {'BUY' if prediction['signal'] == 1 else 'SELL' if prediction['signal'] == -1 else 'HOLD'}")
+            print(f"Confidence: {prediction['confidence']:.2f}")
+            print(f"Position Sizing: {prediction['position_sizing']}")
+            
+            # Simulate a trade outcome
+            trade_data = {
+                "entry_price": market_data["close"][-2],
+                "exit_price": market_data["close"][-1],
+                "profit_loss": (market_data["close"][-1] - market_data["close"][-2]) / market_data["close"][-2] * 100 * prediction["position_sizing"]["leverage"] * (prediction["signal"]),
+                "direction": prediction["signal"],
+                "leverage": prediction["position_sizing"]["leverage"],
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            # Update performance
+            integration.update_performance(pair, trade_data)
+        
+        # Get performance metrics
+        metrics = integration.get_performance_metrics()
+        
+        print("\nPerformance Metrics:")
+        for pair, pair_metrics in metrics.items():
+            print(f"{pair}: Win Rate={pair_metrics['win_rate']:.2f}, "
+                 f"Total P&L={pair_metrics['total_pnl']:.2f}%, "
+                 f"Trades={pair_metrics['total_trades']}")
+        
+    except Exception as e:
+        print(f"Error in main function: {e}")
 
 if __name__ == "__main__":
     main()

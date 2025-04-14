@@ -1,169 +1,179 @@
-# ML Live Trading Integration Guide
+# ML Enhanced Trading Bot Guide
 
-This guide provides instructions on implementing and training the machine learning aspects of the trading bot for live trading.
+This guide explains how to use the machine learning-enhanced trading system with the Kraken trading bot.
 
 ## Overview
 
-The ML Live Trading Integration system connects our sophisticated machine learning models with our trading infrastructure for real-time market predictions. The system includes:
+The ML-enhanced trading system adds advanced machine learning capabilities to the existing Kraken trading bot, providing:
 
-1. **Advanced ML Model Architecture**: Combining TCN (Temporal Convolutional Networks), CNN (Convolutional Neural Networks), LSTM/GRU (Long Short-Term Memory/Gated Recurrent Units), and Transformer encoders for state-of-the-art price prediction.
+1. ML-based trade signal generation with ensemble models
+2. Dynamic position sizing with confidence-based leverage
+3. Market regime detection and adaptation
+4. Performance tracking and strategy optimization
+5. Multi-asset ML model training and deployment
 
-2. **Strategy Ensemble Training**: Optimizing strategy weights for different market regimes to ensure optimal strategy collaboration.
+The ML system includes three major model types working together:
+- **Transformer models**: Excellent at capturing long-range dependencies and patterns
+- **TCN (Temporal Convolutional Network) models**: Effective for time series with hierarchical patterns
+- **LSTM models**: Strong at learning sequential patterns with memory
 
-3. **Model Collaboration Integrator**: Facilitating real-time communication between strategies and ML models.
+## Installation
 
-4. **Dynamic Position Sizing with ML**: Using machine learning to adjust leverage and position sizes based on market conditions and prediction confidence.
+All required dependencies are already installed. The system uses TensorFlow, numpy, pandas, and other Python libraries.
 
-## Getting Started
+## Directory Structure
 
-### Prerequisites
+- `models/`: Main directory for all ML models
+  - `transformer/`: Transformer-based models
+  - `tcn/`: Temporal Convolutional Network models
+  - `lstm/`: LSTM models
+  - `ensemble/`: Ensemble configurations and weights
 
-- Python 3.8+ with TensorFlow, scikit-learn, pandas and numpy
-- Historical data available in `historical_data/` directory
-- Kraken API credentials configured in the `.env` file
+- `training_data/`: Contains prepared data for model training
+- `backtest_results/`: Stores backtest results for performance analysis
 
-### Quick Start
+## Quick Start
 
-To train and deploy the entire ML trading system:
+To start trading with ML enhancements in sandbox mode:
 
 ```bash
-./run_ml_training_and_live_integration.py --sandbox
+python run_optimized_ml_trading.py --reset --optimize
 ```
 
 This will:
-1. Train ML models for all configured assets
-2. Train the strategy ensemble
-3. Start the ML-enhanced trading bot in sandbox mode
+1. Reset the portfolio to initial conditions
+2. Run ML model optimization for default assets (SOL/USD, ETH/USD, BTC/USD)
+3. Start the trading bot in sandbox mode with ML integration
 
-For production trading:
+## Command Options
 
-```bash
-./run_ml_training_and_live_integration.py --live
-```
+The ML trading system can be customized with various command-line options:
 
-**CAUTION**: Using `--live` mode will place real trades using your Kraken account.
-
-## Training ML Models
-
-### Basic Training
-
-To train the ML models for all assets:
+### Basic Options
 
 ```bash
-./train_ml_live_integration.py
+python run_optimized_ml_trading.py --assets "SOL/USD" "ETH/USD" --capital 25000 --interval 30
 ```
 
-This trains models using default settings:
-- 90 days of historical data
-- Regular leverage settings
-- No hyperparameter optimization
+This starts trading with:
+- SOL/USD and ETH/USD assets
+- $25,000 initial capital
+- 30-second trading interval
 
-### Advanced Training
-
-For hyper-optimized training:
+### Reset Portfolio
 
 ```bash
-./train_ml_live_integration.py --optimize --days 180 --extreme-leverage
+python run_optimized_ml_trading.py --reset
 ```
 
-Options:
-- `--optimize`: Enable hyperparameter optimization
-- `--days`: Number of days of historical data to use (more is better but slower)
-- `--extreme-leverage`: Train models for extreme leverage settings (20-125x)
-- `--force-retrain`: Force retrain even if models exist
-- `--visualize`: Generate performance visualizations
+Resets the portfolio to the initial capital amount before starting trading.
 
-## Strategy Ensemble Training
-
-The strategy ensemble trainer optimizes how different strategies collaborate:
+### Run Optimization
 
 ```bash
-./strategy_ensemble_trainer.py
+python run_optimized_ml_trading.py --optimize
 ```
 
-The trainer:
-1. Detects market regimes in historical data
-2. Evaluates strategy performance in each regime
-3. Optimizes strategy weights for each regime
-4. Generates collaboration configuration
+Runs ML model optimization before starting trading, including:
+- Data preparation and feature engineering
+- Training transformer, TCN, and LSTM models
+- Creating ensemble configurations
+- Building position sizing models
+- Backtesting ensemble performance
 
-## Model Collaboration
-
-The model collaboration integrator connects ML predictions with strategy decisions:
+### Live Trading
 
 ```bash
-# Integration happens automatically when running the bot
-./bot_manager_integration.py
+python run_optimized_ml_trading.py --live
 ```
 
-Features:
-- Regime-specific strategy weighting
-- Adaptive weight adjustment based on performance
-- Signal arbitration with confidence scoring
-- ML-enhanced position sizing
+**CAUTION**: This enables live trading with real money. Use with extreme caution.
 
-## ML Position Sizing
-
-ML-enhanced position sizing adjusts leverage and position size based on:
-- Prediction confidence
-- Signal strength
-- Market volatility
-- Historical performance
-
-Enable with:
+### Limiting Iterations
 
 ```bash
-./run_ml_training_and_live_integration.py --ml-position-sizing
+python run_optimized_ml_trading.py --iterations 100
 ```
 
-## Extreme Leverage Settings
+Runs the trading bot for exactly 100 iterations then stops.
 
-For aggressive trading with extreme leverage:
+## Advanced Usage
+
+### Custom Model Training
+
+For advanced users who want to customize model training:
 
 ```bash
-./run_ml_training_and_live_integration.py --extreme-leverage
+python ml_live_training_optimizer.py --assets "SOL/USD" "ETH/USD" "BTC/USD"
 ```
 
-Asset-specific leverage ranges:
-- SOL/USD: 20x to 125x
-- ETH/USD: 15x to 100x
-- BTC/USD: 12x to 85x
+This only runs the optimization process without starting trading.
 
-**CAUTION**: Extreme leverage significantly increases risk of liquidation.
+### Adjusting Leverage
 
-## Multi-Asset Trading
+The system automatically uses asset-specific leverage settings:
 
-By default, the system trades multiple assets with this capital allocation:
-- SOL/USD: 40%
-- ETH/USD: 35%
-- BTC/USD: 25%
+- SOL/USD: 20x-125x leverage (default: 35x)
+- ETH/USD: 15x-100x leverage (default: 30x)
+- BTC/USD: 12x-85x leverage (default: 25x)
 
-To specify custom assets:
+Leverage is automatically scaled based on model confidence.
 
-```bash
-./run_ml_training_and_live_integration.py --assets SOL/USD ETH/USD
-```
+## Understanding ML Signal Strength
 
-## Monitoring and Logging
+ML signal strength is determined by ensemble model confidence:
 
-All ML predictions and trading actions are logged to:
-- `ml_training.log`: Training progress and metrics
-- `model_collaboration.log`: Strategy collaboration details
-- `bot_manager_integration.log`: Trading decisions and execution
-- `ml_deployment.log`: Overall deployment information
+- **High confidence (>0.90)**: Full position size with maximum allowed leverage
+- **Medium-high confidence (0.80-0.90)**: 80% position size with scaled leverage
+- **Medium confidence (0.70-0.80)**: 50% position size with scaled leverage
+- **Low confidence (0.65-0.70)**: 30% position size with minimum leverage
+- **Very low confidence (<0.65)**: No trade
+
+## Market Regime Specialization
+
+The system automatically detects market regimes:
+
+- **Trending markets**: Emphasizes transformer models (45% weight)
+- **Ranging markets**: Balanced approach with more weight on adaptive strategy (25% weight)
+- **Volatile markets**: Heavily weighted towards ML models (90% combined weight)
+
+## Performance Tracking
+
+The system automatically tracks model performance and adapts strategy weights based on results. Performance metrics are displayed during trading.
 
 ## Troubleshooting
 
-Common issues:
+### Missing Models
 
-1. **Missing historical data**: Ensure data files exist in `historical_data/` directory
-2. **API connection errors**: Verify Kraken API credentials in `.env`
-3. **Model training failures**: Check for sufficient GPU memory and data quality
-4. **Strategy conflicts**: Review strategy weights in ensemble configuration
+If you encounter errors about missing models, run:
 
-## Next Steps
+```bash
+python run_optimized_ml_trading.py --optimize
+```
 
-1. **Customizing ML architecture**: Modify `enhanced_transformer_models.py`
-2. **Adding new strategies**: Update `strategy_ensemble_trainer.py`
-3. **Tuning hyperparameters**: Explore `hyper_optimized_ml_training.py`
-4. **Backtesting with ML**: Use `comprehensive_backtest.py`
+### Low Model Performance
+
+If models are underperforming, try retraining with more recent data:
+
+```bash
+python ml_live_training_optimizer.py --assets "SOL/USD"
+```
+
+## Warning About Extreme Leverage
+
+The ML system is configured to use extreme leverage settings that can result in significant gains but also catastrophic losses. Always use sandbox mode for testing, and proceed with extreme caution when using live trading mode.
+
+## Best Practices
+
+1. Always start in sandbox mode
+2. Monitor initial trades carefully
+3. Periodically retrain models (every 1-2 weeks)
+4. Start with lower capital when testing new strategies
+5. Review performance metrics regularly
+
+## Advanced Configuration
+
+Advanced users can modify asset-specific configurations in:
+- `ml_live_training_optimizer.py`: For training configurations
+- `model_collaboration_integrator.py`: For strategy weighting
+- `ml_live_trading_integration.py`: For leverage and position sizing

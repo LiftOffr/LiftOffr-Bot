@@ -2,16 +2,17 @@
 """
 Start ML Trading Bot
 
-This script provides an easy way to start the ML-enhanced trading bot.
+This script provides a simple entry point for starting the ML-enhanced trading bot
+with the specified configuration.
 """
 
 import os
 import sys
 import argparse
-import subprocess
 import logging
 import time
-from typing import List, Dict, Any, Optional
+from datetime import datetime
+from typing import List, Dict, Any
 
 # Configure logging
 logging.basicConfig(
@@ -19,193 +20,242 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('ml_startup.log')
+        logging.FileHandler('start_ml_trading.log')
     ]
 )
 logger = logging.getLogger(__name__)
 
-def parse_arguments():
+def parse_args():
     """Parse command line arguments"""
-    parser = argparse.ArgumentParser(description='Start ML-enhanced trading bot')
+    parser = argparse.ArgumentParser(description='Start ML trading bot')
     
-    parser.add_argument('--pairs', nargs='+', default=["SOL/USD", "ETH/USD", "BTC/USD"],
-                      help='Trading pairs to trade')
+    parser.add_argument('--assets', nargs='+', default=["SOL/USD"],
+                       help='Assets to trade (default: SOL/USD)')
     
     parser.add_argument('--live', action='store_true',
-                      help='Run in live trading mode (not sandbox)')
+                       help='Enable live trading (use with caution)')
     
-    parser.add_argument('--sandbox', action='store_true', default=True,
-                      help='Use sandbox mode (no real trades)')
+    parser.add_argument('--reset-portfolio', action='store_true',
+                       help='Reset portfolio to initial state')
     
-    parser.add_argument('--extreme-leverage', action='store_true', default=True,
-                      help='Use extreme leverage settings (20-125x)')
+    parser.add_argument('--initial-capital', type=float, default=20000.0,
+                       help='Initial capital in USD (default: 20000.0)')
     
-    parser.add_argument('--ml-position-sizing', action='store_true', default=True,
-                      help='Use ML-enhanced position sizing')
+    parser.add_argument('--optimize-first', action='store_true',
+                       help='Run optimization before trading')
     
     parser.add_argument('--interval', type=int, default=60,
-                      help='Seconds between trading iterations')
+                       help='Trading interval in seconds (default: 60)')
     
-    parser.add_argument('--retrain', action='store_true',
-                      help='Retrain ML models before starting')
+    parser.add_argument('--max-iterations', type=int, default=None,
+                       help='Maximum number of trading iterations')
     
-    parser.add_argument('--capital', type=float, default=20000.0,
-                      help='Initial capital')
+    parser.add_argument('--extreme-leverage', action='store_true', default=True,
+                       help='Use extreme leverage settings (default: True)')
     
-    args = parser.parse_args()
+    parser.add_argument('--ml-position-sizing', action='store_true', default=True,
+                       help='Use ML for position sizing (default: True)')
     
-    # Override sandbox if live is specified
-    if args.live:
-        args.sandbox = False
-    
-    return args
+    return parser.parse_args()
 
-def verify_models(pairs: List[str], force_retrain: bool = False) -> bool:
-    """
-    Verify ML models exist for all pairs
-    
-    Args:
-        pairs: List of trading pairs
-        force_retrain: Whether to force retraining
-        
-    Returns:
-        bool: Whether models exist
-    """
-    models_exist = True
-    
-    for pair in pairs:
-        pair_filename = pair.replace("/", "")
-        
-        # Check for ensemble model
-        ensemble_path = f"models/ensemble/{pair_filename}_ensemble.json"
-        position_sizing_path = f"models/ensemble/{pair_filename}_position_sizing.json"
-        
-        if not os.path.exists(ensemble_path) or not os.path.exists(position_sizing_path) or force_retrain:
-            models_exist = False
-            break
-    
-    return models_exist
-
-def train_models(pairs: List[str], extreme_leverage: bool = False) -> bool:
-    """
-    Train ML models for all pairs
-    
-    Args:
-        pairs: List of trading pairs
-        extreme_leverage: Whether to use extreme leverage settings
-        
-    Returns:
-        bool: Whether training was successful
-    """
+def reset_portfolio(initial_capital: float) -> bool:
+    """Reset portfolio to initial state"""
     try:
-        # Build command
-        cmd = ["python", "train_ml_live_integration.py"]
+        logger.info(f"Resetting portfolio to ${initial_capital:.2f}")
         
-        # Add arguments
-        cmd.append("--assets")
-        cmd.extend(pairs)
+        # Import necessary modules
+        from bot_manager import BotManager
         
-        if extreme_leverage:
-            cmd.append("--extreme-leverage")
+        # Create a new bot manager
+        bot_manager = BotManager(
+            initial_capital=initial_capital,
+            sandbox_mode=True
+        )
         
-        cmd.append("--force-retrain")
+        # Save state
+        logger.info("Portfolio reset successful")
+        return True
         
-        # Run training
-        logger.info(f"Training ML models with command: {' '.join(cmd)}")
-        process = subprocess.run(cmd, capture_output=True, text=True)
-        
-        # Check result
-        if process.returncode == 0:
-            logger.info("Model training completed successfully")
-            return True
-        else:
-            logger.error(f"Model training failed: {process.stderr}")
-            return False
-            
     except Exception as e:
-        logger.error(f"Error training models: {e}")
+        logger.error(f"Failed to reset portfolio: {e}")
         return False
 
-def start_trading_bot(args) -> None:
-    """
-    Start the ML trading bot
-    
-    Args:
-        args: Command line arguments
-    """
+def optimize_ml_models(assets: List[str]) -> bool:
+    """Run ML model optimization"""
     try:
-        # Build command
-        cmd = ["python", "run_ml_live_bot.py"]
+        logger.info(f"Optimizing ML models for {assets}")
         
-        # Add arguments
-        cmd.append("--pairs")
-        cmd.extend(args.pairs)
+        # Import optimization module
+        from ml_live_training_optimizer import optimize_all_models
         
-        if args.live:
-            cmd.append("--live")
+        # Run optimization
+        success = optimize_all_models(assets)
+        
+        if success:
+            logger.info("ML model optimization completed successfully")
         else:
-            cmd.append("--sandbox")
+            logger.error("ML model optimization failed")
         
-        if args.extreme_leverage:
-            cmd.append("--extreme-leverage")
-        
-        if args.ml_position_sizing:
-            cmd.append("--ml-position-sizing")
-        
-        cmd.append("--interval")
-        cmd.append(str(args.interval))
-        
-        cmd.append("--initial-capital")
-        cmd.append(str(args.capital))
-        
-        # Run bot
-        logger.info(f"Starting ML trading bot with command: {' '.join(cmd)}")
-        process = subprocess.Popen(cmd)
-        
-        # Wait for process to finish
-        process.wait()
+        return success
         
     except Exception as e:
-        logger.error(f"Error starting trading bot: {e}")
+        logger.error(f"Error optimizing ML models: {e}")
+        return False
+
+def create_model_directories() -> bool:
+    """Create necessary directories for ML models"""
+    try:
+        # Create model directories
+        directories = [
+            "models",
+            "models/ensemble",
+            "models/transformer",
+            "models/tcn",
+            "models/lstm"
+        ]
+        
+        for directory in directories:
+            os.makedirs(directory, exist_ok=True)
+            logger.info(f"Created directory: {directory}")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error creating model directories: {e}")
+        return False
+
+def start_ml_trading(args) -> bool:
+    """Start ML trading bot"""
+    try:
+        # Import necessary modules
+        from ml_live_trading_integration import MLLiveTradingIntegration
+        from model_collaboration_integrator import ModelCollaborationIntegrator
+        from bot_manager_integration import MLTradingBotManager
+        
+        # Create ML integration
+        ml_integration = MLLiveTradingIntegration(
+            trading_pairs=args.assets,
+            use_extreme_leverage=args.extreme_leverage
+        )
+        
+        # Create model collaboration
+        model_collaboration = ModelCollaborationIntegrator(
+            trading_pairs=args.assets,
+            enable_adaptive_weights=True
+        )
+        
+        # Create ML trading bot manager
+        bot_manager = MLTradingBotManager(
+            trading_pairs=args.assets,
+            initial_capital=args.initial_capital,
+            ml_integration=ml_integration,
+            model_collaboration=model_collaboration,
+            sandbox_mode=not args.live,
+            use_ml_position_sizing=args.ml_position_sizing
+        )
+        
+        # Main trading loop
+        iteration = 0
+        running = True
+        
+        logger.info("Starting trading loop")
+        
+        try:
+            while running:
+                # Check if max iterations reached
+                if args.max_iterations and iteration >= args.max_iterations:
+                    logger.info(f"Reached maximum iterations ({args.max_iterations})")
+                    break
+                
+                # Log iteration
+                current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                logger.info(f"Iteration {iteration} at {current_time}")
+                
+                # Update market data
+                bot_manager.update_market_data()
+                
+                # Evaluate strategies
+                bot_manager.evaluate_strategies()
+                
+                # Execute trades
+                bot_manager.execute_trades()
+                
+                # Display status every 5 iterations
+                if iteration % 5 == 0:
+                    bot_manager.display_status()
+                
+                # Pause between iterations
+                time.sleep(args.interval)
+                
+                # Increment iteration counter
+                iteration += 1
+                
+        except KeyboardInterrupt:
+            logger.info("Trading interrupted by user")
+            running = False
+        
+        # Final status
+        bot_manager.display_status()
+        
+        # Save model collaboration weights
+        if model_collaboration:
+            model_collaboration.save_weights()
+        
+        logger.info("Trading completed")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error starting ML trading: {e}")
+        return False
 
 def main():
     """Main function"""
-    try:
-        # Parse arguments
-        args = parse_arguments()
-        
-        # Print startup message
-        print("=" * 80)
-        print("ML-ENHANCED TRADING BOT STARTUP")
-        print("=" * 80)
-        print(f"Trading pairs: {args.pairs}")
-        print(f"Mode: {'LIVE' if args.live else 'SANDBOX'}")
-        print(f"Extreme leverage: {args.extreme_leverage}")
-        print(f"ML position sizing: {args.ml_position_sizing}")
-        print(f"Initial capital: ${args.capital:.2f}")
-        print(f"Interval: {args.interval} seconds")
-        print("=" * 80)
-        
-        # Verify models exist
-        models_exist = verify_models(args.pairs, args.retrain)
-        
-        # Train models if needed
-        if not models_exist:
-            print("\nML models not found or retraining requested. Training models...")
-            success = train_models(args.pairs, args.extreme_leverage)
-            
-            if not success:
-                print("Error training models. Exiting.")
-                return
-        
-        # Start trading bot
-        print("\nStarting ML trading bot...")
-        start_trading_bot(args)
-        
-    except KeyboardInterrupt:
-        print("\nStartup interrupted")
-    except Exception as e:
-        logger.error(f"Error in startup: {e}")
+    # Parse arguments
+    args = parse_args()
+    
+    # Print banner
+    print("=" * 80)
+    print(f"ML TRADING BOT - {'LIVE' if args.live else 'SANDBOX'} MODE")
+    print("=" * 80)
+    print(f"Trading assets: {args.assets}")
+    print(f"Initial capital: ${args.initial_capital:.2f}")
+    print(f"Extreme leverage: {args.extreme_leverage}")
+    print(f"ML position sizing: {args.ml_position_sizing}")
+    print(f"Trading interval: {args.interval} seconds")
+    if args.max_iterations:
+        print(f"Maximum iterations: {args.max_iterations}")
+    print("=" * 80)
+    
+    # Confirm live trading
+    if args.live:
+        confirm = input("You are about to start LIVE trading. Type 'CONFIRM' to proceed: ")
+        if confirm != "CONFIRM":
+            print("Live trading not confirmed. Exiting.")
+            return
+    
+    # Create model directories
+    if not create_model_directories():
+        print("Failed to create model directories. Exiting.")
+        return
+    
+    # Reset portfolio if requested
+    if args.reset_portfolio:
+        if not reset_portfolio(args.initial_capital):
+            print("Failed to reset portfolio. Exiting.")
+            return
+    
+    # Optimize ML models if requested
+    if args.optimize_first:
+        if not optimize_ml_models(args.assets):
+            print("Failed to optimize ML models. Exiting.")
+            return
+    
+    # Start ML trading
+    if not start_ml_trading(args):
+        print("Failed to start ML trading. Exiting.")
+        return
+    
+    print("ML trading completed.")
 
 if __name__ == "__main__":
     main()
