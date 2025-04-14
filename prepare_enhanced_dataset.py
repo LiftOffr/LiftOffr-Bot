@@ -53,7 +53,7 @@ class EnhancedDatasetPreparation:
         pair: str,
         timeframe: str = "1h",
         output_dir: str = DEFAULT_OUTPUT_DIR,
-        min_samples: int = 5000
+        min_samples: int = 200
     ):
         """
         Initialize the dataset preparation
@@ -533,7 +533,7 @@ def main():
     parser.add_argument("--pair", type=str, required=True, help="Trading pair (e.g., 'SOL/USD')")
     parser.add_argument("--timeframe", type=str, default="1h", help="Timeframe (e.g., '1h', '4h', '1d')")
     parser.add_argument("--output-dir", type=str, default=DEFAULT_OUTPUT_DIR, help="Output directory for the dataset")
-    parser.add_argument("--min-samples", type=int, default=5000, help="Minimum number of samples required")
+    parser.add_argument("--min-samples", type=int, default=200, help="Minimum number of samples required")
     args = parser.parse_args()
     
     # Create dataset preparation object
