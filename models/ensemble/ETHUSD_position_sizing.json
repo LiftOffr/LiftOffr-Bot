@@ -1,9 +1,11 @@
 {
-  "base_risk_percentage": 0.02,
-  "max_risk_percentage": 0.05,
+  "base_risk_percentage": 0.025,
+  "max_risk_percentage": 0.06,
   "confidence_scaling": true,
   "volatility_scaling": true,
   "min_position_size": 0.001,
-  "max_position_size": 0.5,
-  "last_updated": "2025-04-14T18:16:00.793900"
+  "max_position_size": 0.6,
+  "signal_strength_threshold": 0.6,
+  "adaptive_sizing": true,
+  "last_updated": "2025-04-14T19:11:00.000000"
 }

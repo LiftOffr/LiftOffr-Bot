@@ -3,11 +3,12 @@
   "updated_at": "2025-04-14T16:49:11.278960",
   "global_settings": {
     "default_capital_allocation": {
-      "SOL/USD": 0.2,
-      "ETH/USD": 0.2,
-      "BTC/USD": 0.2,
-      "DOT/USD": 0.2,
-      "LINK/USD": 0.2
+      "SOL/USD": 0.166,
+      "ETH/USD": 0.166,
+      "BTC/USD": 0.166,
+      "DOT/USD": 0.166,
+      "LINK/USD": 0.166,
+      "ADA/USD": 0.17
     },
     "max_open_positions": 5,
     "portfolio_rebalance_interval": 24,
@@ -334,6 +335,41 @@
         "take_profit_pct": 0.05,
         "trailing_stop_pct": 0.02
       }
+    },
+    "ADA/USD": {
+      "trading_enabled": true,
+      "min_required_data": 2000,
+      "hyperparameters": {
+        "gru": {
+          "learning_rate": 0.0005,
+          "units": 128,
+          "dropout": 0.3,
+          "recurrent_dropout": 0.3
+        },
+        "lstm": {
+          "learning_rate": 0.0005,
+          "units": 128,
+          "dropout": 0.3,
+          "recurrent_dropout": 0.3
+        },
+        "tcn": {
+          "learning_rate": 0.0005,
+          "optimization": "adam"
+        }
+      },
+      "regime_weights": {
+        "bullish": 1.5,
+        "bearish": 1.2,
+        "sideways": 0.8,
+        "volatile": 2.0
+      },
+      "risk_params": {
+        "max_leverage": 125,
+        "confidence_threshold": 0.62,
+        "stop_loss_pct": 0.03,
+        "take_profit_pct": 0.05,
+        "trailing_stop_pct": 0.02
+      }
     }
   },
   "training_parameters": {
@@ -408,9 +444,49 @@
     "SOLUSD": {
       "enabled": true,
       "model_type": "ensemble",
-      "confidence_threshold": 0.7,
+      "confidence_threshold": 0.62,
       "timeframe": "1h",
-      "max_leverage": 5,
+      "max_leverage": 125,
+      "enable_short_positions": true
+    },
+    "BTCUSD": {
+      "enabled": true,
+      "model_type": "ensemble",
+      "confidence_threshold": 0.62,
+      "timeframe": "1h",
+      "max_leverage": 125,
+      "enable_short_positions": true
+    },
+    "ETHUSD": {
+      "enabled": true,
+      "model_type": "ensemble",
+      "confidence_threshold": 0.62,
+      "timeframe": "1h",
+      "max_leverage": 125,
+      "enable_short_positions": true
+    },
+    "DOTUSD": {
+      "enabled": true,
+      "model_type": "ensemble",
+      "confidence_threshold": 0.62,
+      "timeframe": "1h",
+      "max_leverage": 125,
+      "enable_short_positions": true
+    },
+    "ADAUSD": {
+      "enabled": true,
+      "model_type": "ensemble",
+      "confidence_threshold": 0.62,
+      "timeframe": "1h",
+      "max_leverage": 125,
+      "enable_short_positions": true
+    },
+    "LINKUSD": {
+      "enabled": true,
+      "model_type": "ensemble",
+      "confidence_threshold": 0.62,
+      "timeframe": "1h",
+      "max_leverage": 125,
       "enable_short_positions": true
     }
   },
@@ -645,7 +721,7 @@
       }
     },
     "ETHUSD": {
-      "confidence_threshold": 0.65,
+      "confidence_threshold": 0.62,
       "signal_strength": 0.8,
       "leverage": {
         "base": 20,
@@ -660,6 +736,69 @@
       },
       "risk_management": {
         "max_position_size": 0.7,
+        "stop_loss_atr_multiplier": 1.5,
+        "take_profit_atr_multiplier": 3.0,
+        "max_drawdown_pct": 10.0
+      }
+    },
+    "DOTUSD": {
+      "confidence_threshold": 0.62,
+      "signal_strength": 0.8,
+      "leverage": {
+        "base": 20,
+        "max": 125,
+        "min": 5,
+        "step": 5,
+        "confidence_scaling": true
+      },
+      "feature_selection": {
+        "use_pair_specific_features": true,
+        "top_n_features": 20
+      },
+      "risk_management": {
+        "max_position_size": 0.6,
+        "stop_loss_atr_multiplier": 1.5,
+        "take_profit_atr_multiplier": 3.0,
+        "max_drawdown_pct": 10.0
+      }
+    },
+    "ADAUSD": {
+      "confidence_threshold": 0.62,
+      "signal_strength": 0.8,
+      "leverage": {
+        "base": 20,
+        "max": 125,
+        "min": 5,
+        "step": 5,
+        "confidence_scaling": true
+      },
+      "feature_selection": {
+        "use_pair_specific_features": true,
+        "top_n_features": 20
+      },
+      "risk_management": {
+        "max_position_size": 0.6,
+        "stop_loss_atr_multiplier": 1.5,
+        "take_profit_atr_multiplier": 3.0,
+        "max_drawdown_pct": 10.0
+      }
+    },
+    "LINKUSD": {
+      "confidence_threshold": 0.62,
+      "signal_strength": 0.8,
+      "leverage": {
+        "base": 20,
+        "max": 125,
+        "min": 5,
+        "step": 5,
+        "confidence_scaling": true
+      },
+      "feature_selection": {
+        "use_pair_specific_features": true,
+        "top_n_features": 20
+      },
+      "risk_management": {
+        "max_position_size": 0.6,
         "stop_loss_atr_multiplier": 1.5,
         "take_profit_atr_multiplier": 3.0,
         "max_drawdown_pct": 10.0
@@ -724,9 +863,9 @@
       "high_confidence_threshold": 0.85
     }
   },
-  "confidence_threshold": 0.65,
+  "confidence_threshold": 0.62,
   "base_leverage": 20.0,
   "max_leverage": 125.0,
   "max_risk_per_trade": 0.2,
-  "last_updated": "2025-04-14T18:16:00.789311"
+  "last_updated": "2025-04-14T19:18:56.000000"
 }
