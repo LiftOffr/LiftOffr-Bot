@@ -1,16 +1,1 @@
-[
-  {
-    "trade_id": "SOL_USD_20250414233907_long",
-    "pair": "SOL/USD",
-    "direction": "long",
-    "entry_price": 130.17,
-    "entry_time": "2025-04-14T23:39:07",
-    "size": 0.001,
-    "leverage": 20.0,
-    "margin": 200.0,
-    "position_value": 130.17,
-    "initial_stop_loss": 129.96,
-    "stop_loss": 129.96,
-    "last_price": 130.14
-  }
-]
+[]

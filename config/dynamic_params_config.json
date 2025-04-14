@@ -1,60 +1,102 @@
 {
-  "confidence_scaling": {
-    "base_leverage": 20.0,
-    "max_leverage": 100.0,
-    "min_confidence": 0.5,
-    "leverage_curve": "exponential",
-    "leverage_bias": 0.3
-  },
-  "market_adjustments": {
-    "volatility_scaling": true,
-    "volatility_dampening": {
-      "very_low": 1.2,
-      "low": 1.1,
-      "medium": 1.0,
-      "high": 0.8,
-      "very_high": 0.6,
-      "extreme": 0.4
+  "version": "1.0",
+  "dynamic_parameters": {
+    "enabled": true,
+    "update_frequency": "candle",
+    "market_regime_detection": {
+      "enabled": true,
+      "regime_types": [
+        "trending_up",
+        "trending_down",
+        "ranging",
+        "volatile"
+      ],
+      "detection_methods": [
+        "price_action",
+        "volatility",
+        "momentum"
+      ]
     },
-    "regime_adjustments": {
-      "trending_up": 1.1,
-      "trending_down": 0.9,
-      "ranging": 1.0,
-      "volatile": 0.8
+    "parameter_adjustment": {
+      "volatility_based": true,
+      "confidence_based": true,
+      "win_rate_based": true,
+      "regime_based": true
+    },
+    "learning_rate": 0.15,
+    "min_adjustment": 0.5,
+    "max_adjustment": 2.5
+  },
+  "adjustable_parameters": {
+    "leverage": {
+      "enabled": true,
+      "base_value": 50.0,
+      "min_value": 1.0,
+      "max_value": 125.0,
+      "step_size": 1.0,
+      "volatility_scaling": true,
+      "confidence_scaling": true
+    },
+    "risk_percentage": {
+      "enabled": true,
+      "base_value": 0.15,
+      "min_value": 0.01,
+      "max_value": 0.2,
+      "step_size": 0.01,
+      "volatility_scaling": true,
+      "confidence_scaling": true
+    },
+    "take_profit": {
+      "enabled": true,
+      "base_value": 0.1,
+      "min_value": 0.02,
+      "max_value": 0.5,
+      "step_size": 0.01,
+      "volatility_scaling": true,
+      "regime_scaling": true
+    },
+    "stop_loss": {
+      "enabled": true,
+      "base_value": 0.05,
+      "min_value": 0.01,
+      "max_value": 0.1,
+      "step_size": 0.005,
+      "volatility_scaling": true,
+      "confidence_scaling": true
+    },
+    "trailing_stop": {
+      "enabled": true,
+      "base_value": 0.02,
+      "min_value": 0.005,
+      "max_value": 0.05,
+      "step_size": 0.005,
+      "profit_scaling": true
     }
   },
-  "performance_adjustments": {
-    "enable_win_streak_bonus": true,
-    "win_streak_bonus_per_win": 0.05,
-    "win_streak_bonus_cap": 0.25,
-    "enable_loss_streak_reduction": true,
-    "loss_streak_reduction_per_loss": 0.1,
-    "loss_streak_reduction_cap": 0.5,
-    "time_decay_hours": 48
-  },
-  "risk_limits": {
-    "max_risk_percentage": 0.3,
-    "min_risk_percentage": 0.05,
-    "default_risk_percentage": 0.2,
-    "max_leverage_cap": 125.0,
-    "min_leverage": 5.0
-  },
-  "pair_specific_adjustments": {
-    "SOL/USD": {
-      "base_leverage_modifier": 1.1,
-      "risk_percentage_modifier": 1.05
+  "regime_specific_values": {
+    "trending_up": {
+      "leverage_multiplier": 1.2,
+      "risk_percentage_multiplier": 1.2,
+      "take_profit_multiplier": 1.0,
+      "stop_loss_multiplier": 0.8
     },
-    "BTC/USD": {
-      "base_leverage_modifier": 0.9,
-      "risk_percentage_modifier": 0.95
+    "trending_down": {
+      "leverage_multiplier": 1.0,
+      "risk_percentage_multiplier": 1.0,
+      "take_profit_multiplier": 0.8,
+      "stop_loss_multiplier": 1.0
+    },
+    "ranging": {
+      "leverage_multiplier": 0.8,
+      "risk_percentage_multiplier": 0.8,
+      "take_profit_multiplier": 0.7,
+      "stop_loss_multiplier": 1.2
+    },
+    "volatile": {
+      "leverage_multiplier": 0.6,
+      "risk_percentage_multiplier": 0.6,
+      "take_profit_multiplier": 1.2,
+      "stop_loss_multiplier": 1.4
     }
-  },
-  "advanced_settings": {
-    "apply_kelly_criterion": true,
-    "kelly_fraction": 0.3,
-    "drawdown_adaptation": true,
-    "drawdown_reduction_factor": 0.5,
-    "high_confidence_threshold": 0.8,
-    "low_confidence_threshold": 0.6
   }
 }

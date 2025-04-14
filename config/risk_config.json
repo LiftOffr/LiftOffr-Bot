@@ -1,54 +1,80 @@
 {
-  "max_drawdown_percentage": 15.0,
-  "max_position_size_percentage": 25.0,
-  "max_leverage_mapping": {
-    "very_low": 125.0,
-    "low": 100.0,
-    "medium": 75.0,
-    "high": 50.0,
-    "very_high": 25.0,
-    "extreme": 10.0
+  "version": "2.0",
+  "risk_management": {
+    "enabled": true,
+    "risk_level": "aggressive",
+    "max_risk_per_trade": 0.15,
+    "max_portfolio_risk": 0.4,
+    "max_leverage": 50.0,
+    "volatility_scaling": {
+      "enabled": true,
+      "scaling_factor": 1.3,
+      "volatility_window": 20,
+      "volatility_threshold": 0.03
+    },
+    "kelly_criterion": {
+      "enabled": true,
+      "fraction": 0.8
+    },
+    "drawdown_protection": {
+      "enabled": true,
+      "max_drawdown_threshold": 0.25,
+      "reduce_exposure_at": 0.75,
+      "pause_trading_at": 0.9
+    },
+    "position_sizing": {
+      "method": "risk_based",
+      "adaptive": true,
+      "confidence_scaling": true
+    },
+    "stop_loss": {
+      "method": "volatility_based",
+      "atr_multiplier": 1.5,
+      "fixed_percentage": 0.04,
+      "max_loss_percentage": 0.04,
+      "trailing": true
+    },
+    "take_profit": {
+      "method": "adaptive",
+      "target_reward_risk_ratio": 1.5,
+      "ratcheting": true
+    }
   },
-  "stop_loss_volatility_multipliers": {
-    "very_low": 4.0,
-    "low": 3.5,
-    "medium": 3.0,
-    "high": 2.5,
-    "very_high": 2.0,
-    "extreme": 1.5
+  "market_regime_detection": {
+    "enabled": true,
+    "methods": [
+      "volatility",
+      "trend_strength",
+      "momentum"
+    ],
+    "lookback_periods": 50,
+    "update_frequency": "candle",
+    "regime_specific_parameters": true
   },
-  "profit_ratchet_levels": [
-    {"profit_percentage": 1.0, "stop_to_breakeven": true},
-    {"profit_percentage": 2.0, "lock_percentage": 0.5},
-    {"profit_percentage": 3.0, "lock_percentage": 1.0},
-    {"profit_percentage": 5.0, "lock_percentage": 2.0},
-    {"profit_percentage": 10.0, "lock_percentage": 5.0}
-  ],
-  "kelly_fraction": 0.3,
-  "max_correlated_exposure": 35.0,
-  "max_daily_risk_percentage": 5.0,
-  "risk_scaling": {
-    "win_streak_bonus_cap": 0.25,
-    "loss_streak_reduction_cap": 0.5,
-    "time_decay_hours": 48,
-    "volatility_dampening": true
-  },
-  "emergency_risk_controls": {
-    "max_position_loss_percentage": 15.0,
-    "portfolio_stop_loss_percentage": 20.0,
-    "max_daily_loss_percentage": 7.5,
-    "disable_system_on_critical": true
-  },
-  "liquidation_prevention": {
-    "early_warning_margin_percentage": 50.0,
-    "critical_margin_percentage": 25.0,
-    "auto_reduce_critical_positions": true,
-    "reduce_position_percentage": 50.0
-  },
-  "monitoring": {
-    "check_interval_seconds": 60,
-    "log_risk_metrics": true,
-    "alert_on_warning": true,
-    "alert_on_critical": true
+  "pair_specific": {
+    "SOL/USD": {
+      "max_leverage": 50.0,
+      "volatility_adjustment": 1.42
+    },
+    "BTC/USD": {
+      "max_leverage": 50.0,
+      "volatility_adjustment": 1.42
+    },
+    "ETH/USD": {
+      "max_leverage": 50.0,
+      "volatility_adjustment": 1.42
+    },
+    "ADA/USD": {
+      "max_leverage": 50.0,
+      "volatility_adjustment": 1.42
+    },
+    "DOT/USD": {
+      "max_leverage": 50.0,
+      "volatility_adjustment": 1.42
+    },
+    "LINK/USD": {
+      "max_leverage": 50.0,
+      "volatility_adjustment": 1.42
+    }
   }
 }

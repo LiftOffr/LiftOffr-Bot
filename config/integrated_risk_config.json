@@ -1,60 +1,77 @@
 {
-  "enable_integrated_risk": true,
-  "check_interval_seconds": 60,
-  "enable_emergency_controls": true,
-  "log_level": "INFO",
-  "enable_portfolio_correlation": true,
-  "performance_metrics_window": 30,
-  "backtest_validation": true,
-  "risk_profile": "balanced",
-  "monitoring": {
-    "enable_alerts": true,
-    "alert_threshold_warning": 0.7,
-    "alert_threshold_critical": 0.9,
-    "max_drawdown_alert": 10.0,
-    "consecutive_loss_alert": 5
-  },
-  "pair_specific_settings": {
-    "SOL/USD": {
-      "risk_coefficient": 1.1,
-      "max_leverage_override": 100.0,
-      "prioritize_in_optimization": true
+  "version": "1.0",
+  "integrated_risk_management": {
+    "enabled": true,
+    "max_concurrent_trades": 8,
+    "max_trades_per_pair": 2,
+    "max_portfolio_allocation": 0.85,
+    "strategy_ranking": {
+      "enabled": true,
+      "method": "weighted_performance",
+      "metrics": [
+        "win_rate",
+        "profit_factor",
+        "sharpe_ratio",
+        "consistency"
+      ],
+      "lookback_periods": [
+        30,
+        90,
+        180
+      ]
     },
-    "BTC/USD": {
-      "risk_coefficient": 1.0,
-      "max_leverage_override": 75.0,
-      "prioritize_in_optimization": true
+    "signal_arbitration": {
+      "required_confirmation": 0,
+      "signal_strength_priority": true,
+      "strategy_strength_scaling": true,
+      "minimum_signal_strength": 0.4,
+      "contradictory_signals": "stronger_wins"
     },
-    "ETH/USD": {
-      "risk_coefficient": 1.0,
-      "max_leverage_override": 75.0,
-      "prioritize_in_optimization": true
+    "risk_budgeting": {
+      "enabled": true,
+      "allocation_method": "equal_risk",
+      "adjust_by_performance": true,
+      "higher_timeframe_bias": true
     }
   },
-  "optimization_parameters": {
-    "default_lookback_days": 180,
-    "test_ratio": 0.3,
-    "cross_validation_folds": 3,
-    "parameter_grid_size": "medium",
-    "apply_results_immediately": true,
-    "optimization_interval_days": 7
+  "strategy_categories": {
+    "those_dudes": {
+      "strategies": [
+        "ARIMAStrategy",
+        "LSTMStrategy",
+        "GRUStrategy"
+      ],
+      "max_allocation": 0.5,
+      "priority": 0.6,
+      "risk_adjustment": 1.0,
+      "integration_rules": {
+        "min_agreement": 0,
+        "signal_amplification": true
+      }
+    },
+    "him_all_along": {
+      "strategies": [
+        "AdaptiveStrategy",
+        "TCNStrategy",
+        "EnsembleStrategy"
+      ],
+      "max_allocation": 0.5,
+      "priority": 0.4,
+      "risk_adjustment": 1.0,
+      "integration_rules": {
+        "min_agreement": 0,
+        "signal_amplification": true
+      }
+    }
   },
-  "enhanced_risk_metrics": {
-    "use_value_at_risk": true,
-    "var_confidence_level": 0.95,
-    "enable_stress_testing": true,
-    "stress_test_scenarios": [
-      "high_volatility",
-      "market_crash",
-      "flash_crash",
-      "correlation_spike"
-    ],
-    "risk_adjusted_returns": true
-  },
-  "liquidation_prevention": {
-    "enable_auto_deleveraging": true,
-    "margin_safety_buffer": 1.5,
-    "enable_position_hedging": false,
-    "max_drawdown_intervention": 12.0
+  "cross_strategy_exits": {
+    "enabled": true,
+    "exit_agreement_threshold": 0.0,
+    "prioritize_stop_loss": true,
+    "profit_protection": {
+      "enabled": true,
+      "unrealized_profit_threshold": 0.03,
+      "lock_in_percentage": 0.5
+    }
   }
 }
