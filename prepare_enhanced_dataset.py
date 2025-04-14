@@ -109,10 +109,15 @@ class EnhancedDatasetPreparation:
         Returns:
             DataFrame with historical data or None if data not found
         """
-        # Construct file path
-        data_path = os.path.join(HISTORICAL_DATA_DIR, f"{self.pair_filename}_{self.timeframe}.csv")
+        # Construct file path - check nested directory structure first
+        pair_dir_path = os.path.join(HISTORICAL_DATA_DIR, self.pair_filename)
+        data_path = os.path.join(pair_dir_path, f"{self.pair_filename}_{self.timeframe}.csv")
         
-        # Check if file exists
+        # If not found in nested structure, try flat structure as fallback
+        if not os.path.exists(data_path):
+            data_path = os.path.join(HISTORICAL_DATA_DIR, f"{self.pair_filename}_{self.timeframe}.csv")
+        
+        # Check if file exists in either location
         if not os.path.exists(data_path):
             logger.error(f"Historical data file not found: {data_path}")
             return None
@@ -232,7 +237,8 @@ class EnhancedDatasetPreparation:
                         
                         # Update values in the main dataframe
                         df.loc[chunk.index[j], "arima_prediction"] = signal_value
-                        df.loc[chunk.index[j], "arima_forecast"] = forecast
+                        # Convert forecast to float to avoid compatibility issues
+                        df.loc[chunk.index[j], "arima_forecast"] = float(forecast)
                         df.loc[chunk.index[j], "arima_strength"] = strength
                     except Exception as e:
                         # Just log and continue on errors

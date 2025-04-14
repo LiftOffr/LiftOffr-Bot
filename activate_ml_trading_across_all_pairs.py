@@ -110,7 +110,8 @@ def run_command(command, description=None, check=True):
     stdout_lines = []
     stderr_lines = []
     
-    with process.stdout:
+    # Safe handling of stdout
+    if process.stdout:
         def read_pipe(pipe, lines):
             for line in iter(pipe.readline, ''):
                 if line.strip():
@@ -119,7 +120,8 @@ def run_command(command, description=None, check=True):
         
         read_pipe(process.stdout, stdout_lines)
     
-    with process.stderr:
+    # Safe handling of stderr
+    if process.stderr:
         read_pipe(process.stderr, stderr_lines)
     
     returncode = process.wait()
