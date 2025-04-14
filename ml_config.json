@@ -13,7 +13,7 @@
     "max_open_positions": 5,
     "portfolio_rebalance_interval": 24,
     "enable_dynamic_allocation": true,
-    "ml_confidence_threshold": 0.62,
+    "ml_confidence_threshold": 0.60,
     "minimum_trading_data": 456,
     "sandbox_mode": true,
     "log_level": "INFO",

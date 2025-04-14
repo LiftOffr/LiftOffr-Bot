@@ -3,50 +3,50 @@
     {
       "type": "lstm",
       "enabled": true,
-      "confidence_scaling": 1.35
+      "confidence_scaling": 1.5
     },
     {
       "type": "tcn",
       "enabled": true,
-      "confidence_scaling": 1.2
+      "confidence_scaling": 1.25
     },
     {
       "type": "transformer",
       "enabled": true,
-      "confidence_scaling": 1.25
+      "confidence_scaling": 1.15
     },
     {
       "type": "cnn",
       "enabled": true,
-      "confidence_scaling": 1.0
+      "confidence_scaling": 0.95
     },
     {
       "type": "gru",
       "enabled": true,
-      "confidence_scaling": 1.1
+      "confidence_scaling": 1.05
     },
     {
       "type": "bilstm",
       "enabled": true,
-      "confidence_scaling": 1.15
+      "confidence_scaling": 1.0
     },
     {
       "type": "attention",
       "enabled": true,
-      "confidence_scaling": 1.3
+      "confidence_scaling": 1.4
     },
     {
       "type": "hybrid",
-      "enabled": true,
-      "confidence_scaling": 1.2
+      "enabled": false,
+      "confidence_scaling": 1.0
     }
   ],
   "parameters": {
     "method": "weighted_voting",
-    "confidence_threshold": 0.62,
+    "confidence_threshold": 0.60,
     "use_confidence_scaling": true,
     "use_dynamic_weights": true,
-    "update_frequency": 12,
-    "last_updated": "2025-04-14T19:10:45.000000"
+    "update_frequency": 24,
+    "last_updated": "2025-04-14T19:50:00.000000"
   }
 }

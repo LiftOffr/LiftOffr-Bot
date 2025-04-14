@@ -582,7 +582,8 @@ class EnsembleWeightOptimizer:
         plt.savefig(os.path.join(self.output_dir, f'optimization_results_{self.trading_pair.replace("/", "")}_{self.timeframe}.png'))
         plt.close()
         
-        logger.info(f"Saved visualization to {os.path.join(self.output_dir, f'optimization_results_{self.trading_pair.replace('/', '')}_{self.timeframe}.png')}")
+        filename = os.path.join(self.output_dir, f'optimization_results_{self.trading_pair.replace("/", "")}_{self.timeframe}.png')
+        logger.info(f"Saved visualization to {filename}")
     
     def _save_optimized_weights(self, optimized_weights):
         """
