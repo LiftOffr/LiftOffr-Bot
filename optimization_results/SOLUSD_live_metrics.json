@@ -1,0 +1,14 @@
+{
+  "directional_accuracy": 0.8880270087121968,
+  "win_rate": 0.8082221442894342,
+  "profit_factor": 2.4552984864361926,
+  "avg_win_loss_ratio": 1.8942576792614396,
+  "max_drawdown": 0.05707095825944763,
+  "sharpe_ratio": 3.470613047562125,
+  "execution_metrics": {
+    "avg_slippage": 0.0010864394172701807,
+    "avg_latency": 0.1948585346030013,
+    "fill_rate": 0.979500961001923
+  },
+  "evaluated_date": "2025-04-14T02:52:25.675315"
+}
