@@ -13,12 +13,6 @@ Market regimes include:
 5. Ranging/neutral - Sideways price movement with low volatility
 
 The detected market regime is used to adjust:
-"""
-
-import pandas as pd
-import numpy as np
-import logging
-from typing import Dict, List, Tuple, Optional, Any
 - Position sizing and leverage
 - Entry and exit criteria
 - Stop loss and take profit levels
@@ -28,7 +22,7 @@ from typing import Dict, List, Tuple, Optional, Any
 import logging
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Tuple, Union, Optional
+from typing import Dict, List, Tuple, Union, Optional, Any
 from enum import Enum
 
 logger = logging.getLogger(__name__)

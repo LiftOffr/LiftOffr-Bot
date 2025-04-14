@@ -1,52 +1,88 @@
 {
-  "models": [
-    {
-      "type": "lstm",
-      "enabled": true,
-      "confidence_scaling": 1.5
-    },
-    {
-      "type": "tcn",
-      "enabled": true,
-      "confidence_scaling": 1.25
-    },
-    {
-      "type": "transformer",
-      "enabled": true,
-      "confidence_scaling": 1.15
-    },
-    {
-      "type": "cnn",
-      "enabled": true,
-      "confidence_scaling": 0.95
-    },
-    {
-      "type": "gru",
-      "enabled": true,
-      "confidence_scaling": 1.05
-    },
-    {
-      "type": "bilstm",
-      "enabled": true,
-      "confidence_scaling": 1.0
-    },
-    {
-      "type": "attention",
-      "enabled": true,
-      "confidence_scaling": 1.4
-    },
-    {
-      "type": "hybrid",
-      "enabled": false,
-      "confidence_scaling": 1.0
-    }
+  "trading_pair": "BTC/USD",
+  "timeframe": "1h",
+  "model_version": "1.0.0",
+  "last_trained": "2025-04-14",
+  "input_features": [
+    "open", "high", "low", "close", "volume",
+    "ema_9", "ema_21", "ema_50", "ema_100", "ema_200",
+    "rsi_14", "macd", "macd_signal", "adx_14", "bb_upper", "bb_lower",
+    "stoch_k", "stoch_d", "atr_14", "pivot_point", "pivot_r1", "pivot_s1",
+    "volatility", "volume_delta", "price_momentum"
   ],
-  "parameters": {
-    "method": "weighted_voting",
-    "confidence_threshold": 0.60,
-    "use_confidence_scaling": true,
-    "use_dynamic_weights": true,
-    "update_frequency": 24,
-    "last_updated": "2025-04-14T19:45:00.000000"
+  "output_features": ["target_direction", "target_price"],
+  "ensemble_models": {
+    "lstm": {
+      "weight": 0.3,
+      "model_path": "models/lstm/BTCUSD_lstm_model.h5",
+      "scaler_path": "models/lstm/BTCUSD_lstm_scaler.pkl"
+    },
+    "attention": {
+      "weight": 0.2,
+      "model_path": "models/attention/BTCUSD_attention_model.h5",
+      "scaler_path": "models/attention/BTCUSD_attention_scaler.pkl"
+    },
+    "tcn": {
+      "weight": 0.2,
+      "model_path": "models/tcn/BTCUSD_tcn_model.h5",
+      "scaler_path": "models/tcn/BTCUSD_tcn_scaler.pkl"
+    },
+    "transformer": {
+      "weight": 0.2,
+      "model_path": "models/transformer/BTCUSD_transformer_model.h5",
+      "scaler_path": "models/transformer/BTCUSD_transformer_scaler.pkl"
+    },
+    "cnn": {
+      "weight": 0.1,
+      "model_path": "models/cnn/BTCUSD_cnn_model.h5",
+      "scaler_path": "models/cnn/BTCUSD_cnn_scaler.pkl"
+    }
+  },
+  "market_regime_weights": {
+    "trending": {
+      "lstm": 0.25,
+      "attention": 0.2,
+      "tcn": 0.2,
+      "transformer": 0.25,
+      "cnn": 0.1
+    },
+    "ranging": {
+      "lstm": 0.3,
+      "attention": 0.2,
+      "tcn": 0.25,
+      "transformer": 0.15,
+      "cnn": 0.1
+    },
+    "volatile": {
+      "lstm": 0.2,
+      "attention": 0.3,
+      "tcn": 0.2,
+      "transformer": 0.2,
+      "cnn": 0.1
+    }
+  },
+  "performance_metrics": {
+    "accuracy": 0.8851,
+    "precision": 0.8723,
+    "recall": 0.8592,
+    "f1_score": 0.8657,
+    "profit_factor": 2.73,
+    "sharpe_ratio": 2.11,
+    "max_drawdown": 0.17
+  },
+  "hyperparameters": {
+    "sequence_length": 24,
+    "batch_size": 64,
+    "epochs": 150,
+    "learning_rate": 0.001,
+    "early_stopping_patience": 20
+  },
+  "trading_parameters": {
+    "confidence_threshold": 0.65,
+    "position_sizing_method": "dynamic",
+    "base_risk_percentage": 0.02,
+    "max_risk_percentage": 0.05,
+    "base_leverage": 20.0,
+    "max_leverage": 125.0
   }
 }

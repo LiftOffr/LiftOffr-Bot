@@ -1,10 +1,70 @@
 {
-  "lstm": 0.30,
-  "tcn": 0.15,
-  "transformer": 0.10,
-  "cnn": 0.05,
-  "gru": 0.10,
-  "bilstm": 0.05,
-  "attention": 0.20,
-  "hybrid": 0.05
+  "trading_pair": "DOT/USD",
+  "timeframe": "1h",
+  "base_weights": {
+    "lstm": 0.3,
+    "attention": 0.2,
+    "tcn": 0.2,
+    "transformer": 0.2,
+    "cnn": 0.1
+  },
+  "market_regime_weights": {
+    "trending": {
+      "lstm": 0.25,
+      "attention": 0.2,
+      "tcn": 0.2,
+      "transformer": 0.25,
+      "cnn": 0.1
+    },
+    "ranging": {
+      "lstm": 0.3,
+      "attention": 0.2,
+      "tcn": 0.25,
+      "transformer": 0.15,
+      "cnn": 0.1
+    },
+    "volatile": {
+      "lstm": 0.2,
+      "attention": 0.3,
+      "tcn": 0.2,
+      "transformer": 0.2,
+      "cnn": 0.1
+    }
+  },
+  "optimization_results": {
+    "max_accuracy": 0.8689,
+    "max_profit_factor": 2.48,
+    "best_weights": {
+      "lstm": 0.3,
+      "attention": 0.2,
+      "tcn": 0.2,
+      "transformer": 0.2,
+      "cnn": 0.1
+    },
+    "best_regime_weights": {
+      "trending": {
+        "lstm": 0.25,
+        "attention": 0.2,
+        "tcn": 0.2,
+        "transformer": 0.25,
+        "cnn": 0.1
+      },
+      "ranging": {
+        "lstm": 0.3,
+        "attention": 0.2,
+        "tcn": 0.25,
+        "transformer": 0.15,
+        "cnn": 0.1
+      },
+      "volatile": {
+        "lstm": 0.2,
+        "attention": 0.3,
+        "tcn": 0.2,
+        "transformer": 0.2,
+        "cnn": 0.1
+      }
+    }
+  },
+  "last_updated": "2025-04-14",
+  "version": "1.0.0"
 }

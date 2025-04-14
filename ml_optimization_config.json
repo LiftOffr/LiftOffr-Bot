@@ -1,0 +1,379 @@
+{
+  "model_optimization": {
+    "base_models": {
+      "lstm": {
+        "layers": [1, 2, 3],
+        "units": [32, 64, 128, 256],
+        "dropout": [0.1, 0.2, 0.3, 0.4, 0.5],
+        "recurrent_dropout": [0.0, 0.1, 0.2, 0.3],
+        "activation": ["relu", "tanh", "selu"],
+        "recurrent_activation": ["sigmoid", "tanh", "hard_sigmoid"],
+        "optimizer": ["adam", "rmsprop", "sgd"],
+        "learning_rate": [0.001, 0.0005, 0.0001],
+        "batch_size": [16, 32, 64, 128],
+        "epochs": [50, 100, 200]
+      },
+      "cnn": {
+        "layers": [1, 2, 3],
+        "filters": [16, 32, 64, 128],
+        "kernel_size": [3, 5, 7, 9],
+        "pool_size": [2, 3, 4],
+        "dropout": [0.1, 0.2, 0.3, 0.4, 0.5],
+        "activation": ["relu", "elu", "selu"],
+        "optimizer": ["adam", "rmsprop"],
+        "learning_rate": [0.001, 0.0005, 0.0001],
+        "batch_size": [16, 32, 64, 128],
+        "epochs": [50, 100, 200]
+      },
+      "attention_gru": {
+        "gru_units": [32, 64, 128, 256],
+        "attention_dim": [16, 32, 64],
+        "dropout": [0.1, 0.2, 0.3, 0.4, 0.5],
+        "recurrent_dropout": [0.0, 0.1, 0.2, 0.3],
+        "activation": ["relu", "tanh", "selu"],
+        "recurrent_activation": ["sigmoid", "tanh", "hard_sigmoid"],
+        "optimizer": ["adam", "rmsprop"],
+        "learning_rate": [0.001, 0.0005, 0.0001],
+        "batch_size": [16, 32, 64, 128],
+        "epochs": [50, 100, 200]
+      },
+      "tcn": {
+        "nb_filters": [32, 64, 128],
+        "kernel_size": [2, 3, 4],
+        "nb_stacks": [1, 2],
+        "dilations": [[1, 2, 4, 8, 16], [1, 2, 4, 8, 16, 32]],
+        "dropout_rate": [0.0, 0.1, 0.2, 0.3],
+        "activation": ["relu", "elu"],
+        "optimizer": ["adam", "rmsprop"],
+        "learning_rate": [0.001, 0.0005, 0.0001],
+        "batch_size": [16, 32, 64, 128],
+        "epochs": [50, 100, 200]
+      },
+      "transformer": {
+        "head_size": [16, 32, 64],
+        "num_heads": [2, 4, 8],
+        "ff_dim": [32, 64, 128, 256],
+        "num_transformer_blocks": [1, 2, 4],
+        "mlp_units": [[32, 16], [64, 32], [128, 64]],
+        "dropout": [0.1, 0.2, 0.3, 0.4, 0.5],
+        "mlp_dropout": [0.1, 0.2, 0.3, 0.4, 0.5],
+        "optimizer": ["adam", "adamw"],
+        "learning_rate": [0.001, 0.0005, 0.0001],
+        "batch_size": [16, 32, 64, 128],
+        "epochs": [50, 100, 200]
+      }
+    },
+    "ensemble_optimization": {
+      "model_types": ["lstm", "cnn", "attention_gru", "tcn", "transformer"],
+      "weighting_strategies": ["uniform", "performance_based", "bayesian_optimization", "genetic_algorithm"],
+      "ensemble_methods": ["voting", "stacking", "blending", "bagging"],
+      "confidence_threshold": [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9],
+      "validation_scheme": ["time_series_split", "walk_forward", "expanding_window"]
+    }
+  },
+  "feature_engineering": {
+    "technical_indicators": [
+      "sma", "ema", "rsi", "macd", "bollinger_bands", "atr", "adx", 
+      "stochastic", "cci", "obv", "vwap", "ichimoku", "pivot_points",
+      "rate_of_change", "williams_r", "awesome_oscillator", "momentum",
+      "trix", "keltner_channel", "elder_ray", "supertrend"
+    ],
+    "feature_selection_methods": ["rfe", "lasso", "random_forest", "mutual_information", "sfs"],
+    "dimensionality_reduction": ["pca", "t-sne", "umap"],
+    "feature_crossing": true,
+    "lagged_features": [1, 2, 3, 5, 10, 15, 30],
+    "rolling_statistics": ["mean", "std", "min", "max", "skew", "kurtosis", "quantile"],
+    "window_sizes": [5, 10, 20, 50, 100, 200]
+  },
+  "trading_parameters": {
+    "signal_strength_thresholds": {
+      "very_strong": 0.9,
+      "strong": 0.75,
+      "moderate": 0.6,
+      "weak": 0.5
+    },
+    "position_sizing": {
+      "methods": ["fixed", "kelly", "optimal_f", "dynamic_risk"],
+      "risk_per_trade": [0.01, 0.02, 0.03, 0.04, 0.05],
+      "max_position_size": 0.5,
+      "scaling_factors": {
+        "very_strong": 1.5,
+        "strong": 1.25,
+        "moderate": 1.0,
+        "weak": 0.75
+      }
+    },
+    "leverage": {
+      "base_leverage": 25,
+      "max_leverage": 125,
+      "confidence_scaling": true,
+      "regime_based": true,
+      "dynamic_adjustment": true,
+      "safety_limits": {
+        "max_allowed": 125,
+        "reduction_in_high_volatility": 0.5,
+        "limit_in_drawdown": 10
+      }
+    },
+    "risk_management": {
+      "stop_loss": {
+        "fixed": [0.02, 0.03, 0.04, 0.05],
+        "atr_multipliers": [1.0, 1.5, 2.0, 2.5, 3.0],
+        "adaptive": true,
+        "trailing": true,
+        "trailing_activation": [0.005, 0.01, 0.015, 0.02],
+        "trailing_distance": [0.01, 0.015, 0.02, 0.025, 0.03]
+      },
+      "take_profit": {
+        "fixed": [0.06, 0.08, 0.10, 0.12, 0.15],
+        "atr_multipliers": [2.0, 2.5, 3.0, 3.5, 4.0],
+        "adaptive": true,
+        "multiple_targets": true,
+        "target_percentages": [0.3, 0.3, 0.4],
+        "target_distances": [1.0, 2.0, 3.0]
+      },
+      "max_drawdown": 0.25,
+      "max_trades_per_day": 10,
+      "correlation_limits": 0.7,
+      "maximum_correlated_exposure": 0.5
+    },
+    "execution": {
+      "entry_strategies": ["market", "limit", "scaled", "dynamic"],
+      "exit_strategies": ["market", "limit", "scaled", "dynamic", "trailing"],
+      "order_types": ["market", "limit", "stop", "stop_limit", "trailing_stop"],
+      "slippage_models": ["fixed", "percentage", "volume_based", "adaptive"],
+      "execution_timeouts": [5, 10, 30, 60, 300]
+    },
+    "market_regimes": {
+      "detection": {
+        "methods": ["volatility", "trend", "momentum", "statistical"],
+        "lookback_periods": [20, 50, 100, 200],
+        "threshold_adjustments": true
+      },
+      "regime_definitions": [
+        {
+          "name": "volatile_bullish",
+          "volatility_threshold": 0.015,
+          "trend_threshold": 0.005,
+          "parameters": {
+            "leverage_adjustment": 0.8,
+            "position_size_adjustment": 0.7,
+            "stop_loss_adjustment": 1.3,
+            "take_profit_adjustment": 1.5
+          }
+        },
+        {
+          "name": "volatile_bearish",
+          "volatility_threshold": 0.015,
+          "trend_threshold": -0.005,
+          "parameters": {
+            "leverage_adjustment": 0.7,
+            "position_size_adjustment": 0.6,
+            "stop_loss_adjustment": 1.4,
+            "take_profit_adjustment": 1.4
+          }
+        },
+        {
+          "name": "trending_bullish",
+          "volatility_threshold": 0.008,
+          "trend_threshold": 0.003,
+          "parameters": {
+            "leverage_adjustment": 1.3,
+            "position_size_adjustment": 1.2,
+            "stop_loss_adjustment": 0.9,
+            "take_profit_adjustment": 1.3
+          }
+        },
+        {
+          "name": "trending_bearish",
+          "volatility_threshold": 0.008,
+          "trend_threshold": -0.003,
+          "parameters": {
+            "leverage_adjustment": 1.1,
+            "position_size_adjustment": 1.0,
+            "stop_loss_adjustment": 1.0,
+            "take_profit_adjustment": 1.2
+          }
+        },
+        {
+          "name": "ranging",
+          "volatility_threshold": 0.005,
+          "trend_threshold": 0.001,
+          "parameters": {
+            "leverage_adjustment": 1.0,
+            "position_size_adjustment": 1.0,
+            "stop_loss_adjustment": 1.0,
+            "take_profit_adjustment": 1.0
+          }
+        }
+      ]
+    }
+  },
+  "analysis_parameters": {
+    "performance_metrics": [
+      "total_return", "win_rate", "profit_factor", "max_drawdown", 
+      "sharpe_ratio", "sortino_ratio", "calmar_ratio", "average_win",
+      "average_loss", "win_loss_ratio", "expectancy", "recovery_factor"
+    ],
+    "optimization_targets": [
+      {
+        "name": "balanced",
+        "metrics": {
+          "total_return": 0.4,
+          "win_rate": 0.3,
+          "max_drawdown": 0.2,
+          "sharpe_ratio": 0.1
+        }
+      },
+      {
+        "name": "return_focused",
+        "metrics": {
+          "total_return": 0.7,
+          "win_rate": 0.1,
+          "max_drawdown": 0.1,
+          "sharpe_ratio": 0.1
+        }
+      },
+      {
+        "name": "risk_averse",
+        "metrics": {
+          "total_return": 0.2,
+          "win_rate": 0.2,
+          "max_drawdown": 0.4,
+          "sharpe_ratio": 0.2
+        }
+      },
+      {
+        "name": "consistency",
+        "metrics": {
+          "total_return": 0.3,
+          "win_rate": 0.4,
+          "max_drawdown": 0.2,
+          "sharpe_ratio": 0.1
+        }
+      }
+    ],
+    "validation_periods": [
+      {
+        "name": "recent",
+        "length_days": 90
+      },
+      {
+        "name": "medium",
+        "length_days": 180 
+      },
+      {
+        "name": "long",
+        "length_days": 365
+      }
+    ],
+    "market_condition_test_scenarios": [
+      "bull_market", "bear_market", "sideways", "volatile", 
+      "low_volatility", "trend_reversal", "flash_crash"
+    ]
+  },
+  "asset_specific_optimizations": {
+    "SOL/USD": {
+      "weight_preference": {
+        "lstm": 0.3,
+        "attention_gru": 0.2,
+        "tcn": 0.2,
+        "transformer": 0.2,
+        "cnn": 0.1
+      },
+      "feature_importance": {
+        "price_action": 0.4,
+        "volatility": 0.3,
+        "volume": 0.2,
+        "trend": 0.1
+      },
+      "preferred_timeframes": ["1h", "4h", "1d"],
+      "optimal_lookback": 100
+    },
+    "BTC/USD": {
+      "weight_preference": {
+        "lstm": 0.25,
+        "attention_gru": 0.25,
+        "tcn": 0.2,
+        "transformer": 0.2,
+        "cnn": 0.1
+      },
+      "feature_importance": {
+        "price_action": 0.35,
+        "volatility": 0.25,
+        "volume": 0.25,
+        "trend": 0.15
+      },
+      "preferred_timeframes": ["1h", "4h", "1d"],
+      "optimal_lookback": 150
+    },
+    "ETH/USD": {
+      "weight_preference": {
+        "lstm": 0.25,
+        "attention_gru": 0.25,
+        "tcn": 0.2,
+        "transformer": 0.2,
+        "cnn": 0.1
+      },
+      "feature_importance": {
+        "price_action": 0.35,
+        "volatility": 0.25,
+        "volume": 0.25,
+        "trend": 0.15
+      },
+      "preferred_timeframes": ["1h", "4h", "1d"],
+      "optimal_lookback": 125
+    },
+    "LINK/USD": {
+      "weight_preference": {
+        "lstm": 0.3,
+        "attention_gru": 0.25,
+        "tcn": 0.2,
+        "transformer": 0.15,
+        "cnn": 0.1
+      },
+      "feature_importance": {
+        "price_action": 0.4,
+        "volatility": 0.3,
+        "volume": 0.2,
+        "trend": 0.1
+      },
+      "preferred_timeframes": ["1h", "4h", "1d"],
+      "optimal_lookback": 90
+    },
+    "DOT/USD": {
+      "weight_preference": {
+        "lstm": 0.3,
+        "attention_gru": 0.2,
+        "tcn": 0.2,
+        "transformer": 0.2,
+        "cnn": 0.1
+      },
+      "feature_importance": {
+        "price_action": 0.4,
+        "volatility": 0.3,
+        "volume": 0.2,
+        "trend": 0.1
+      },
+      "preferred_timeframes": ["1h", "4h", "1d"],
+      "optimal_lookback": 80
+    },
+    "ADA/USD": {
+      "weight_preference": {
+        "lstm": 0.3,
+        "attention_gru": 0.2,
+        "tcn": 0.2,
+        "transformer": 0.2,
+        "cnn": 0.1
+      },
+      "feature_importance": {
+        "price_action": 0.4,
+        "volatility": 0.3,
+        "volume": 0.2,
+        "trend": 0.1
+      },
+      "preferred_timeframes": ["1h", "4h", "1d"],
+      "optimal_lookback": 90
+    }
+  }
+}
