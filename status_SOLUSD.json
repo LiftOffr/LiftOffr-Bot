@@ -1,0 +1,14 @@
+{
+  "pair": "SOL/USD",
+  "total_trades": 196,
+  "win_trades": 82,
+  "loss_trades": 113,
+  "win_rate": 0.41836734693877553,
+  "closed_pnl_usd": 52.51,
+  "open_pnl_usd": -1068677.9969032998,
+  "pnl_usd": -1068625.4869032998,
+  "pnl_pct": -45927.027660566695,
+  "initial_value": 2326.79,
+  "current_value": 27211627.777962968,
+  "open_positions": 537
+}
