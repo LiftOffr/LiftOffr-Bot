@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "updated_at": "2025-04-14T16:49:11.278960",
   "global_settings": {
     "default_capital_allocation": {
@@ -12,7 +12,7 @@
     "max_open_positions": 5,
     "portfolio_rebalance_interval": 24,
     "enable_dynamic_allocation": true,
-    "ml_confidence_threshold": 0.65,
+    "ml_confidence_threshold": 0.62,
     "minimum_trading_data": 456,
     "sandbox_mode": true,
     "log_level": "INFO",
@@ -378,7 +378,7 @@
       "maximum_drawdown_protection": 0.1,
       "maximum_consecutive_losses": 5
     },
-    "last_updated": "2025-04-14T17:39:06.738115"
+    "last_updated": "2025-04-14T18:16:00.789480"
   },
   "leverage_optimization": {
     "enabled": true,
@@ -603,7 +603,7 @@
   },
   "assets": {
     "SOLUSD": {
-      "confidence_threshold": 0.65,
+      "confidence_threshold": 0.62,
       "signal_strength": 0.8,
       "leverage": {
         "base": 20,
@@ -617,14 +617,14 @@
         "top_n_features": 20
       },
       "risk_management": {
-        "max_position_size": 0.7,
+        "max_position_size": 0.8,
         "stop_loss_atr_multiplier": 1.5,
         "take_profit_atr_multiplier": 3.0,
         "max_drawdown_pct": 10.0
       }
     },
     "BTCUSD": {
-      "confidence_threshold": 0.65,
+      "confidence_threshold": 0.62,
       "signal_strength": 0.8,
       "leverage": {
         "base": 20,
@@ -638,7 +638,7 @@
         "top_n_features": 20
       },
       "risk_management": {
-        "max_position_size": 0.7,
+        "max_position_size": 0.8,
         "stop_loss_atr_multiplier": 1.5,
         "take_profit_atr_multiplier": 3.0,
         "max_drawdown_pct": 10.0
@@ -728,5 +728,5 @@
   "base_leverage": 20.0,
   "max_leverage": 125.0,
   "max_risk_per_trade": 0.2,
-  "last_updated": "2025-04-14T17:39:06.737844"
+  "last_updated": "2025-04-14T18:16:00.789311"
 }

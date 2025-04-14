@@ -1,9 +1,15 @@
 {
-  "base_risk_percentage": 0.02,
-  "max_risk_percentage": 0.05,
+  "base_risk_percentage": 0.05,
+  "max_risk_percentage": 0.20,
   "confidence_scaling": true,
   "volatility_scaling": true,
   "min_position_size": 0.001,
-  "max_position_size": 0.5,
-  "last_updated": "2025-04-14T17:39:06.742735"
+  "max_position_size": 0.8,
+  "leverage_scaling": {
+    "min_leverage": 20,
+    "max_leverage": 125,
+    "confidence_threshold": 0.75,
+    "scaling_factor": 1.5
+  },
+  "last_updated": "2025-04-14T18:59:00.000000"
 }

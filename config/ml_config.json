@@ -5,9 +5,7 @@
         "max_leverage": 125.0,
         "max_risk_per_trade": 0.2,
         "trading_pairs": [
-            "SOL/USD",
-            "BTC/USD",
-            "ETH/USD"
+            "SOL/USD"
         ]
     },
     "strategy_integration": {
@@ -18,22 +16,6 @@
     },
     "ensemble": {
         "SOLUSD": {
-            "model_weights": {
-                "lstm": 0.35,
-                "cnn": 0.35,
-                "transformer": 0.3
-            },
-            "confidence_scaling": "sigmoid"
-        },
-        "BTCUSD": {
-            "model_weights": {
-                "lstm": 0.35,
-                "cnn": 0.35,
-                "transformer": 0.3
-            },
-            "confidence_scaling": "sigmoid"
-        },
-        "ETHUSD": {
             "model_weights": {
                 "lstm": 0.35,
                 "cnn": 0.35,
