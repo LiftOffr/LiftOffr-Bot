@@ -1,0 +1,36 @@
+{
+  "current_risk_level": "Medium",
+  "volatility": {
+    "level": "Low",
+    "value": 0.018,
+    "threshold": 0.03
+  },
+  "max_drawdown": 0.024,
+  "value_at_risk": 0.035,
+  "kelly_criterion": 0.42,
+  "optimal_leverage": 20.0,
+  "market_regime": "TRENDING_UP",
+  "regime_confidence": 0.78,
+  "recommended_position_sizing": {
+    "base_risk_percentage": 0.05,
+    "adjusted_risk_percentage": 0.07,
+    "max_margin_per_trade": 200.0,
+    "min_margin_per_trade": 50.0
+  },
+  "stop_loss_strategy": {
+    "type": "volatility_based",
+    "atr_multiplier": 1.5,
+    "fixed_percentage": 0.04,
+    "ratcheting_enabled": true,
+    "trailing_enabled": true
+  },
+  "asset_specific": {
+    "SOL/USD": {
+      "volatility": 0.022,
+      "trend_strength": 0.65,
+      "optimal_leverage": 20.0,
+      "support_levels": [126.5, 124.8, 122.3],
+      "resistance_levels": [132.5, 135.0, 138.6]
+    }
+  }
+}

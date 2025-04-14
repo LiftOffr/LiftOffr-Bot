@@ -1,0 +1,30 @@
+[
+  {
+    "trade_id": "SOL_USD_20250414231505_long",
+    "pair": "SOL/USD",
+    "direction": "long",
+    "entry_price": 129.80,
+    "exit_price": 130.05,
+    "size": 0.002,
+    "leverage": 20.0,
+    "entry_time": "2025-04-14T23:15:05",
+    "exit_time": "2025-04-14T23:35:20",
+    "pnl_percentage": 0.0385,
+    "pnl_amount": 10.08,
+    "exit_reason": "take_profit"
+  },
+  {
+    "trade_id": "SOL_USD_20250414225010_short",
+    "pair": "SOL/USD",
+    "direction": "short",
+    "entry_price": 130.15,
+    "exit_price": 129.92,
+    "size": 0.001,
+    "leverage": 20.0,
+    "entry_time": "2025-04-14T22:50:10",
+    "exit_time": "2025-04-14T23:10:35",
+    "pnl_percentage": 0.0353,
+    "pnl_amount": 4.62,
+    "exit_reason": "take_profit"
+  }
+]

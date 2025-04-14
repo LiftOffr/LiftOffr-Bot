@@ -1,0 +1,44 @@
+[
+  {
+    "timestamp": "2025-04-14T22:00:00",
+    "portfolio_value": 10000.00,
+    "cash": 10000.00,
+    "positions": 0,
+    "drawdown": 0.0
+  },
+  {
+    "timestamp": "2025-04-14T22:30:00",
+    "portfolio_value": 10000.00,
+    "cash": 10000.00,
+    "positions": 0,
+    "drawdown": 0.0
+  },
+  {
+    "timestamp": "2025-04-14T23:00:00",
+    "portfolio_value": 10005.00,
+    "cash": 9800.00,
+    "positions": 1,
+    "drawdown": 0.0
+  },
+  {
+    "timestamp": "2025-04-14T23:15:00",
+    "portfolio_value": 10009.80,
+    "cash": 9800.00,
+    "positions": 1,
+    "drawdown": 0.0
+  },
+  {
+    "timestamp": "2025-04-14T23:30:00",
+    "portfolio_value": 10014.70,
+    "cash": 9800.00,
+    "positions": 1,
+    "drawdown": 0.0
+  },
+  {
+    "timestamp": "2025-04-14T23:39:00",
+    "portfolio_value": 10014.50,
+    "cash": 9800.00,
+    "positions": 1,
+    "drawdown": 0.0002
+  }
+]
