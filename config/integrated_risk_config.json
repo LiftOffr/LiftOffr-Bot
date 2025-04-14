@@ -1,0 +1,60 @@
+{
+  "enable_integrated_risk": true,
+  "check_interval_seconds": 60,
+  "enable_emergency_controls": true,
+  "log_level": "INFO",
+  "enable_portfolio_correlation": true,
+  "performance_metrics_window": 30,
+  "backtest_validation": true,
+  "risk_profile": "balanced",
+  "monitoring": {
+    "enable_alerts": true,
+    "alert_threshold_warning": 0.7,
+    "alert_threshold_critical": 0.9,
+    "max_drawdown_alert": 10.0,
+    "consecutive_loss_alert": 5
+  },
+  "pair_specific_settings": {
+    "SOL/USD": {
+      "risk_coefficient": 1.1,
+      "max_leverage_override": 100.0,
+      "prioritize_in_optimization": true
+    },
+    "BTC/USD": {
+      "risk_coefficient": 1.0,
+      "max_leverage_override": 75.0,
+      "prioritize_in_optimization": true
+    },
+    "ETH/USD": {
+      "risk_coefficient": 1.0,
+      "max_leverage_override": 75.0,
+      "prioritize_in_optimization": true
+    }
+  },
+  "optimization_parameters": {
+    "default_lookback_days": 180,
+    "test_ratio": 0.3,
+    "cross_validation_folds": 3,
+    "parameter_grid_size": "medium",
+    "apply_results_immediately": true,
+    "optimization_interval_days": 7
+  },
+  "enhanced_risk_metrics": {
+    "use_value_at_risk": true,
+    "var_confidence_level": 0.95,
+    "enable_stress_testing": true,
+    "stress_test_scenarios": [
+      "high_volatility",
+      "market_crash",
+      "flash_crash",
+      "correlation_spike"
+    ],
+    "risk_adjusted_returns": true
+  },
+  "liquidation_prevention": {
+    "enable_auto_deleveraging": true,
+    "margin_safety_buffer": 1.5,
+    "enable_position_hedging": false,
+    "max_drawdown_intervention": 12.0
+  }
+}

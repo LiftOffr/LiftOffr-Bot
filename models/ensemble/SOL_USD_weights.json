@@ -1,0 +1,5 @@
+{
+  "tcn": 0.42,
+  "lstm": 0.23,
+  "attention_gru": 0.35
+}

@@ -1,0 +1,71 @@
+{
+  "SOL/USD": {
+    "risk_percentage": 0.22,
+    "base_leverage": 25.0,
+    "max_leverage": 100.0,
+    "confidence_threshold": 0.68,
+    "signal_strength_threshold": 0.58,
+    "trailing_stop_atr_multiplier": 3.2,
+    "exit_multiplier": 1.8,
+    "drawdown_limit_percentage": 4.0,
+    "strategy_weights": {
+      "arima": 0.35,
+      "adaptive": 0.65
+    },
+    "optimization_time": "2025-04-14T23:02:15.123456",
+    "optimization_metrics": {
+      "profit_factor": 2.5,
+      "win_rate": 0.75,
+      "max_drawdown": 0.12,
+      "avg_profit_per_trade": 0.034,
+      "total_return": 0.87,
+      "sharpe_ratio": 1.9
+    }
+  },
+  "BTC/USD": {
+    "risk_percentage": 0.18,
+    "base_leverage": 15.0,
+    "max_leverage": 75.0,
+    "confidence_threshold": 0.72,
+    "signal_strength_threshold": 0.62,
+    "trailing_stop_atr_multiplier": 2.8,
+    "exit_multiplier": 1.6,
+    "drawdown_limit_percentage": 4.0,
+    "strategy_weights": {
+      "arima": 0.4,
+      "adaptive": 0.6
+    },
+    "optimization_time": "2025-04-14T23:02:15.123456",
+    "optimization_metrics": {
+      "profit_factor": 1.8,
+      "win_rate": 0.68,
+      "max_drawdown": 0.15,
+      "avg_profit_per_trade": 0.025,
+      "total_return": 0.65,
+      "sharpe_ratio": 1.5
+    }
+  },
+  "ETH/USD": {
+    "risk_percentage": 0.20,
+    "base_leverage": 20.0,
+    "max_leverage": 90.0,
+    "confidence_threshold": 0.70,
+    "signal_strength_threshold": 0.60,
+    "trailing_stop_atr_multiplier": 3.0,
+    "exit_multiplier": 1.7,
+    "drawdown_limit_percentage": 4.0,
+    "strategy_weights": {
+      "arima": 0.38,
+      "adaptive": 0.62
+    },
+    "optimization_time": "2025-04-14T23:02:15.123456",
+    "optimization_metrics": {
+      "profit_factor": 2.1,
+      "win_rate": 0.72,
+      "max_drawdown": 0.14,
+      "avg_profit_per_trade": 0.030,
+      "total_return": 0.78,
+      "sharpe_ratio": 1.7
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "confidence_scaling": {
+    "base_leverage": 20.0,
+    "max_leverage": 100.0,
+    "min_confidence": 0.5,
+    "leverage_curve": "exponential",
+    "leverage_bias": 0.3
+  },
+  "market_adjustments": {
+    "volatility_scaling": true,
+    "volatility_dampening": {
+      "very_low": 1.2,
+      "low": 1.1,
+      "medium": 1.0,
+      "high": 0.8,
+      "very_high": 0.6,
+      "extreme": 0.4
+    },
+    "regime_adjustments": {
+      "trending_up": 1.1,
+      "trending_down": 0.9,
+      "ranging": 1.0,
+      "volatile": 0.8
+    }
+  },
+  "performance_adjustments": {
+    "enable_win_streak_bonus": true,
+    "win_streak_bonus_per_win": 0.05,
+    "win_streak_bonus_cap": 0.25,
+    "enable_loss_streak_reduction": true,
+    "loss_streak_reduction_per_loss": 0.1,
+    "loss_streak_reduction_cap": 0.5,
+    "time_decay_hours": 48
+  },
+  "risk_limits": {
+    "max_risk_percentage": 0.3,
+    "min_risk_percentage": 0.05,
+    "default_risk_percentage": 0.2,
+    "max_leverage_cap": 125.0,
+    "min_leverage": 5.0
+  },
+  "pair_specific_adjustments": {
+    "SOL/USD": {
+      "base_leverage_modifier": 1.1,
+      "risk_percentage_modifier": 1.05
+    },
+    "BTC/USD": {
+      "base_leverage_modifier": 0.9,
+      "risk_percentage_modifier": 0.95
+    }
+  },
+  "advanced_settings": {
+    "apply_kelly_criterion": true,
+    "kelly_fraction": 0.3,
+    "drawdown_adaptation": true,
+    "drawdown_reduction_factor": 0.5,
+    "high_confidence_threshold": 0.8,
+    "low_confidence_threshold": 0.6
+  }
+}
