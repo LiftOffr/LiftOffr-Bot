@@ -95,9 +95,17 @@ def prepare_dataset(pair: str, timeframe: str) -> Tuple[np.ndarray, np.ndarray, 
         df = pd.read_csv(dataset_path)
         logger.info(f"Loaded dataset with {len(df)} samples and {len(df.columns)} features")
         
-        # Remove timestamp and other non-feature columns
-        if "timestamp" in df.columns:
-            df = df.drop("timestamp", axis=1)
+        # Remove timestamp and other non-numeric columns
+        columns_to_drop = ["timestamp"]
+        
+        # Add string/categorical columns to drop list
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                logger.info(f"Dropping non-numeric column: {col}")
+                columns_to_drop.append(col)
+        
+        # Drop non-numeric columns
+        df = df.drop(columns_to_drop, axis=1, errors='ignore')
         
         # Get target variable (short-term direction, 8 hours ahead)
         target_col = "target_direction_8"
@@ -111,6 +119,14 @@ def prepare_dataset(pair: str, timeframe: str) -> Tuple[np.ndarray, np.ndarray, 
         
         # Handle missing values
         X = X.fillna(0)
+        
+        # Verify all columns are numeric
+        for col in X.columns:
+            if not pd.api.types.is_numeric_dtype(X[col]):
+                logger.error(f"Non-numeric column found after processing: {col}")
+                return None, None, None, None
+        
+        logger.info(f"Processing {len(X.columns)} numeric features")
         
         # Normalize features
         scaler = StandardScaler()
