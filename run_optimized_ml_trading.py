@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """
-Run Optimized ML Trading Bot
+Run Optimized ML Trading
 
-This script provides a convenient wrapper to run the ML-enhanced trading bot
-with optimized settings for production use.
+This script starts the ML-optimized trading bot with all available
+ML enhancements and optimizations.
 """
 
 import os
 import sys
-import subprocess
-import argparse
+import time
+import json
 import logging
-from datetime import datetime
+import argparse
+import subprocess
+from typing import List, Dict, Any, Optional
 
 # Configure logging
 logging.basicConfig(
@@ -19,120 +21,211 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('run_optimized_ml_trading.log')
+        logging.FileHandler('optimized_ml_trading.log')
     ]
 )
 logger = logging.getLogger(__name__)
 
-def parse_args():
-    """Parse command line arguments"""
-    parser = argparse.ArgumentParser(description='Run optimized ML trading bot')
-    
-    parser.add_argument('--assets', nargs='+', default=["SOL/USD", "ETH/USD", "BTC/USD"],
-                       help='Assets to trade (default: SOL/USD ETH/USD BTC/USD)')
-    
-    parser.add_argument('--live', action='store_true',
-                       help='Enable live trading (use with caution)')
-    
-    parser.add_argument('--reset', action='store_true',
-                       help='Reset portfolio before trading')
-    
-    parser.add_argument('--optimize', action='store_true',
-                       help='Run optimization before trading')
-    
-    parser.add_argument('--capital', type=float, default=20000.0,
-                       help='Initial capital in USD (default: 20000.0)')
-    
-    parser.add_argument('--interval', type=int, default=60,
-                       help='Trading interval in seconds (default: 60)')
-    
-    parser.add_argument('--iterations', type=int, default=None,
-                       help='Maximum number of trading iterations')
-    
-    return parser.parse_args()
+# Constants
+DEFAULT_ASSETS = ["SOL/USD", "ETH/USD", "BTC/USD"]
+DEFAULT_CAPITAL = 20000.0
+CONFIG_PATH = "ml_config.json"
+ML_INTEGRATION_SCRIPT = "ml_live_trading_integration.py"
+BOT_MANAGER_SCRIPT = "bot_manager_integration.py"
 
-def build_command(args):
-    """Build command to run start_ml_trading.py"""
-    cmd = [sys.executable, "start_ml_trading.py"]
+def load_config() -> Dict[str, Any]:
+    """Load the ML configuration from file"""
+    try:
+        if os.path.exists(CONFIG_PATH):
+            with open(CONFIG_PATH, "r") as f:
+                config = json.load(f)
+            logger.info(f"Loaded ML configuration from {CONFIG_PATH}")
+            return config
+        else:
+            logger.warning(f"Configuration file {CONFIG_PATH} not found, using defaults")
+            return {}
+    except Exception as e:
+        logger.error(f"Error loading configuration: {e}")
+        return {}
+
+def get_capital_allocation(config: Dict[str, Any], assets: List[str]) -> Dict[str, float]:
+    """Get capital allocation for the specified assets"""
+    try:
+        if not config or "global_settings" not in config:
+            # Default allocation: equal distribution
+            equal_share = 1.0 / len(assets)
+            return {asset: equal_share for asset in assets}
+        
+        if "default_capital_allocation" not in config["global_settings"]:
+            # Default allocation: equal distribution
+            equal_share = 1.0 / len(assets)
+            return {asset: equal_share for asset in assets}
+        
+        # Get allocation from config
+        allocation = config["global_settings"]["default_capital_allocation"]
+        
+        # Filter to include only the specified assets
+        filtered_allocation = {asset: allocation.get(asset, 0.0) for asset in assets if asset in allocation}
+        
+        # If no allocations were found, use equal distribution
+        if not filtered_allocation or sum(filtered_allocation.values()) == 0:
+            equal_share = 1.0 / len(assets)
+            return {asset: equal_share for asset in assets}
+        
+        # Normalize allocations to sum to 1.0
+        total = sum(filtered_allocation.values())
+        return {asset: value / total for asset, value in filtered_allocation.items()}
     
-    # Add assets
-    cmd.extend(["--assets"] + args.assets)
+    except Exception as e:
+        logger.error(f"Error getting capital allocation: {e}")
+        # Default allocation: equal distribution
+        equal_share = 1.0 / len(assets)
+        return {asset: equal_share for asset in assets}
+
+def start_trading_bot(
+    assets: List[str], 
+    live: bool = False, 
+    reset: bool = False, 
+    optimize: bool = True,
+    capital: float = DEFAULT_CAPITAL,
+    capital_allocation: Optional[Dict[str, float]] = None,
+    max_iterations: Optional[int] = None,
+    interval_seconds: int = 10
+) -> subprocess.Popen:
+    """Start the trading bot with the specified assets"""
+    try:
+        logger.info(f"Starting trading bot for assets: {assets}")
+        
+        # Determine trading mode
+        mode = "live" if live else "sandbox"
+        logger.info(f"Trading mode: {mode}")
+        
+        # Build command
+        command = [
+            "python", 
+            "main.py", 
+            "--pair", assets[0],  # Primary pair
+            "--multi-strategy", "ml_enhanced_integrated"
+        ]
+        
+        # Add flags
+        if not live:
+            command.append("--sandbox")
+        
+        if capital:
+            command.extend(["--capital", str(capital)])
+        
+        # Start the bot
+        logger.info(f"Running command: {' '.join(command)}")
+        process = subprocess.Popen(command)
+        
+        logger.info(f"Trading bot started with PID {process.pid}")
+        
+        # If max_iterations is specified, limit the runtime
+        if max_iterations is not None:
+            logger.info(f"Bot will run for {max_iterations} iterations")
+            iteration = 0
+            while process.poll() is None and (max_iterations is None or iteration < max_iterations):
+                time.sleep(interval_seconds)
+                iteration += 1
+                logger.info(f"Iteration {iteration}/{max_iterations}")
+            
+            # Terminate the process if it's still running
+            if process.poll() is None:
+                logger.info(f"Reached {max_iterations} iterations, terminating bot")
+                process.terminate()
+                process.wait()
+        
+        return process
+    except Exception as e:
+        logger.error(f"Error starting trading bot: {e}")
+        return None
+
+def parse_args():
+    """Parse command-line arguments"""
+    parser = argparse.ArgumentParser(description="Run Optimized ML Trading")
     
-    # Add options
-    if args.live:
-        cmd.append("--live")
+    # Asset selection
+    parser.add_argument("--assets", type=str, nargs="+", default=DEFAULT_ASSETS, 
+                      help="Assets to trade (comma-separated or space-separated list)")
     
-    if args.reset:
-        cmd.append("--reset-portfolio")
+    # Mode selection
+    parser.add_argument("--live", action="store_true", 
+                      help="Run in live trading mode (default: sandbox mode)")
+    parser.add_argument("--sandbox", action="store_true", 
+                      help="Run in sandbox mode (default is already sandbox, this is just for compatibility)")
     
-    if args.optimize:
-        cmd.append("--optimize-first")
+    # Reset option
+    parser.add_argument("--reset", action="store_true", 
+                      help="Reset trading bot state")
     
-    # Add parameters
-    cmd.extend(["--initial-capital", str(args.capital)])
-    cmd.extend(["--interval", str(args.interval)])
+    # Optimization option
+    parser.add_argument("--optimize", action="store_true", 
+                      help="Run with all optimizations enabled")
     
-    if args.iterations:
-        cmd.extend(["--max-iterations", str(args.iterations)])
+    # Capital option
+    parser.add_argument("--capital", type=float, default=DEFAULT_CAPITAL, 
+                      help=f"Starting capital (default: {DEFAULT_CAPITAL})")
     
-    # Always use extreme leverage and ML position sizing
-    cmd.append("--extreme-leverage")
-    cmd.append("--ml-position-sizing")
+    # Interval option
+    parser.add_argument("--interval", type=int, default=10, 
+                      help="Interval between iterations in seconds (default: 10)")
     
-    return cmd
+    # Max iterations option
+    parser.add_argument("--iterations", type=int, 
+                      help="Maximum number of iterations to run (default: unlimited)")
+    
+    args = parser.parse_args()
+    
+    # Process assets argument
+    if len(args.assets) == 1 and "," in args.assets[0]:
+        # Handle comma-separated list
+        args.assets = [asset.strip() for asset in args.assets[0].split(",")]
+    
+    return args
 
 def main():
     """Main function"""
-    # Parse arguments
     args = parse_args()
     
-    # Print banner
-    print("=" * 80)
-    print(f"OPTIMIZED ML TRADING BOT - {'LIVE' if args.live else 'SANDBOX'} MODE")
-    print("=" * 80)
-    print(f"Trading assets: {args.assets}")
-    print(f"Initial capital: ${args.capital:.2f}")
-    print(f"Trading interval: {args.interval} seconds")
-    print(f"Reset portfolio: {args.reset}")
-    print(f"Run optimization: {args.optimize}")
-    if args.iterations:
-        print(f"Maximum iterations: {args.iterations}")
-    print("=" * 80)
-    
-    # Check for live mode and warn user
-    if args.live:
-        confirm = input("WARNING: You are about to start LIVE trading with EXTREME leverage. "
-                       "Type 'I UNDERSTAND THE RISKS' to proceed: ")
-        if confirm != "I UNDERSTAND THE RISKS":
-            print("Live trading not confirmed. Exiting.")
-            return
-    
-    # Build command
-    cmd = build_command(args)
-    
-    # Log the command
-    logger.info(f"Running command: {' '.join(cmd)}")
-    
     try:
-        # Run the command
-        process = subprocess.Popen(cmd)
+        # Load configuration
+        config = load_config()
         
-        # Wait for the process to complete
+        # Get capital allocation
+        capital_allocation = get_capital_allocation(config, args.assets)
+        logger.info(f"Capital allocation: {capital_allocation}")
+        
+        # Validate assets
+        if not args.assets:
+            logger.error("No assets specified")
+            sys.exit(1)
+        
+        # Start trading bot
+        process = start_trading_bot(
+            assets=args.assets,
+            live=args.live,
+            reset=args.reset,
+            optimize=args.optimize,
+            capital=args.capital,
+            capital_allocation=capital_allocation,
+            max_iterations=args.iterations,
+            interval_seconds=args.interval
+        )
+        
+        if not process:
+            logger.error("Failed to start trading bot")
+            sys.exit(1)
+        
+        # Wait for the process to finish
         process.wait()
-        
-        # Check return code
-        if process.returncode == 0:
-            logger.info("Trading completed successfully")
-        else:
-            logger.error(f"Trading failed with return code {process.returncode}")
         
     except KeyboardInterrupt:
         logger.info("Interrupted by user")
-        # Try to terminate the process gracefully
-        process.terminate()
-        
     except Exception as e:
-        logger.error(f"Error running trading bot: {e}")
+        logger.error(f"Error in main: {e}")
+    finally:
+        logger.info("Exiting")
 
 if __name__ == "__main__":
     main()

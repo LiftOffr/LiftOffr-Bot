@@ -26,6 +26,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Load configuration
+CONFIG_PATH = "ml_config.json"
+
+def load_config() -> Dict[str, Any]:
+    """Load the ML configuration from file"""
+    try:
+        if os.path.exists(CONFIG_PATH):
+            with open(CONFIG_PATH, "r") as f:
+                config = json.load(f)
+            logger.info(f"Loaded ML configuration from {CONFIG_PATH}")
+            return config
+        else:
+            logger.warning(f"Configuration file {CONFIG_PATH} not found, using defaults")
+            return {}
+    except Exception as e:
+        logger.error(f"Error loading configuration: {e}")
+        return {}
+
 class MLLiveTradingIntegration:
     """
     ML Live Trading Integration
@@ -45,7 +63,8 @@ class MLLiveTradingIntegration:
         self,
         trading_pairs: List[str] = ["SOL/USD"],
         models_path: str = "models",
-        use_extreme_leverage: bool = True
+        use_extreme_leverage: bool = True,
+        config_override: Dict[str, Any] = None
     ):
         """
         Initialize the ML live trading integration
@@ -54,10 +73,19 @@ class MLLiveTradingIntegration:
             trading_pairs: List of trading pairs to support
             models_path: Path to trained models
             use_extreme_leverage: Whether to use extreme leverage settings
+            config_override: Optional configuration override
         """
         self.trading_pairs = trading_pairs
         self.models_path = models_path
-        self.use_extreme_leverage = use_extreme_leverage
+        
+        # Load configuration
+        self.config = config_override if config_override else load_config()
+        
+        # Override extreme leverage settings if specified in config
+        if 'global_settings' in self.config and 'extreme_leverage_enabled' in self.config['global_settings']:
+            self.use_extreme_leverage = self.config['global_settings']['extreme_leverage_enabled']
+        else:
+            self.use_extreme_leverage = use_extreme_leverage
         
         # Model tracking
         self.loaded_models = {pair: {} for pair in trading_pairs}
@@ -77,7 +105,9 @@ class MLLiveTradingIntegration:
         self._load_models()
         
         logger.info(f"ML Live Trading Integration initialized for {len(trading_pairs)} pairs")
-        logger.info(f"Using extreme leverage: {use_extreme_leverage}")
+        logger.info(f"Using extreme leverage: {self.use_extreme_leverage}")
+        if self.config:
+            logger.info(f"Using custom ML configuration with {len(self.config.get('asset_configs', {}))} asset configs")
     
     def _load_position_sizing_configs(self) -> Dict[str, Any]:
         """
@@ -116,6 +146,37 @@ class MLLiveTradingIntegration:
         Returns:
             Dict: Default position sizing configuration
         """
+        # Try to get settings from config file
+        if self.config and 'asset_configs' in self.config and pair in self.config['asset_configs']:
+            asset_config = self.config['asset_configs'][pair]
+            
+            # Log that we're using the config file settings
+            logger.info(f"Using configuration from ml_config.json for {pair}")
+            
+            return {
+                "asset": pair,
+                "timestamp": datetime.now().isoformat(),
+                "leverage_settings": asset_config.get("leverage_settings", {
+                    "min": 10.0,
+                    "default": 20.0,
+                    "max": 50.0,
+                    "confidence_threshold": 0.70
+                }),
+                "position_sizing": asset_config.get("position_sizing", {
+                    "confidence_thresholds": [0.65, 0.70, 0.80, 0.90],
+                    "size_multipliers": [0.3, 0.5, 0.8, 1.0]
+                }),
+                "risk_management": asset_config.get("risk_management", {
+                    "max_open_positions": 1,
+                    "max_drawdown_percent": 5.0,
+                    "take_profit_multiplier": 2.0,
+                    "stop_loss_multiplier": 1.0
+                })
+            }
+        
+        # Fall back to hardcoded defaults if not in config
+        logger.warning(f"No configuration found for {pair} in ml_config.json, using defaults")
+        
         # Default leverage settings
         if "SOL" in pair:
             leverage_settings = {
@@ -153,6 +214,12 @@ class MLLiveTradingIntegration:
             "position_sizing": {
                 "confidence_thresholds": [0.65, 0.70, 0.80, 0.90],
                 "size_multipliers": [0.3, 0.5, 0.8, 1.0]
+            },
+            "risk_management": {
+                "max_open_positions": 1,
+                "max_drawdown_percent": 5.0,
+                "take_profit_multiplier": 2.0,
+                "stop_loss_multiplier": 1.0
             }
         }
     

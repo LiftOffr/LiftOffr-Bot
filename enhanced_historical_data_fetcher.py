@@ -480,8 +480,16 @@ def merge_low_timeframe_data(pair):
                 # Forward fill to match base timeframe
                 tf_df = tf_df.resample(f"{base_minutes}min").ffill()
         
+        # First rename columns to avoid duplicates
+        tf_cols = tf_df.columns.tolist()
+        rename_dict = {col: f"{col}_{timeframe}" for col in tf_cols}
+        tf_df = tf_df.rename(columns=rename_dict)
+        
+        # Reset index for join
+        tf_df = tf_df.reset_index()
+        
         # Join with base dataframe
-        base_df = base_df.join(tf_df, how='left')
+        base_df = pd.merge(base_df, tf_df, on='timestamp', how='left')
     
     # Forward fill any NaN values from the joins
     base_df = base_df.fillna(method='ffill')
