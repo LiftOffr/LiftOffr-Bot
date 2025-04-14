@@ -1,0 +1,700 @@
+{
+  "global_settings": {
+    "extreme_leverage_enabled": true,
+    "model_pruning_threshold": 0.4,
+    "model_pruning_min_samples": 10,
+    "model_selection_frequency": 6,
+    "training_priority": "critical",
+    "continuous_learning": true,
+    "model_save_frequency_hours": 2,
+    "default_capital_allocation": {
+      "SOL/USD": 0.20,
+      "ETH/USD": 0.20,
+      "BTC/USD": 0.20,
+      "DOT/USD": 0.10,
+      "LINK/USD": 0.05,
+      "AVAX/USD": 0.05,
+      "MATIC/USD": 0.05,
+      "NEAR/USD": 0.05,
+      "ADA/USD": 0.05,
+      "ATOM/USD": 0.05
+    }
+  },
+  "asset_configs": {
+    "SOL/USD": {
+      "leverage_settings": {
+        "min": 20.0,
+        "default": 35.0,
+        "max": 125.0,
+        "confidence_threshold": 0.65
+      },
+      "position_sizing": {
+        "confidence_thresholds": [0.65, 0.75, 0.85, 0.95],
+        "size_multipliers": [0.3, 0.5, 0.8, 1.0]
+      },
+      "risk_management": {
+        "max_open_positions": 1,
+        "max_drawdown_percent": 7.5,
+        "take_profit_multiplier": 3.0,
+        "stop_loss_multiplier": 1.0
+      },
+      "model_weights": {
+        "transformer": 0.30,
+        "tcn": 0.20,
+        "lstm": 0.10,
+        "attention_gru": 0.15,
+        "tft": 0.25
+      },
+      "market_regimes": {
+        "trending": {
+          "transformer_weight": 0.35,
+          "tcn_weight": 0.15,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.15,
+          "tft_weight": 0.30
+        },
+        "ranging": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.20,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.20,
+          "tft_weight": 0.25
+        },
+        "volatile": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.15,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.20,
+          "tft_weight": 0.30
+        }
+      }
+    },
+    "ETH/USD": {
+      "leverage_settings": {
+        "min": 15.0,
+        "default": 30.0,
+        "max": 100.0,
+        "confidence_threshold": 0.70
+      },
+      "position_sizing": {
+        "confidence_thresholds": [0.70, 0.80, 0.90, 0.95],
+        "size_multipliers": [0.25, 0.5, 0.75, 1.0]
+      },
+      "risk_management": {
+        "max_open_positions": 1,
+        "max_drawdown_percent": 6.0,
+        "take_profit_multiplier": 2.5,
+        "stop_loss_multiplier": 1.0
+      },
+      "model_weights": {
+        "transformer": 0.30,
+        "tcn": 0.20,
+        "lstm": 0.10,
+        "attention_gru": 0.15,
+        "tft": 0.25
+      },
+      "market_regimes": {
+        "trending": {
+          "transformer_weight": 0.35,
+          "tcn_weight": 0.15,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.15,
+          "tft_weight": 0.25
+        },
+        "ranging": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.25,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.15,
+          "tft_weight": 0.25
+        },
+        "volatile": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.20,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.20,
+          "tft_weight": 0.25
+        }
+      }
+    },
+    "BTC/USD": {
+      "leverage_settings": {
+        "min": 12.0,
+        "default": 25.0,
+        "max": 85.0,
+        "confidence_threshold": 0.75
+      },
+      "position_sizing": {
+        "confidence_thresholds": [0.75, 0.85, 0.90, 0.95],
+        "size_multipliers": [0.2, 0.4, 0.7, 1.0]
+      },
+      "risk_management": {
+        "max_open_positions": 1,
+        "max_drawdown_percent": 5.0,
+        "take_profit_multiplier": 2.0,
+        "stop_loss_multiplier": 1.0
+      },
+      "model_weights": {
+        "transformer": 0.30,
+        "tcn": 0.20,
+        "lstm": 0.10,
+        "attention_gru": 0.15,
+        "tft": 0.25
+      },
+      "market_regimes": {
+        "trending": {
+          "transformer_weight": 0.30,
+          "tcn_weight": 0.20,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.15,
+          "tft_weight": 0.25
+        },
+        "ranging": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.25,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.15,
+          "tft_weight": 0.25
+        },
+        "volatile": {
+          "transformer_weight": 0.20,
+          "tcn_weight": 0.20,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.20,
+          "tft_weight": 0.30
+        }
+      }
+    },
+    "DOT/USD": {
+      "leverage_settings": {
+        "min": 18.0,
+        "default": 32.0,
+        "max": 110.0,
+        "confidence_threshold": 0.68
+      },
+      "position_sizing": {
+        "confidence_thresholds": [0.68, 0.78, 0.88, 0.95],
+        "size_multipliers": [0.25, 0.5, 0.75, 1.0]
+      },
+      "risk_management": {
+        "max_open_positions": 1,
+        "max_drawdown_percent": 7.0,
+        "take_profit_multiplier": 2.7,
+        "stop_loss_multiplier": 1.0
+      },
+      "model_weights": {
+        "transformer": 0.30,
+        "tcn": 0.20,
+        "lstm": 0.10,
+        "attention_gru": 0.15,
+        "tft": 0.25
+      },
+      "market_regimes": {
+        "trending": {
+          "transformer_weight": 0.35,
+          "tcn_weight": 0.15,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.15,
+          "tft_weight": 0.25
+        },
+        "ranging": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.20,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.20,
+          "tft_weight": 0.25
+        },
+        "volatile": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.15,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.20,
+          "tft_weight": 0.30
+        }
+      }
+    },
+    "LINK/USD": {
+      "leverage_settings": {
+        "min": 15.0,
+        "default": 30.0,
+        "max": 100.0,
+        "confidence_threshold": 0.70
+      },
+      "position_sizing": {
+        "confidence_thresholds": [0.70, 0.80, 0.90, 0.95],
+        "size_multipliers": [0.25, 0.5, 0.75, 1.0]
+      },
+      "risk_management": {
+        "max_open_positions": 1,
+        "max_drawdown_percent": 6.5,
+        "take_profit_multiplier": 2.8,
+        "stop_loss_multiplier": 1.0
+      },
+      "model_weights": {
+        "transformer": 0.25,
+        "tcn": 0.20,
+        "lstm": 0.10,
+        "attention_gru": 0.20,
+        "tft": 0.25
+      },
+      "market_regimes": {
+        "trending": {
+          "transformer_weight": 0.30,
+          "tcn_weight": 0.15,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.15,
+          "tft_weight": 0.30
+        },
+        "ranging": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.25,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.15,
+          "tft_weight": 0.25
+        },
+        "volatile": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.15,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.25,
+          "tft_weight": 0.30
+        }
+      }
+    },
+    "AVAX/USD": {
+      "leverage_settings": {
+        "min": 16.0,
+        "default": 30.0,
+        "max": 110.0,
+        "confidence_threshold": 0.68
+      },
+      "position_sizing": {
+        "confidence_thresholds": [0.68, 0.78, 0.88, 0.95],
+        "size_multipliers": [0.25, 0.5, 0.75, 1.0]
+      },
+      "risk_management": {
+        "max_open_positions": 1,
+        "max_drawdown_percent": 7.0,
+        "take_profit_multiplier": 2.8,
+        "stop_loss_multiplier": 1.0
+      },
+      "model_weights": {
+        "transformer": 0.30,
+        "tcn": 0.20,
+        "lstm": 0.05,
+        "attention_gru": 0.20,
+        "tft": 0.25
+      },
+      "market_regimes": {
+        "trending": {
+          "transformer_weight": 0.35,
+          "tcn_weight": 0.15,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.15,
+          "tft_weight": 0.30
+        },
+        "ranging": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.20,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.20,
+          "tft_weight": 0.30
+        },
+        "volatile": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.15,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.25,
+          "tft_weight": 0.30
+        }
+      }
+    },
+    "MATIC/USD": {
+      "leverage_settings": {
+        "min": 17.0,
+        "default": 32.0,
+        "max": 115.0,
+        "confidence_threshold": 0.68
+      },
+      "position_sizing": {
+        "confidence_thresholds": [0.68, 0.78, 0.88, 0.95],
+        "size_multipliers": [0.25, 0.5, 0.75, 1.0]
+      },
+      "risk_management": {
+        "max_open_positions": 1,
+        "max_drawdown_percent": 7.0,
+        "take_profit_multiplier": 2.8,
+        "stop_loss_multiplier": 1.0
+      },
+      "model_weights": {
+        "transformer": 0.30,
+        "tcn": 0.20,
+        "lstm": 0.05,
+        "attention_gru": 0.20,
+        "tft": 0.25
+      },
+      "market_regimes": {
+        "trending": {
+          "transformer_weight": 0.35,
+          "tcn_weight": 0.15,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.15,
+          "tft_weight": 0.30
+        },
+        "ranging": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.20,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.20,
+          "tft_weight": 0.30
+        },
+        "volatile": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.15,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.25,
+          "tft_weight": 0.30
+        }
+      }
+    },
+    "NEAR/USD": {
+      "leverage_settings": {
+        "min": 18.0,
+        "default": 35.0,
+        "max": 120.0,
+        "confidence_threshold": 0.68
+      },
+      "position_sizing": {
+        "confidence_thresholds": [0.68, 0.78, 0.88, 0.95],
+        "size_multipliers": [0.25, 0.5, 0.75, 1.0]
+      },
+      "risk_management": {
+        "max_open_positions": 1,
+        "max_drawdown_percent": 7.0,
+        "take_profit_multiplier": 2.8,
+        "stop_loss_multiplier": 1.0
+      },
+      "model_weights": {
+        "transformer": 0.30,
+        "tcn": 0.20,
+        "lstm": 0.05,
+        "attention_gru": 0.20,
+        "tft": 0.25
+      },
+      "market_regimes": {
+        "trending": {
+          "transformer_weight": 0.35,
+          "tcn_weight": 0.15,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.15,
+          "tft_weight": 0.30
+        },
+        "ranging": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.20,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.20,
+          "tft_weight": 0.30
+        },
+        "volatile": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.15,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.25,
+          "tft_weight": 0.30
+        }
+      }
+    },
+    "ADA/USD": {
+      "leverage_settings": {
+        "min": 16.0,
+        "default": 30.0,
+        "max": 100.0,
+        "confidence_threshold": 0.70
+      },
+      "position_sizing": {
+        "confidence_thresholds": [0.70, 0.80, 0.90, 0.95],
+        "size_multipliers": [0.25, 0.5, 0.75, 1.0]
+      },
+      "risk_management": {
+        "max_open_positions": 1,
+        "max_drawdown_percent": 6.5,
+        "take_profit_multiplier": 2.8,
+        "stop_loss_multiplier": 1.0
+      },
+      "model_weights": {
+        "transformer": 0.30,
+        "tcn": 0.20,
+        "lstm": 0.05,
+        "attention_gru": 0.20,
+        "tft": 0.25
+      },
+      "market_regimes": {
+        "trending": {
+          "transformer_weight": 0.35,
+          "tcn_weight": 0.15,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.15,
+          "tft_weight": 0.30
+        },
+        "ranging": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.20,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.20,
+          "tft_weight": 0.30
+        },
+        "volatile": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.15,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.25,
+          "tft_weight": 0.30
+        }
+      }
+    },
+    "ATOM/USD": {
+      "leverage_settings": {
+        "min": 15.0,
+        "default": 30.0,
+        "max": 100.0,
+        "confidence_threshold": 0.70
+      },
+      "position_sizing": {
+        "confidence_thresholds": [0.70, 0.80, 0.90, 0.95],
+        "size_multipliers": [0.25, 0.5, 0.75, 1.0]
+      },
+      "risk_management": {
+        "max_open_positions": 1,
+        "max_drawdown_percent": 6.5,
+        "take_profit_multiplier": 2.8,
+        "stop_loss_multiplier": 1.0
+      },
+      "model_weights": {
+        "transformer": 0.30,
+        "tcn": 0.20,
+        "lstm": 0.05,
+        "attention_gru": 0.20,
+        "tft": 0.25
+      },
+      "market_regimes": {
+        "trending": {
+          "transformer_weight": 0.35,
+          "tcn_weight": 0.15,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.15,
+          "tft_weight": 0.30
+        },
+        "ranging": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.20,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.20,
+          "tft_weight": 0.30
+        },
+        "volatile": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.15,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.25,
+          "tft_weight": 0.30
+        }
+      }
+    }
+  },
+  "training_parameters": {
+    "SOL/USD": {
+      "epochs": 300,
+      "batch_size": 64,
+      "learning_rate": 0.0008,
+      "validation_split": 0.2,
+      "sequence_length": 90,
+      "prediction_horizon": 12,
+      "market_noise_amplitude": 0.35,
+      "execution_slippage_max": 0.008,
+      "asymmetric_loss_ratio": 2.5,
+      "random_seed": 42,
+      "priority_level": "critical"
+    },
+    "ETH/USD": {
+      "epochs": 250,
+      "batch_size": 64,
+      "learning_rate": 0.001,
+      "validation_split": 0.2,
+      "sequence_length": 72,
+      "prediction_horizon": 12,
+      "market_noise_amplitude": 0.25,
+      "execution_slippage_max": 0.006,
+      "asymmetric_loss_ratio": 2.2,
+      "random_seed": 42,
+      "priority_level": "critical"
+    },
+    "BTC/USD": {
+      "epochs": 200,
+      "batch_size": 64,
+      "learning_rate": 0.001,
+      "validation_split": 0.2,
+      "sequence_length": 60,
+      "prediction_horizon": 12,
+      "market_noise_amplitude": 0.15,
+      "execution_slippage_max": 0.004,
+      "asymmetric_loss_ratio": 2.0,
+      "random_seed": 42,
+      "priority_level": "critical"
+    },
+    "DOT/USD": {
+      "epochs": 270,
+      "batch_size": 64,
+      "learning_rate": 0.0009,
+      "validation_split": 0.2,
+      "sequence_length": 84,
+      "prediction_horizon": 12,
+      "market_noise_amplitude": 0.30,
+      "execution_slippage_max": 0.007,
+      "asymmetric_loss_ratio": 2.3,
+      "random_seed": 42,
+      "priority_level": "high"
+    },
+    "LINK/USD": {
+      "epochs": 240,
+      "batch_size": 64,
+      "learning_rate": 0.0009,
+      "validation_split": 0.2,
+      "sequence_length": 78,
+      "prediction_horizon": 12,
+      "market_noise_amplitude": 0.28,
+      "execution_slippage_max": 0.007,
+      "asymmetric_loss_ratio": 2.4,
+      "random_seed": 42,
+      "priority_level": "high"
+    },
+    "AVAX/USD": {
+      "epochs": 280,
+      "batch_size": 64,
+      "learning_rate": 0.0008,
+      "validation_split": 0.2,
+      "sequence_length": 90,
+      "prediction_horizon": 12,
+      "market_noise_amplitude": 0.32,
+      "execution_slippage_max": 0.008,
+      "asymmetric_loss_ratio": 2.5,
+      "random_seed": 42,
+      "priority_level": "high"
+    },
+    "MATIC/USD": {
+      "epochs": 270,
+      "batch_size": 64,
+      "learning_rate": 0.0008,
+      "validation_split": 0.2,
+      "sequence_length": 90,
+      "prediction_horizon": 12,
+      "market_noise_amplitude": 0.32,
+      "execution_slippage_max": 0.008,
+      "asymmetric_loss_ratio": 2.5,
+      "random_seed": 42,
+      "priority_level": "medium"
+    },
+    "NEAR/USD": {
+      "epochs": 270,
+      "batch_size": 64,
+      "learning_rate": 0.0008,
+      "validation_split": 0.2,
+      "sequence_length": 90,
+      "prediction_horizon": 12,
+      "market_noise_amplitude": 0.32,
+      "execution_slippage_max": 0.008,
+      "asymmetric_loss_ratio": 2.5,
+      "random_seed": 42,
+      "priority_level": "medium"
+    },
+    "ADA/USD": {
+      "epochs": 250,
+      "batch_size": 64,
+      "learning_rate": 0.0008,
+      "validation_split": 0.2,
+      "sequence_length": 80,
+      "prediction_horizon": 12,
+      "market_noise_amplitude": 0.28,
+      "execution_slippage_max": 0.007,
+      "asymmetric_loss_ratio": 2.4,
+      "random_seed": 42,
+      "priority_level": "medium"
+    },
+    "ATOM/USD": {
+      "epochs": 250,
+      "batch_size": 64,
+      "learning_rate": 0.0008,
+      "validation_split": 0.2,
+      "sequence_length": 80,
+      "prediction_horizon": 12,
+      "market_noise_amplitude": 0.28,
+      "execution_slippage_max": 0.007,
+      "asymmetric_loss_ratio": 2.4,
+      "random_seed": 42,
+      "priority_level": "medium"
+    }
+  },
+  "advanced_ai_settings": {
+    "reinforcement_learning": {
+      "enabled": true,
+      "algorithm": "PPO",
+      "reward_optimization": "profit",
+      "episodes_per_training": 1000,
+      "gamma": 0.99,
+      "state_representation": "market_features",
+      "action_space": "discrete"
+    },
+    "transfer_learning": {
+      "enabled": true,
+      "source_target_pairs": [
+        ["BTC/USD", "ETH/USD"],
+        ["ETH/USD", "SOL/USD"],
+        ["BTC/USD", "SOL/USD"]
+      ],
+      "fine_tuning_epochs": 50,
+      "feature_adaptation": true
+    },
+    "online_learning": {
+      "enabled": true,
+      "update_frequency_minutes": 60,
+      "batch_size": 32,
+      "learning_rate_decay": 0.95,
+      "max_samples_per_update": 500
+    },
+    "neural_architecture_search": {
+      "enabled": true,
+      "max_trials": 50,
+      "search_algorithm": "bayesian",
+      "metrics": ["val_loss", "prediction_accuracy"],
+      "max_model_size_mb": 100
+    },
+    "multi_objective_optimization": {
+      "enabled": true,
+      "objectives": [
+        {"name": "return", "weight": 0.6},
+        {"name": "sharpe", "weight": 0.3},
+        {"name": "drawdown", "weight": 0.1}
+      ],
+      "constraint_violation_penalty": 1000
+    },
+    "ensemble_configuration": {
+      "dynamic_weighting": true,
+      "diversity_promotion": true,
+      "pruning_frequency_hours": 24,
+      "min_ensemble_size": 3,
+      "max_ensemble_size": 7
+    },
+    "model_distillation": {
+      "enabled": true,
+      "teacher_student_ratio": 3,
+      "temperature": 2.0,
+      "distillation_weight": 0.5
+    },
+    "uncertainty_quantification": {
+      "enabled": true,
+      "method": "monte_carlo_dropout",
+      "confidence_threshold": 0.8,
+      "num_samples": 100
+    }
+  }
+}

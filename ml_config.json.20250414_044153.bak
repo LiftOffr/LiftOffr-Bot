@@ -1,0 +1,307 @@
+{
+  "global_settings": {
+    "extreme_leverage_enabled": true,
+    "model_pruning_threshold": 0.4,
+    "model_pruning_min_samples": 10,
+    "model_selection_frequency": 12,
+    "training_priority": "high",
+    "continuous_learning": true,
+    "model_save_frequency_hours": 4,
+    "default_capital_allocation": {
+      "SOL/USD": 0.35,
+      "ETH/USD": 0.30,
+      "BTC/USD": 0.20,
+      "DOT/USD": 0.10,
+      "LINK/USD": 0.05
+    }
+  },
+  "asset_configs": {
+    "SOL/USD": {
+      "leverage_settings": {
+        "min": 20.0,
+        "default": 35.0,
+        "max": 125.0,
+        "confidence_threshold": 0.65
+      },
+      "position_sizing": {
+        "confidence_thresholds": [0.65, 0.75, 0.85, 0.95],
+        "size_multipliers": [0.3, 0.5, 0.8, 1.0]
+      },
+      "risk_management": {
+        "max_open_positions": 1,
+        "max_drawdown_percent": 7.5,
+        "take_profit_multiplier": 3.0,
+        "stop_loss_multiplier": 1.0
+      },
+      "model_weights": {
+        "transformer": 0.40,
+        "tcn": 0.30,
+        "lstm": 0.10,
+        "attention_gru": 0.20
+      },
+      "market_regimes": {
+        "trending": {
+          "transformer_weight": 0.55,
+          "tcn_weight": 0.25,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.15
+        },
+        "ranging": {
+          "transformer_weight": 0.35,
+          "tcn_weight": 0.30,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.25
+        },
+        "volatile": {
+          "transformer_weight": 0.40,
+          "tcn_weight": 0.25,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.25
+        }
+      }
+    },
+    "ETH/USD": {
+      "leverage_settings": {
+        "min": 15.0,
+        "default": 30.0,
+        "max": 100.0,
+        "confidence_threshold": 0.70
+      },
+      "position_sizing": {
+        "confidence_thresholds": [0.70, 0.80, 0.90, 0.95],
+        "size_multipliers": [0.25, 0.5, 0.75, 1.0]
+      },
+      "risk_management": {
+        "max_open_positions": 1,
+        "max_drawdown_percent": 6.0,
+        "take_profit_multiplier": 2.5,
+        "stop_loss_multiplier": 1.0
+      },
+      "model_weights": {
+        "transformer": 0.35,
+        "tcn": 0.30,
+        "lstm": 0.15,
+        "attention_gru": 0.20
+      },
+      "market_regimes": {
+        "trending": {
+          "transformer_weight": 0.45,
+          "tcn_weight": 0.25,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.20
+        },
+        "ranging": {
+          "transformer_weight": 0.30,
+          "tcn_weight": 0.35,
+          "lstm_weight": 0.15,
+          "attention_gru_weight": 0.20
+        },
+        "volatile": {
+          "transformer_weight": 0.35,
+          "tcn_weight": 0.30,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.25
+        }
+      }
+    },
+    "BTC/USD": {
+      "leverage_settings": {
+        "min": 12.0,
+        "default": 25.0,
+        "max": 85.0,
+        "confidence_threshold": 0.75
+      },
+      "position_sizing": {
+        "confidence_thresholds": [0.75, 0.85, 0.90, 0.95],
+        "size_multipliers": [0.2, 0.4, 0.7, 1.0]
+      },
+      "risk_management": {
+        "max_open_positions": 1,
+        "max_drawdown_percent": 5.0,
+        "take_profit_multiplier": 2.0,
+        "stop_loss_multiplier": 1.0
+      },
+      "model_weights": {
+        "transformer": 0.35,
+        "tcn": 0.35,
+        "lstm": 0.10,
+        "attention_gru": 0.20
+      },
+      "market_regimes": {
+        "trending": {
+          "transformer_weight": 0.40,
+          "tcn_weight": 0.30,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.20
+        },
+        "ranging": {
+          "transformer_weight": 0.25,
+          "tcn_weight": 0.40,
+          "lstm_weight": 0.15,
+          "attention_gru_weight": 0.20
+        },
+        "volatile": {
+          "transformer_weight": 0.30,
+          "tcn_weight": 0.35,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.25
+        }
+      }
+    },
+    "DOT/USD": {
+      "leverage_settings": {
+        "min": 18.0,
+        "default": 32.0,
+        "max": 110.0,
+        "confidence_threshold": 0.68
+      },
+      "position_sizing": {
+        "confidence_thresholds": [0.68, 0.78, 0.88, 0.95],
+        "size_multipliers": [0.25, 0.5, 0.75, 1.0]
+      },
+      "risk_management": {
+        "max_open_positions": 1,
+        "max_drawdown_percent": 7.0,
+        "take_profit_multiplier": 2.7,
+        "stop_loss_multiplier": 1.0
+      },
+      "model_weights": {
+        "transformer": 0.38,
+        "tcn": 0.27,
+        "lstm": 0.10,
+        "attention_gru": 0.25
+      },
+      "market_regimes": {
+        "trending": {
+          "transformer_weight": 0.45,
+          "tcn_weight": 0.25,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.20
+        },
+        "ranging": {
+          "transformer_weight": 0.30,
+          "tcn_weight": 0.30,
+          "lstm_weight": 0.15,
+          "attention_gru_weight": 0.25
+        },
+        "volatile": {
+          "transformer_weight": 0.35,
+          "tcn_weight": 0.25,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.30
+        }
+      }
+    },
+    "LINK/USD": {
+      "leverage_settings": {
+        "min": 15.0,
+        "default": 30.0,
+        "max": 100.0,
+        "confidence_threshold": 0.70
+      },
+      "position_sizing": {
+        "confidence_thresholds": [0.70, 0.80, 0.90, 0.95],
+        "size_multipliers": [0.25, 0.5, 0.75, 1.0]
+      },
+      "risk_management": {
+        "max_open_positions": 1,
+        "max_drawdown_percent": 6.5,
+        "take_profit_multiplier": 2.8,
+        "stop_loss_multiplier": 1.0
+      },
+      "model_weights": {
+        "transformer": 0.35,
+        "tcn": 0.30,
+        "lstm": 0.10,
+        "attention_gru": 0.25
+      },
+      "market_regimes": {
+        "trending": {
+          "transformer_weight": 0.45,
+          "tcn_weight": 0.25,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.20
+        },
+        "ranging": {
+          "transformer_weight": 0.30,
+          "tcn_weight": 0.35,
+          "lstm_weight": 0.10,
+          "attention_gru_weight": 0.25
+        },
+        "volatile": {
+          "transformer_weight": 0.35,
+          "tcn_weight": 0.30,
+          "lstm_weight": 0.05,
+          "attention_gru_weight": 0.30
+        }
+      }
+    }
+  },
+  "training_parameters": {
+    "SOL/USD": {
+      "epochs": 250,
+      "batch_size": 64,
+      "learning_rate": 0.0008,
+      "validation_split": 0.2,
+      "sequence_length": 90,
+      "prediction_horizon": 12,
+      "market_noise_amplitude": 0.35,
+      "execution_slippage_max": 0.008,
+      "asymmetric_loss_ratio": 2.5,
+      "random_seed": 42,
+      "priority_level": "critical"
+    },
+    "ETH/USD": {
+      "epochs": 200,
+      "batch_size": 64,
+      "learning_rate": 0.001,
+      "validation_split": 0.2,
+      "sequence_length": 72,
+      "prediction_horizon": 12,
+      "market_noise_amplitude": 0.25,
+      "execution_slippage_max": 0.006,
+      "asymmetric_loss_ratio": 2.2,
+      "random_seed": 42,
+      "priority_level": "high"
+    },
+    "BTC/USD": {
+      "epochs": 180,
+      "batch_size": 64,
+      "learning_rate": 0.001,
+      "validation_split": 0.2,
+      "sequence_length": 60,
+      "prediction_horizon": 12,
+      "market_noise_amplitude": 0.15,
+      "execution_slippage_max": 0.004,
+      "asymmetric_loss_ratio": 2.0,
+      "random_seed": 42,
+      "priority_level": "medium"
+    },
+    "DOT/USD": {
+      "epochs": 220,
+      "batch_size": 64,
+      "learning_rate": 0.0009,
+      "validation_split": 0.2,
+      "sequence_length": 84,
+      "prediction_horizon": 12,
+      "market_noise_amplitude": 0.30,
+      "execution_slippage_max": 0.007,
+      "asymmetric_loss_ratio": 2.3,
+      "random_seed": 42,
+      "priority_level": "high"
+    },
+    "LINK/USD": {
+      "epochs": 180,
+      "batch_size": 64,
+      "learning_rate": 0.0009,
+      "validation_split": 0.2,
+      "sequence_length": 78,
+      "prediction_horizon": 12,
+      "market_noise_amplitude": 0.28,
+      "execution_slippage_max": 0.007,
+      "asymmetric_loss_ratio": 2.4,
+      "random_seed": 42,
+      "priority_level": "medium"
+    }
+  }
+}
