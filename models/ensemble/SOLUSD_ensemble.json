@@ -4,62 +4,62 @@
   "timeframe": "1h",
   "models": {
     "lstm": {
-      "weight": 0.3,
+      "weight": 0.34,
       "model_path": "models/lstm/SOLUSD_model.h5",
       "scaler_path": "models/lstm/SOLUSD_scaler.pkl"
     },
     "attention": {
-      "weight": 0.2,
+      "weight": 0.26,
       "model_path": "models/attention/SOLUSD_model.h5",
       "scaler_path": "models/attention/SOLUSD_scaler.pkl"
     },
     "tcn": {
-      "weight": 0.2,
+      "weight": 0.18,
       "model_path": "models/tcn/SOLUSD_model.h5",
       "scaler_path": "models/tcn/SOLUSD_scaler.pkl"
     },
     "transformer": {
-      "weight": 0.2,
+      "weight": 0.17,
       "model_path": "models/transformer/SOLUSD_model.h5",
       "scaler_path": "models/transformer/SOLUSD_scaler.pkl"
     },
     "cnn": {
-      "weight": 0.1,
+      "weight": 0.05,
       "model_path": "models/cnn/SOLUSD_model.h5",
       "scaler_path": "models/cnn/SOLUSD_scaler.pkl"
     }
   },
   "market_regime_weights": {
     "trending": {
-      "lstm": 0.25,
-      "attention": 0.2,
-      "tcn": 0.2,
-      "transformer": 0.25,
-      "cnn": 0.1
+      "lstm": 0.32,
+      "attention": 0.24,
+      "tcn": 0.18,
+      "transformer": 0.21,
+      "cnn": 0.05
     },
     "ranging": {
-      "lstm": 0.3,
-      "attention": 0.2,
-      "tcn": 0.25,
+      "lstm": 0.34,
+      "attention": 0.24,
+      "tcn": 0.22,
       "transformer": 0.15,
-      "cnn": 0.1
+      "cnn": 0.05
     },
     "volatile": {
-      "lstm": 0.2,
-      "attention": 0.3,
-      "tcn": 0.2,
-      "transformer": 0.2,
-      "cnn": 0.1
+      "lstm": 0.28,
+      "attention": 0.33,
+      "tcn": 0.16,
+      "transformer": 0.18,
+      "cnn": 0.05
     }
   },
   "performance_metrics": {
-    "accuracy": 0.8913,
-    "precision": 0.8654,
-    "recall": 0.8825,
-    "f1_score": 0.8738,
-    "profit_factor": 2.75,
-    "win_rate": 0.82
+    "accuracy": 0.9118,
+    "precision": 0.8975,
+    "recall": 0.9036,
+    "f1_score": 0.9005,
+    "profit_factor": 3.05,
+    "win_rate": 0.85
   },
   "last_updated": "2025-04-14",
-  "version": "1.0.0"
+  "version": "1.0.1"
 }

@@ -1,7 +1,7 @@
 {
-  "lstm": 0.3,
-  "attention": 0.2,
-  "tcn": 0.2,
-  "transformer": 0.2,
-  "cnn": 0.1
+  "lstm": 0.34,
+  "attention": 0.26,
+  "tcn": 0.18,
+  "transformer": 0.17,
+  "cnn": 0.05
 }

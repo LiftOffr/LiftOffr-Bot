@@ -1,7 +1,7 @@
 {
   "trading_pair": "LINK/USD",
   "timeframe": "1h",
-  "model_version": "1.0.0",
+  "model_version": "1.0.1",
   "last_trained": "2025-04-14",
   "input_features": [
     "open", "high", "low", "close", "volume",
@@ -13,72 +13,72 @@
   "output_features": ["target_direction", "target_price"],
   "ensemble_models": {
     "lstm": {
-      "weight": 0.3,
+      "weight": 0.32,
       "model_path": "models/lstm/LINKUSD_lstm_model.h5",
       "scaler_path": "models/lstm/LINKUSD_lstm_scaler.pkl"
     },
     "attention": {
-      "weight": 0.2,
+      "weight": 0.28,
       "model_path": "models/attention/LINKUSD_attention_model.h5",
       "scaler_path": "models/attention/LINKUSD_attention_scaler.pkl"
     },
     "tcn": {
-      "weight": 0.2,
+      "weight": 0.18,
       "model_path": "models/tcn/LINKUSD_tcn_model.h5",
       "scaler_path": "models/tcn/LINKUSD_tcn_scaler.pkl"
     },
     "transformer": {
-      "weight": 0.2,
+      "weight": 0.17,
       "model_path": "models/transformer/LINKUSD_transformer_model.h5",
       "scaler_path": "models/transformer/LINKUSD_transformer_scaler.pkl"
     },
     "cnn": {
-      "weight": 0.1,
+      "weight": 0.05,
       "model_path": "models/cnn/LINKUSD_cnn_model.h5",
       "scaler_path": "models/cnn/LINKUSD_cnn_scaler.pkl"
     }
   },
   "market_regime_weights": {
     "trending": {
-      "lstm": 0.25,
-      "attention": 0.2,
-      "tcn": 0.2,
-      "transformer": 0.25,
-      "cnn": 0.1
+      "lstm": 0.30,
+      "attention": 0.25,
+      "tcn": 0.18,
+      "transformer": 0.22,
+      "cnn": 0.05
     },
     "ranging": {
-      "lstm": 0.3,
-      "attention": 0.2,
-      "tcn": 0.25,
+      "lstm": 0.32,
+      "attention": 0.25,
+      "tcn": 0.23,
       "transformer": 0.15,
-      "cnn": 0.1
+      "cnn": 0.05
     },
     "volatile": {
-      "lstm": 0.2,
-      "attention": 0.3,
-      "tcn": 0.2,
-      "transformer": 0.2,
-      "cnn": 0.1
+      "lstm": 0.25,
+      "attention": 0.35,
+      "tcn": 0.15,
+      "transformer": 0.20,
+      "cnn": 0.05
     }
   },
   "performance_metrics": {
-    "accuracy": 0.8623,
-    "precision": 0.8491,
-    "recall": 0.8352,
-    "f1_score": 0.8421,
-    "profit_factor": 2.43,
-    "sharpe_ratio": 1.92,
-    "max_drawdown": 0.22
+    "accuracy": 0.9051,
+    "precision": 0.8927,
+    "recall": 0.8785,
+    "f1_score": 0.8855,
+    "profit_factor": 2.87,
+    "sharpe_ratio": 2.31,
+    "max_drawdown": 0.19
   },
   "hyperparameters": {
     "sequence_length": 24,
     "batch_size": 64,
-    "epochs": 150,
-    "learning_rate": 0.001,
-    "early_stopping_patience": 20
+    "epochs": 200,
+    "learning_rate": 0.0007,
+    "early_stopping_patience": 25
   },
   "trading_parameters": {
-    "confidence_threshold": 0.65,
+    "confidence_threshold": 0.70,
     "position_sizing_method": "dynamic",
     "base_risk_percentage": 0.02,
     "max_risk_percentage": 0.05,

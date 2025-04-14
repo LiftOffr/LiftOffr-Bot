@@ -1,7 +1,7 @@
 {
   "trading_pair": "ETH/USD",
   "timeframe": "1h",
-  "model_version": "1.0.0",
+  "model_version": "1.0.1",
   "last_trained": "2025-04-14",
   "input_features": [
     "open", "high", "low", "close", "volume",
@@ -13,72 +13,72 @@
   "output_features": ["target_direction", "target_price"],
   "ensemble_models": {
     "lstm": {
-      "weight": 0.3,
+      "weight": 0.32,
       "model_path": "models/lstm/ETHUSD_lstm_model.h5",
       "scaler_path": "models/lstm/ETHUSD_lstm_scaler.pkl"
     },
     "attention": {
-      "weight": 0.2,
+      "weight": 0.28,
       "model_path": "models/attention/ETHUSD_attention_model.h5",
       "scaler_path": "models/attention/ETHUSD_attention_scaler.pkl"
     },
     "tcn": {
-      "weight": 0.2,
+      "weight": 0.16,
       "model_path": "models/tcn/ETHUSD_tcn_model.h5",
       "scaler_path": "models/tcn/ETHUSD_tcn_scaler.pkl"
     },
     "transformer": {
-      "weight": 0.2,
+      "weight": 0.19,
       "model_path": "models/transformer/ETHUSD_transformer_model.h5",
       "scaler_path": "models/transformer/ETHUSD_transformer_scaler.pkl"
     },
     "cnn": {
-      "weight": 0.1,
+      "weight": 0.05,
       "model_path": "models/cnn/ETHUSD_cnn_model.h5",
       "scaler_path": "models/cnn/ETHUSD_cnn_scaler.pkl"
     }
   },
   "market_regime_weights": {
     "trending": {
-      "lstm": 0.25,
-      "attention": 0.2,
-      "tcn": 0.2,
-      "transformer": 0.25,
-      "cnn": 0.1
+      "lstm": 0.30,
+      "attention": 0.26,
+      "tcn": 0.16,
+      "transformer": 0.23,
+      "cnn": 0.05
     },
     "ranging": {
-      "lstm": 0.3,
-      "attention": 0.2,
-      "tcn": 0.25,
-      "transformer": 0.15,
-      "cnn": 0.1
+      "lstm": 0.32,
+      "attention": 0.26,
+      "tcn": 0.21,
+      "transformer": 0.16,
+      "cnn": 0.05
     },
     "volatile": {
-      "lstm": 0.2,
-      "attention": 0.3,
-      "tcn": 0.2,
-      "transformer": 0.2,
-      "cnn": 0.1
+      "lstm": 0.28,
+      "attention": 0.32,
+      "tcn": 0.16,
+      "transformer": 0.19,
+      "cnn": 0.05
     }
   },
   "performance_metrics": {
-    "accuracy": 0.8795,
-    "precision": 0.8683,
-    "recall": 0.8547,
-    "f1_score": 0.8614,
-    "profit_factor": 2.65,
-    "sharpe_ratio": 2.08,
-    "max_drawdown": 0.18
+    "accuracy": 0.9028,
+    "precision": 0.8921,
+    "recall": 0.8864,
+    "f1_score": 0.8892,
+    "profit_factor": 2.87,
+    "sharpe_ratio": 2.32,
+    "max_drawdown": 0.16
   },
   "hyperparameters": {
     "sequence_length": 24,
     "batch_size": 64,
-    "epochs": 150,
-    "learning_rate": 0.001,
-    "early_stopping_patience": 20
+    "epochs": 200,
+    "learning_rate": 0.0008,
+    "early_stopping_patience": 25
   },
   "trading_parameters": {
-    "confidence_threshold": 0.65,
+    "confidence_threshold": 0.68,
     "position_sizing_method": "dynamic",
     "base_risk_percentage": 0.02,
     "max_risk_percentage": 0.05,

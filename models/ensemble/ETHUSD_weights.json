@@ -2,69 +2,69 @@
   "trading_pair": "ETH/USD",
   "timeframe": "1h",
   "base_weights": {
-    "lstm": 0.3,
-    "attention": 0.2,
-    "tcn": 0.2,
-    "transformer": 0.2,
-    "cnn": 0.1
+    "lstm": 0.32,
+    "attention": 0.28,
+    "tcn": 0.16,
+    "transformer": 0.19,
+    "cnn": 0.05
   },
   "market_regime_weights": {
     "trending": {
-      "lstm": 0.25,
-      "attention": 0.2,
-      "tcn": 0.2,
-      "transformer": 0.25,
-      "cnn": 0.1
+      "lstm": 0.30,
+      "attention": 0.26,
+      "tcn": 0.16,
+      "transformer": 0.23,
+      "cnn": 0.05
     },
     "ranging": {
-      "lstm": 0.3,
-      "attention": 0.2,
-      "tcn": 0.25,
-      "transformer": 0.15,
-      "cnn": 0.1
+      "lstm": 0.32,
+      "attention": 0.26,
+      "tcn": 0.21,
+      "transformer": 0.16,
+      "cnn": 0.05
     },
     "volatile": {
-      "lstm": 0.2,
-      "attention": 0.3,
-      "tcn": 0.2,
-      "transformer": 0.2,
-      "cnn": 0.1
+      "lstm": 0.28,
+      "attention": 0.32,
+      "tcn": 0.16,
+      "transformer": 0.19,
+      "cnn": 0.05
     }
   },
   "optimization_results": {
-    "max_accuracy": 0.8795,
-    "max_profit_factor": 2.65,
+    "max_accuracy": 0.9028,
+    "max_profit_factor": 2.87,
     "best_weights": {
-      "lstm": 0.3,
-      "attention": 0.2,
-      "tcn": 0.2,
-      "transformer": 0.2,
-      "cnn": 0.1
+      "lstm": 0.32,
+      "attention": 0.28,
+      "tcn": 0.16,
+      "transformer": 0.19,
+      "cnn": 0.05
     },
     "best_regime_weights": {
       "trending": {
-        "lstm": 0.25,
-        "attention": 0.2,
-        "tcn": 0.2,
-        "transformer": 0.25,
-        "cnn": 0.1
+        "lstm": 0.30,
+        "attention": 0.26,
+        "tcn": 0.16,
+        "transformer": 0.23,
+        "cnn": 0.05
       },
       "ranging": {
-        "lstm": 0.3,
-        "attention": 0.2,
-        "tcn": 0.25,
-        "transformer": 0.15,
-        "cnn": 0.1
+        "lstm": 0.32,
+        "attention": 0.26,
+        "tcn": 0.21,
+        "transformer": 0.16,
+        "cnn": 0.05
       },
       "volatile": {
-        "lstm": 0.2,
-        "attention": 0.3,
-        "tcn": 0.2,
-        "transformer": 0.2,
-        "cnn": 0.1
+        "lstm": 0.28,
+        "attention": 0.32,
+        "tcn": 0.16,
+        "transformer": 0.19,
+        "cnn": 0.05
       }
     }
   },
   "last_updated": "2025-04-14",
-  "version": "1.0.0"
+  "version": "1.0.1"
 }
