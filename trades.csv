@@ -764,3 +764,4 @@ timestamp,pair,side,amount,price,value,pnl,pnl_percentage,strategy,cross_strateg
 2025-04-14 16:23:38,SOL/USD,SELL,766.740276,129.01,,,short,ARIMAStrategy
 2025-04-14 16:31:16,SOL/USD,BUY,843.218221,129.04,,,long,ARIMAStrategy
 2025-04-14 16:40:41,SOL/USD,SELL,772.439364,129.46,,,short,ARIMAStrategy
+2025-04-14 16:42:24,SOL/USD,SELL,770.534751,129.78,,,short,ARIMAStrategy

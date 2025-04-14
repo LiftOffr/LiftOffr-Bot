@@ -1,21 +1,21 @@
 {
   "models": {
-    "transformer": {
-      "path": "models/transformer/SOLUSD_transformer.h5",
-      "weight": 0.4
-    },
     "tcn": {
       "path": "models/tcn/SOLUSD_tcn.h5",
-      "weight": 0.35
+      "weight": 0.3333333333333333
+    },
+    "cnn": {
+      "path": "models/cnn/SOLUSD.h5",
+      "weight": 0.3333333333333333
     },
     "lstm": {
       "path": "models/lstm/SOLUSD_lstm.h5",
-      "weight": 0.25
+      "weight": 0.3333333333333333
     }
   },
   "parameters": {
     "confidence_threshold": 0.65,
     "voting_method": "weighted",
-    "trained_date": "2025-04-14T02:52:25.473824"
+    "trained_date": "2025-04-14T16:49:10.791899"
   }
 }
