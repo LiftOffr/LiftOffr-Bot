@@ -32,8 +32,8 @@
     }
   },
   "optimization_results": {
-    "max_accuracy": 0.8895,
-    "max_profit_factor": 2.91,
+    "max_accuracy": 0.8795,
+    "max_profit_factor": 2.65,
     "best_weights": {
       "lstm": 0.3,
       "attention": 0.2,

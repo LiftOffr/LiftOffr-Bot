@@ -62,13 +62,13 @@
     }
   },
   "performance_metrics": {
-    "accuracy": 0.8895,
-    "precision": 0.8732,
-    "recall": 0.8689,
-    "f1_score": 0.8710,
-    "profit_factor": 2.91,
-    "sharpe_ratio": 2.17,
-    "max_drawdown": 0.15
+    "accuracy": 0.8795,
+    "precision": 0.8683,
+    "recall": 0.8547,
+    "f1_score": 0.8614,
+    "profit_factor": 2.65,
+    "sharpe_ratio": 2.08,
+    "max_drawdown": 0.18
   },
   "hyperparameters": {
     "sequence_length": 24,
