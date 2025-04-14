@@ -25,6 +25,9 @@ from tensorflow.keras.layers import MultiHeadAttention, LayerNormalization, Add
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 
+# Import custom model architectures
+from attention_gru_model import AttentionLayer, load_attention_gru_model
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -36,7 +39,7 @@ logger = logging.getLogger(__name__)
 # Constants
 MODELS_DIR = "models"
 ENSEMBLE_DIR = os.path.join(MODELS_DIR, "ensemble")
-MODEL_TYPES = ["tcn", "cnn", "lstm", "gru", "bilstm", "attention", "transformer", "hybrid"]
+MODEL_TYPES = ["tcn", "cnn", "lstm", "gru", "bilstm", "attention", "transformer", "hybrid", "attention_gru"]
 
 # Ensure ensemble directory exists
 os.makedirs(ENSEMBLE_DIR, exist_ok=True)
@@ -138,8 +141,14 @@ class DynamicWeightedEnsemble:
             
             if os.path.exists(model_path) and os.path.exists(norm_path) and os.path.exists(features_path):
                 try:
-                    # Load model
-                    self.models[model_type] = load_model(model_path)
+                    # For attention_gru model type, use the special loader
+                    if model_type == "attention_gru":
+                        # Use the custom loader with AttentionLayer
+                        from attention_gru_model import load_attention_gru_model
+                        self.models[model_type] = load_attention_gru_model(model_path)
+                    else:
+                        # Regular model loading for other model types
+                        self.models[model_type] = load_model(model_path)
                     
                     # Load normalization parameters
                     with open(norm_path, 'r') as f:
@@ -287,7 +296,8 @@ class DynamicWeightedEnsemble:
                 "bilstm": 1.2,   # BiLSTM captures both directions
                 "attention": 1.5, # Attention focuses on relevant patterns
                 "transformer": 1.8, # Transformers excel at complex patterns
-                "hybrid": 2.0    # Hybrid captures multiple perspectives
+                "hybrid": 2.0,   # Hybrid captures multiple perspectives
+                "attention_gru": 1.7  # Attention-GRU excels at capturing time dependencies
             },
             "volatile_trending": {
                 "tcn": 1.5,
@@ -297,7 +307,8 @@ class DynamicWeightedEnsemble:
                 "bilstm": 1.5,
                 "attention": 1.6,
                 "transformer": 1.7,
-                "hybrid": 2.0
+                "hybrid": 2.0,
+                "attention_gru": 1.8  # Attention-GRU performs well in trending markets
             },
             "volatile_ranging": {
                 "tcn": 1.7,
@@ -307,7 +318,8 @@ class DynamicWeightedEnsemble:
                 "bilstm": 1.3,
                 "attention": 1.5,
                 "transformer": 1.5,
-                "hybrid": 2.0
+                "hybrid": 2.0,
+                "attention_gru": 1.6  # Attention-GRU helps identify patterns in ranging markets
             },
             "normal_trending": {
                 "tcn": 1.2,
@@ -317,7 +329,8 @@ class DynamicWeightedEnsemble:
                 "bilstm": 1.3,
                 "attention": 1.2,
                 "transformer": 1.2,
-                "hybrid": 1.5
+                "hybrid": 1.5,
+                "attention_gru": 1.4  # Attention-GRU can identify trend pattern details
             },
             "normal_ranging": {
                 "tcn": 1.0,
@@ -327,7 +340,8 @@ class DynamicWeightedEnsemble:
                 "bilstm": 1.0,
                 "attention": 1.0,
                 "transformer": 1.0,
-                "hybrid": 1.2
+                "hybrid": 1.2,
+                "attention_gru": 1.1  # Attention-GRU provides some advantage in normal ranging markets
             },
             "normal": {
                 "tcn": 1.0,
@@ -337,7 +351,8 @@ class DynamicWeightedEnsemble:
                 "bilstm": 1.0,
                 "attention": 1.0,
                 "transformer": 1.0,
-                "hybrid": 1.0
+                "hybrid": 1.0,
+                "attention_gru": 1.0  # Equal baseline weight for normal market conditions
             }
         }
         
@@ -1008,7 +1023,21 @@ class DynamicWeightedEnsemble:
                     logger.debug(f"Input tensor shape for {model_type}: {X.shape}")
                     
                     # Generate prediction
-                    pred = model.predict(X, verbose=0)[0][0]
+                    if model_type == "attention_gru":
+                        # For Attention-GRU models
+                        raw_pred = model.predict(X, verbose=0)
+                        # Handle different output shapes
+                        if isinstance(raw_pred, list):
+                            pred = raw_pred[0][0]
+                        elif len(raw_pred.shape) > 2:
+                            pred = raw_pred[0][0]
+                        elif len(raw_pred.shape) == 2:
+                            pred = raw_pred[0][0]
+                        else:
+                            pred = raw_pred[0]
+                    else:
+                        # Standard model prediction
+                        pred = model.predict(X, verbose=0)[0][0]
                     
                     # Store prediction and confidence
                     predictions[model_type] = pred

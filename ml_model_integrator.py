@@ -19,8 +19,9 @@ import traceback
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 
-# Import advanced ensemble model
+# Import advanced models
 from advanced_ensemble_model import DynamicWeightedEnsemble
+from attention_gru_model import load_attention_gru_model, AttentionLayer
 
 # Configure logging
 logging.basicConfig(
