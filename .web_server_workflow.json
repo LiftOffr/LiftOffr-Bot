@@ -2,7 +2,7 @@
   "workflows": {
     "web_server": {
       "name": "web_server",
-      "command": "python web_app.py",
+      "command": "python start_web_app.py",
       "terminal": true
     }
   }

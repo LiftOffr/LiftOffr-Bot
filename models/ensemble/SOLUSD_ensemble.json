@@ -1,65 +1,52 @@
 {
-  "model_name": "SOLUSD_ensemble",
-  "trading_pair": "SOL/USD",
-  "timeframe": "1h",
-  "models": {
-    "lstm": {
-      "weight": 0.34,
-      "model_path": "models/lstm/SOLUSD_model.h5",
-      "scaler_path": "models/lstm/SOLUSD_scaler.pkl"
+  "models": [
+    {
+      "type": "lstm",
+      "enabled": true,
+      "confidence_scaling": 1.2
     },
-    "attention": {
-      "weight": 0.26,
-      "model_path": "models/attention/SOLUSD_model.h5",
-      "scaler_path": "models/attention/SOLUSD_scaler.pkl"
+    {
+      "type": "tcn",
+      "enabled": true,
+      "confidence_scaling": 1.1
     },
-    "tcn": {
-      "weight": 0.18,
-      "model_path": "models/tcn/SOLUSD_model.h5",
-      "scaler_path": "models/tcn/SOLUSD_scaler.pkl"
+    {
+      "type": "transformer",
+      "enabled": true,
+      "confidence_scaling": 1.15
     },
-    "transformer": {
-      "weight": 0.17,
-      "model_path": "models/transformer/SOLUSD_model.h5",
-      "scaler_path": "models/transformer/SOLUSD_scaler.pkl"
+    {
+      "type": "cnn",
+      "enabled": true,
+      "confidence_scaling": 1.0
     },
-    "cnn": {
-      "weight": 0.05,
-      "model_path": "models/cnn/SOLUSD_model.h5",
-      "scaler_path": "models/cnn/SOLUSD_scaler.pkl"
+    {
+      "type": "gru",
+      "enabled": true,
+      "confidence_scaling": 1.05
+    },
+    {
+      "type": "bilstm",
+      "enabled": true,
+      "confidence_scaling": 1.1
+    },
+    {
+      "type": "attention",
+      "enabled": true,
+      "confidence_scaling": 1.15
+    },
+    {
+      "type": "hybrid",
+      "enabled": true,
+      "confidence_scaling": 1.2
     }
-  },
-  "market_regime_weights": {
-    "trending": {
-      "lstm": 0.32,
-      "attention": 0.24,
-      "tcn": 0.18,
-      "transformer": 0.21,
-      "cnn": 0.05
-    },
-    "ranging": {
-      "lstm": 0.34,
-      "attention": 0.24,
-      "tcn": 0.22,
-      "transformer": 0.15,
-      "cnn": 0.05
-    },
-    "volatile": {
-      "lstm": 0.28,
-      "attention": 0.33,
-      "tcn": 0.16,
-      "transformer": 0.18,
-      "cnn": 0.05
-    }
-  },
-  "performance_metrics": {
-    "accuracy": 0.9118,
-    "precision": 0.8975,
-    "recall": 0.9036,
-    "f1_score": 0.9005,
-    "profit_factor": 3.05,
-    "win_rate": 0.85
-  },
-  "last_updated": "2025-04-14",
-  "version": "1.0.1"
+  ],
+  "parameters": {
+    "method": "weighted_voting",
+    "confidence_threshold": 0.65,
+    "use_confidence_scaling": true,
+    "use_dynamic_weights": true,
+    "update_frequency": 24,
+    "last_updated": "2025-04-14T22:29:10.010439"
+  }
 }

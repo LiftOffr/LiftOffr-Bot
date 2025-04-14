@@ -4,397 +4,417 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kraken Trading Bot Dashboard</title>
-    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body {
-            padding-top: 20px;
-            padding-bottom: 20px;
+        .strategy-card {
+            transition: all 0.3s ease;
         }
-        .dashboard-header {
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-            border-bottom: 1px solid var(--bs-secondary);
+        .strategy-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
         }
-        .dashboard-card {
-            height: 100%;
-            margin-bottom: 20px;
-        }
-        .value-positive {
+        .profit {
             color: #28a745;
         }
-        .value-negative {
+        .loss {
             color: #dc3545;
         }
         .status-indicator {
-            display: inline-block;
             width: 12px;
             height: 12px;
             border-radius: 50%;
+            display: inline-block;
             margin-right: 5px;
         }
-        .status-running {
+        .status-active {
             background-color: #28a745;
         }
-        .status-stopped {
+        .status-inactive {
             background-color: #dc3545;
         }
-        .status-paused {
+        .status-pending {
             background-color: #ffc107;
-        }
-        .chart-container {
-            position: relative;
-            height: 300px;
-            margin-bottom: 20px;
-        }
-        .data-table {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .refresh-container {
-            margin-bottom: 20px;
-        }
-        #last-updated {
-            font-size: 0.8rem;
-            color: var(--bs-secondary);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="dashboard-header">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <h1>Kraken Trading Bot Dashboard</h1>
-                    <p class="lead">Real-time monitoring and performance tracking</p>
-                </div>
-                <div class="col-md-4 text-end">
-                    <div class="refresh-container">
-                        <button id="refresh-btn" class="btn btn-outline-secondary">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
-                                <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
-                                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
-                            </svg>
-                            Refresh Data
-                        </button>
-                        <div id="last-updated">Last updated: N/A</div>
-                    </div>
-                </div>
-            </div>
+    <div class="container mt-4">
+        <h1 class="text-center mb-4">
+            <i class="fas fa-robot me-2"></i>
+            Kraken Trading Bot Dashboard
+        </h1>
+        
+        <div class="alert alert-warning" id="sandbox-alert" style="display: none;">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Sandbox Mode:</strong> Bot is running in sandbox mode. No real trades will be executed.
         </div>
 
-        <div class="row">
-            <div class="col-md-4">
-                <div class="card dashboard-card">
-                    <div class="card-body">
-                        <h4 class="card-title">Bot Status</h4>
-                        <p class="card-text">
-                            <span id="status-indicator" class="status-indicator"></span>
-                            <span id="status-text">Loading...</span>
-                        </p>
-                        <div class="d-flex justify-content-between">
-                            <span>Strategy:</span>
-                            <span id="strategy-text">Loading...</span>
+        <!-- Portfolio Summary Card -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Portfolio Summary</h5>
+                <span class="badge bg-secondary" id="last-updated">Last Updated: --</span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="card bg-dark text-white">
+                            <div class="card-body">
+                                <h6 class="card-title">Initial Value</h6>
+                                <h4 class="card-text" id="initial-value">$0.00</h4>
+                            </div>
                         </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Trading Pair:</span>
-                            <span id="pair-text">Loading...</span>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="card bg-dark text-white">
+                            <div class="card-body">
+                                <h6 class="card-title">Current Value</h6>
+                                <h4 class="card-text" id="current-value">$0.00</h4>
+                            </div>
                         </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Current Position:</span>
-                            <span id="position-text">Loading...</span>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="card bg-dark text-white">
+                            <div class="card-body">
+                                <h6 class="card-title">Profit/Loss</h6>
+                                <h4 class="card-text" id="profit-loss">$0.00 (0.00%)</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="card bg-dark text-white">
+                            <div class="card-body">
+                                <h6 class="card-title">Win Rate</h6>
+                                <h4 class="card-text" id="win-rate">0.00%</h4>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="col-md-4">
-                <div class="card dashboard-card">
-                    <div class="card-body">
-                        <h4 class="card-title">Portfolio Value</h4>
-                        <h2 id="portfolio-value">$0.00</h2>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span>Initial:</span>
-                            <span id="initial-value">$0.00</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span>Gain/Loss:</span>
-                            <span id="gain-loss">0.00%</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-md-4">
-                <div class="card dashboard-card">
-                    <div class="card-body">
-                        <h4 class="card-title">Current Position</h4>
-                        <div class="d-flex justify-content-between">
-                            <span>Entry Price:</span>
-                            <span id="entry-price">$0.00</span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Current Price:</span>
-                            <span id="current-price">$0.00</span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Unrealized P&L:</span>
-                            <span id="position-pnl">$0.00 (0.00%)</span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Quantity:</span>
-                            <span id="position-quantity">0.000</span>
+                <div class="row mt-3">
+                    <div class="col-md-6 col-sm-12 mb-3">
+                        <div class="card bg-dark text-white">
+                            <div class="card-body">
+                                <h6 class="card-title">Available Funds</h6>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar" id="funds-progress" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span id="available-funds">$0.00</span>
+                                    <span id="allocated-capital">$0.00 (0.00%)</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row mt-4">
-            <div class="col-md-12">
-                <div class="card dashboard-card">
-                    <div class="card-body">
-                        <h4 class="card-title">Portfolio History</h4>
-                        <div class="chart-container">
-                            <canvas id="portfolio-chart"></canvas>
+                    <div class="col-md-6 col-sm-12 mb-3">
+                        <div class="card bg-dark text-white">
+                            <div class="card-body">
+                                <h6 class="card-title">Configuration</h6>
+                                <div class="d-flex justify-content-between">
+                                    <span>Base Leverage:</span>
+                                    <span id="base-leverage">0x</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Max Leverage:</span>
+                                    <span id="max-leverage">0x</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Risk Percentage:</span>
+                                    <span id="risk-percentage">0.00%</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Confidence Threshold:</span>
+                                    <span id="confidence-threshold">0.00</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="row mt-4">
-            <div class="col-md-12">
-                <div class="card dashboard-card">
-                    <div class="card-body">
-                        <h4 class="card-title">Recent Trades</h4>
-                        <div class="data-table">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Date/Time</th>
-                                        <th>Type</th>
-                                        <th>Trading Pair</th>
-                                        <th>Price</th>
-                                        <th>Amount</th>
-                                        <th>Cost</th>
-                                        <th>Fee</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="trades-table-body">
-                                    <tr>
-                                        <td colspan="7" class="text-center">Loading trade data...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+        <!-- Active Strategies -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Active Strategies</h5>
+            </div>
+            <div class="card-body">
+                <div class="row" id="strategies-container">
+                    <!-- Strategies will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Charts -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Performance</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <canvas id="daily-performance-chart"></canvas>
                     </div>
+                    <div class="col-md-6 mb-4">
+                        <canvas id="strategy-performance-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Trades -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Recent Trades</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Pair</th>
+                                <th>Strategy</th>
+                                <th>Type</th>
+                                <th>Entry</th>
+                                <th>Exit</th>
+                                <th>Leverage</th>
+                                <th>P/L</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-trades">
+                            <!-- Trades will be dynamically inserted here -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Global variables
-        let portfolioChart = null;
-        
-        // Function to update the dashboard with fresh data
-        function updateDashboard() {
-            // Update last refresh time
-            const now = new Date();
-            document.getElementById('last-updated').textContent = `Last updated: ${now.toLocaleTimeString()}`;
-            
-            // Fetch bot status
+        // Fetch status data
+        function fetchStatus() {
             fetch('/api/status')
                 .then(response => response.json())
                 .then(data => {
-                    // Update bot status indicators
-                    const statusIndicator = document.getElementById('status-indicator');
-                    const statusText = document.getElementById('status-text');
-                    
-                    if (data.status === 'running') {
-                        statusIndicator.className = 'status-indicator status-running';
-                        statusText.textContent = 'Running';
-                    } else if (data.status === 'stopped') {
-                        statusIndicator.className = 'status-indicator status-stopped';
-                        statusText.textContent = 'Stopped';
-                    } else if (data.status === 'paused') {
-                        statusIndicator.className = 'status-indicator status-paused';
-                        statusText.textContent = 'Paused';
-                    }
-                    
-                    // Update strategy and trading pair
-                    document.getElementById('strategy-text').textContent = data.strategy || 'N/A';
-                    document.getElementById('pair-text').textContent = data.trading_pair || 'N/A';
-                    document.getElementById('position-text').textContent = data.position || 'None';
-                    
-                    // Update portfolio value
-                    document.getElementById('portfolio-value').textContent = `$${data.portfolio_value.toFixed(2)}`;
-                    document.getElementById('initial-value').textContent = `$${data.initial_value.toFixed(2)}`;
-                    
-                    // Update gain/loss with appropriate color
-                    const gainLossElement = document.getElementById('gain-loss');
-                    const gainLossValue = data.gain_loss_pct;
-                    gainLossElement.textContent = `${gainLossValue >= 0 ? '+' : ''}${gainLossValue.toFixed(2)}%`;
-                    gainLossElement.className = gainLossValue >= 0 ? 'value-positive' : 'value-negative';
-                    
-                    // Update current position details
-                    document.getElementById('entry-price').textContent = `$${data.entry_price?.toFixed(2) || '0.00'}`;
-                    document.getElementById('current-price').textContent = `$${data.current_price?.toFixed(2) || '0.00'}`;
+                    updateDashboard(data);
                 })
                 .catch(error => {
-                    console.error('Error fetching bot status:', error);
-                });
-                
-            // Fetch current position
-            fetch('/api/portfolio/current')
-                .then(response => response.json())
-                .then(data => {
-                    // Update position details
-                    document.getElementById('position-quantity').textContent = data.quantity?.toFixed(3) || '0.000';
-                    
-                    // Update position P&L with appropriate color
-                    const positionPnlElement = document.getElementById('position-pnl');
-                    const pnlValue = data.pnl || 0;
-                    const pnlPercent = data.pnl_percent || 0;
-                    positionPnlElement.textContent = `$${pnlValue.toFixed(2)} (${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)`;
-                    positionPnlElement.className = pnlValue >= 0 ? 'value-positive' : 'value-negative';
-                })
-                .catch(error => {
-                    console.error('Error fetching current position:', error);
-                });
-                
-            // Fetch portfolio history for chart
-            fetch('/api/portfolio/history')
-                .then(response => response.json())
-                .then(data => {
-                    updatePortfolioChart(data);
-                })
-                .catch(error => {
-                    console.error('Error fetching portfolio history:', error);
-                });
-                
-            // Fetch recent trades
-            fetch('/api/trades')
-                .then(response => response.json())
-                .then(data => {
-                    updateTradesTable(data);
-                })
-                .catch(error => {
-                    console.error('Error fetching trades:', error);
+                    console.error('Error fetching status:', error);
                 });
         }
-        
-        // Function to update the portfolio history chart
-        function updatePortfolioChart(data) {
-            const ctx = document.getElementById('portfolio-chart').getContext('2d');
+
+        // Fetch performance data
+        function fetchPerformance() {
+            fetch('/api/performance')
+                .then(response => response.json())
+                .then(data => {
+                    updatePerformanceCharts(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching performance:', error);
+                });
+        }
+
+        // Update dashboard with fetched data
+        function updateDashboard(data) {
+            // Update sandbox alert
+            if (data.system && data.system.sandbox_mode) {
+                document.getElementById('sandbox-alert').style.display = 'block';
+            } else {
+                document.getElementById('sandbox-alert').style.display = 'none';
+            }
+
+            // Update last updated time
+            if (data.system && data.system.last_updated) {
+                document.getElementById('last-updated').textContent = 'Last Updated: ' + data.system.last_updated;
+            }
+
+            // Update portfolio summary
+            if (data.portfolio) {
+                document.getElementById('initial-value').textContent = '$' + data.portfolio.initial_value.toFixed(2);
+                document.getElementById('current-value').textContent = '$' + data.portfolio.current_value.toFixed(2);
+                
+                const profitLossEl = document.getElementById('profit-loss');
+                profitLossEl.textContent = '$' + data.portfolio.profit_loss.toFixed(2) + ' (' + data.portfolio.profit_loss_percent.toFixed(2) + '%)';
+                if (data.portfolio.profit_loss > 0) {
+                    profitLossEl.className = 'card-text profit';
+                } else if (data.portfolio.profit_loss < 0) {
+                    profitLossEl.className = 'card-text loss';
+                } else {
+                    profitLossEl.className = 'card-text';
+                }
+                
+                document.getElementById('available-funds').textContent = '$' + data.portfolio.available_funds.toFixed(2);
+                document.getElementById('allocated-capital').textContent = '$' + data.portfolio.allocated_capital.toFixed(2) + ' (' + (data.portfolio.allocated_capital / data.portfolio.current_value * 100).toFixed(2) + '%)';
+                
+                // Update progress bar
+                const allocatedPercent = (data.portfolio.allocated_capital / data.portfolio.current_value * 100).toFixed(2);
+                const fundsProgress = document.getElementById('funds-progress');
+                fundsProgress.style.width = allocatedPercent + '%';
+                fundsProgress.textContent = allocatedPercent + '%';
+            }
+
+            // Update win rate
+            if (data.win_rate !== undefined) {
+                document.getElementById('win-rate').textContent = data.win_rate.toFixed(2) + '%';
+            }
+
+            // Update ML configuration
+            if (data.ml_config) {
+                document.getElementById('base-leverage').textContent = data.ml_config.base_leverage + 'x';
+                document.getElementById('max-leverage').textContent = data.ml_config.max_leverage + 'x';
+                document.getElementById('risk-percentage').textContent = (data.ml_config.risk_percentage * 100).toFixed(2) + '%';
+                document.getElementById('confidence-threshold').textContent = data.ml_config.confidence_threshold.toFixed(2);
+            }
+
+            // Update active strategies
+            if (data.portfolio && data.portfolio.strategies) {
+                const strategiesContainer = document.getElementById('strategies-container');
+                strategiesContainer.innerHTML = ''; // Clear existing strategies
+                
+                data.portfolio.strategies.forEach(strategy => {
+                    const strategyCard = document.createElement('div');
+                    strategyCard.className = 'col-md-4 col-sm-6 mb-3';
+                    
+                    let positionBadge = '';
+                    if (strategy.position === 'LONG') {
+                        positionBadge = '<span class="badge bg-success ms-2">LONG</span>';
+                    } else if (strategy.position === 'SHORT') {
+                        positionBadge = '<span class="badge bg-danger ms-2">SHORT</span>';
+                    } else {
+                        positionBadge = '<span class="badge bg-secondary ms-2">NO POSITION</span>';
+                    }
+                    
+                    strategyCard.innerHTML = `
+                        <div class="card strategy-card bg-dark text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <span class="status-indicator status-active"></span>
+                                    ${strategy.id} (${strategy.pair})
+                                </h5>
+                                <p class="card-text">Strategy: ${strategy.strategy_type}${positionBadge}</p>
+                                <div class="d-flex justify-content-between">
+                                    <span>Margin:</span>
+                                    <span>${strategy.margin_percentage}%</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Leverage:</span>
+                                    <span>${strategy.leverage}x</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    strategiesContainer.appendChild(strategyCard);
+                });
+            }
+
+            // Update recent trades
+            if (data.recent_trades) {
+                const recentTradesEl = document.getElementById('recent-trades');
+                recentTradesEl.innerHTML = ''; // Clear existing trades
+                
+                data.recent_trades.forEach(trade => {
+                    const row = document.createElement('tr');
+                    
+                    const profitLossClass = trade.profit_loss > 0 ? 'profit' : (trade.profit_loss < 0 ? 'loss' : '');
+                    
+                    row.innerHTML = `
+                        <td>${new Date(trade.timestamp).toLocaleString()}</td>
+                        <td>${trade.pair}</td>
+                        <td>${trade.strategy}</td>
+                        <td>${trade.type}</td>
+                        <td>$${trade.entry_price.toFixed(2)}</td>
+                        <td>$${trade.exit_price ? trade.exit_price.toFixed(2) : '-'}</td>
+                        <td>${trade.leverage}x</td>
+                        <td class="${profitLossClass}">$${trade.profit_loss ? trade.profit_loss.toFixed(2) : '0.00'}</td>
+                    `;
+                    
+                    recentTradesEl.appendChild(row);
+                });
+            }
+        }
+
+        // Update performance charts
+        function updatePerformanceCharts(data) {
+            // Daily performance chart
+            const dailyCtx = document.getElementById('daily-performance-chart').getContext('2d');
             
-            // Extract dates and values from data
-            const dates = data.map(item => item.date);
-            const values = data.map(item => item.value);
-            
-            // Destroy existing chart if it exists
-            if (portfolioChart) {
-                portfolioChart.destroy();
+            if (window.dailyChart) {
+                window.dailyChart.destroy();
             }
             
-            // Create new chart
-            portfolioChart = new Chart(ctx, {
+            const dailyLabels = Object.keys(data.daily_performance);
+            const dailyValues = Object.values(data.daily_performance);
+            
+            window.dailyChart = new Chart(dailyCtx, {
                 type: 'line',
                 data: {
-                    labels: dates,
+                    labels: dailyLabels,
                     datasets: [{
-                        label: 'Portfolio Value ($)',
-                        data: values,
-                        borderColor: '#0d6efd',
-                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                        tension: 0.1,
+                        label: 'Daily P/L',
+                        data: dailyValues,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1,
                         fill: true
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: false,
-                            ticks: {
-                                callback: function(value) {
-                                    return '$' + value.toFixed(2);
-                                }
-                            }
-                        }
-                    },
                     plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const value = context.raw;
-                                    const dataPoint = data[context.dataIndex];
-                                    const changePercent = dataPoint.change_percent;
-                                    return [
-                                        'Value: $' + value.toFixed(2),
-                                        'Change: ' + (changePercent >= 0 ? '+' : '') + changePercent.toFixed(2) + '%'
-                                    ];
-                                }
-                            }
+                        title: {
+                            display: true,
+                            text: 'Daily Performance'
+                        }
+                    }
+                }
+            });
+            
+            // Strategy performance chart
+            const strategyCtx = document.getElementById('strategy-performance-chart').getContext('2d');
+            
+            if (window.strategyChart) {
+                window.strategyChart.destroy();
+            }
+            
+            const strategyLabels = data.strategy_performance.map(s => s.strategy);
+            const strategyValues = data.strategy_performance.map(s => s.sum);
+            const strategyColors = strategyValues.map(value => 
+                value > 0 ? 'rgba(40, 167, 69, 0.8)' : 'rgba(220, 53, 69, 0.8)'
+            );
+            
+            window.strategyChart = new Chart(strategyCtx, {
+                type: 'bar',
+                data: {
+                    labels: strategyLabels,
+                    datasets: [{
+                        label: 'Total P/L by Strategy',
+                        data: strategyValues,
+                        backgroundColor: strategyColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Strategy Performance'
                         }
                     }
                 }
             });
         }
-        
-        // Function to update the trades table
-        function updateTradesTable(data) {
-            const tableBody = document.getElementById('trades-table-body');
-            
-            // Clear existing rows
-            tableBody.innerHTML = '';
-            
-            if (data.length === 0) {
-                // Show no trades message
-                const row = document.createElement('tr');
-                row.innerHTML = '<td colspan="7" class="text-center">No trades recorded yet</td>';
-                tableBody.appendChild(row);
-                return;
-            }
-            
-            // Add new rows
-            data.forEach(trade => {
-                const row = document.createElement('tr');
-                
-                // Format date/time
-                const tradeDate = new Date(trade.time * 1000).toLocaleString();
-                
-                // Determine if buy or sell for styling
-                const isBuy = trade.type === 'buy';
-                const typeClass = isBuy ? 'value-positive' : 'value-negative';
-                
-                row.innerHTML = `
-                    <td>${tradeDate}</td>
-                    <td class="${typeClass}">${trade.type.toUpperCase()}</td>
-                    <td>${trade.pair}</td>
-                    <td>$${parseFloat(trade.price).toFixed(2)}</td>
-                    <td>${parseFloat(trade.volume).toFixed(6)}</td>
-                    <td>$${parseFloat(trade.cost).toFixed(2)}</td>
-                    <td>$${parseFloat(trade.fee).toFixed(4)}</td>
-                `;
-                
-                tableBody.appendChild(row);
-            });
-        }
-        
-        // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initial update
-            updateDashboard();
-            
-            // Set up refresh button
-            document.getElementById('refresh-btn').addEventListener('click', updateDashboard);
-            
-            // Auto-refresh every 30 seconds
-            setInterval(updateDashboard, 30000);
-        });
+
+        // Initial data fetch
+        fetchStatus();
+        fetchPerformance();
+
+        // Set up periodic refresh
+        setInterval(fetchStatus, 30000); // Refresh every 30 seconds
+        setInterval(fetchPerformance, 60000); // Refresh performance every minute
     </script>
 </body>
 </html>

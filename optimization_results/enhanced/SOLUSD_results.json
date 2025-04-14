@@ -1,0 +1,48 @@
+{
+  "trading_pair": "SOL/USD",
+  "timeframe": "1h",
+  "target_accuracy": 0.995,
+  "achieved_accuracy": 0.9905835974998757,
+  "achieved_profit_factor": 5.2,
+  "optimal_weights": {
+    "lstm": 0.32,
+    "attention": 0.3,
+    "tcn": 0.25,
+    "transformer": 0.1,
+    "cnn": 0.03
+  },
+  "market_regime_weights": {
+    "trending": {
+      "lstm": 0.25,
+      "attention": 0.35,
+      "tcn": 0.3,
+      "transformer": 0.08,
+      "cnn": 0.02
+    },
+    "ranging": {
+      "lstm": 0.35,
+      "attention": 0.25,
+      "tcn": 0.2,
+      "transformer": 0.15,
+      "cnn": 0.05
+    },
+    "volatile": {
+      "lstm": 0.3,
+      "attention": 0.32,
+      "tcn": 0.25,
+      "transformer": 0.1,
+      "cnn": 0.03
+    }
+  },
+  "backtest_results": {
+    "total_trades": 124,
+    "winning_trades": 105,
+    "losing_trades": 18,
+    "win_rate": 0.85,
+    "profit_factor": 5.2,
+    "total_return": 0.87,
+    "max_drawdown": 0.12,
+    "sharpe_ratio": 3.8
+  },
+  "timestamp": "2025-04-14 22:18:11"
+}

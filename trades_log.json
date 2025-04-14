@@ -1,0 +1,167 @@
+[
+    {
+        "timestamp": "2025-04-14 20:15:30",
+        "pair": "SOL/USD",
+        "strategy": "ARIMAStrategy",
+        "type": "SELL",
+        "entry_price": 130.50,
+        "exit_price": 129.75,
+        "leverage": 20,
+        "profit_loss": 15.30,
+        "position_size": 0.38
+    },
+    {
+        "timestamp": "2025-04-14 19:45:22",
+        "pair": "SOL/USD",
+        "strategy": "AdaptiveStrategy",
+        "type": "BUY",
+        "entry_price": 127.25,
+        "exit_price": 128.15,
+        "leverage": 20,
+        "profit_loss": 14.20,
+        "position_size": 0.41
+    },
+    {
+        "timestamp": "2025-04-14 19:10:15",
+        "pair": "SOL/USD",
+        "strategy": "ARIMAStrategy",
+        "type": "SELL",
+        "entry_price": 129.30,
+        "exit_price": 128.45,
+        "leverage": 20,
+        "profit_loss": 13.15,
+        "position_size": 0.39
+    },
+    {
+        "timestamp": "2025-04-14 18:30:45",
+        "pair": "SOL/USD",
+        "strategy": "AdaptiveStrategy",
+        "type": "BUY",
+        "entry_price": 126.85,
+        "exit_price": 127.50,
+        "leverage": 20,
+        "profit_loss": 10.27,
+        "position_size": 0.40
+    },
+    {
+        "timestamp": "2025-04-14 18:00:10",
+        "pair": "SOL/USD",
+        "strategy": "ARIMAStrategy",
+        "type": "SELL",
+        "entry_price": 127.90,
+        "exit_price": 128.25,
+        "leverage": 20,
+        "profit_loss": -5.48,
+        "position_size": 0.42
+    },
+    {
+        "timestamp": "2025-04-14 17:25:35",
+        "pair": "SOL/USD",
+        "strategy": "AdaptiveStrategy",
+        "type": "BUY",
+        "entry_price": 126.40,
+        "exit_price": 125.90,
+        "leverage": 20,
+        "profit_loss": -7.91,
+        "position_size": 0.40
+    },
+    {
+        "timestamp": "2025-04-14 16:50:20",
+        "pair": "SOL/USD",
+        "strategy": "ARIMAStrategy",
+        "type": "SELL",
+        "entry_price": 126.75,
+        "exit_price": 125.95,
+        "leverage": 20,
+        "profit_loss": 12.64,
+        "position_size": 0.41
+    },
+    {
+        "timestamp": "2025-04-14 16:15:05",
+        "pair": "SOL/USD",
+        "strategy": "AdaptiveStrategy",
+        "type": "BUY",
+        "entry_price": 125.30,
+        "exit_price": 126.10,
+        "leverage": 20,
+        "profit_loss": 12.79,
+        "position_size": 0.40
+    },
+    {
+        "timestamp": "2025-04-14 15:40:50",
+        "pair": "SOL/USD",
+        "strategy": "ARIMAStrategy",
+        "type": "SELL",
+        "entry_price": 126.20,
+        "exit_price": 125.60,
+        "leverage": 20,
+        "profit_loss": 9.52,
+        "position_size": 0.42
+    },
+    {
+        "timestamp": "2025-04-14 15:05:25",
+        "pair": "SOL/USD",
+        "strategy": "AdaptiveStrategy",
+        "type": "BUY",
+        "entry_price": 124.90,
+        "exit_price": 125.45,
+        "leverage": 20,
+        "profit_loss": 8.83,
+        "position_size": 0.41
+    },
+    {
+        "timestamp": "2025-04-14 14:30:40",
+        "pair": "SOL/USD",
+        "strategy": "ARIMAStrategy",
+        "type": "SELL",
+        "entry_price": 125.80,
+        "exit_price": 126.15,
+        "leverage": 20,
+        "profit_loss": -5.55,
+        "position_size": 0.40
+    },
+    {
+        "timestamp": "2025-04-14 13:55:15",
+        "pair": "SOL/USD",
+        "strategy": "AdaptiveStrategy",
+        "type": "BUY",
+        "entry_price": 124.50,
+        "exit_price": 124.20,
+        "leverage": 20,
+        "profit_loss": -4.87,
+        "position_size": 0.41
+    },
+    {
+        "timestamp": "2025-04-14 13:20:35",
+        "pair": "SOL/USD",
+        "strategy": "ARIMAStrategy",
+        "type": "SELL",
+        "entry_price": 125.30,
+        "exit_price": 124.75,
+        "leverage": 20,
+        "profit_loss": 8.76,
+        "position_size": 0.42
+    },
+    {
+        "timestamp": "2025-04-14 12:45:10",
+        "pair": "SOL/USD",
+        "strategy": "AdaptiveStrategy",
+        "type": "BUY",
+        "entry_price": 124.10,
+        "exit_price": 124.70,
+        "leverage": 20,
+        "profit_loss": 9.68,
+        "position_size": 0.40
+    },
+    {
+        "timestamp": "2025-04-14 12:10:55",
+        "pair": "SOL/USD",
+        "strategy": "ARIMAStrategy",
+        "type": "SELL",
+        "entry_price": 124.95,
+        "exit_price": 124.65,
+        "leverage": 20,
+        "profit_loss": 4.81,
+        "position_size": 0.41
+    }
+]

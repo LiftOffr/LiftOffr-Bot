@@ -1,0 +1,27 @@
+{
+  "initial_value": 20000.00,
+  "current_value": 19938.99,
+  "profit_loss": -61.01,
+  "profit_loss_percent": -0.31,
+  "allocated_capital": 0.00,
+  "available_funds": 20000.00,
+  "total_trades": 0,
+  "strategies": [
+    {
+      "id": "adaptive-SOLUSD",
+      "pair": "SOL/USD",
+      "strategy_type": "AdaptiveStrategy",
+      "position": "NO POSITION",
+      "margin_percentage": 20.0,
+      "leverage": 20
+    },
+    {
+      "id": "arima-SOLUSD",
+      "pair": "SOL/USD",
+      "strategy_type": "ARIMAStrategy",
+      "position": "NO POSITION",
+      "margin_percentage": 20.0,
+      "leverage": 20
+    }
+  ]
+}

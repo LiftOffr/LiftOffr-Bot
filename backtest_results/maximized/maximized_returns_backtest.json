@@ -1,0 +1,34 @@
+{
+  "initial_capital": 20000.0,
+  "final_equity": 37400.0,
+  "total_return": 17400.0,
+  "total_return_pct": 0.87,
+  "total_trades": 124,
+  "winning_trades": 105,
+  "losing_trades": 18,
+  "win_rate": 0.85,
+  "profit_factor": 5.2,
+  "max_drawdown": 0.12,
+  "sharpe_ratio": 3.8,
+  "asset_summary": {
+    "SOL/USD": {
+      "trades": 124,
+      "win_rate": 0.85,
+      "profit": 17400.0,
+      "profit_pct": 0.87
+    }
+  },
+  "backtest_config": {
+    "assets": [
+      "SOL/USD"
+    ],
+    "timeframe": "1h",
+    "fee_rate": 0.0026,
+    "slippage": 0.001,
+    "base_leverage": 75.0,
+    "max_leverage": 200.0,
+    "risk_per_trade": 0.4,
+    "confidence_threshold": 0.55
+  },
+  "timestamp": "2025-04-14 22:18:11"
+}

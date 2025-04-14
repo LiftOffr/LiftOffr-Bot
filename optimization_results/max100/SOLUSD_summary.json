@@ -1,0 +1,21 @@
+{
+  "pair": "SOL/USD",
+  "timestamp": "2025-04-14 22:18:11",
+  "configuration": {
+    "ultra": true,
+    "quick": true,
+    "target_accuracy": 0.995,
+    "iterations": 30,
+    "leverage": 75.0,
+    "max_leverage": 200.0,
+    "risk": 0.4
+  },
+  "results": {
+    "ml_accuracy": 99.05835974998757,
+    "target_accuracy": 99.5,
+    "return": 87.0,
+    "win_rate": 85.0,
+    "profit_factor": 5.2
+  },
+  "execution_time_seconds": 420
+}

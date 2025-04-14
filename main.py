@@ -337,12 +337,17 @@ def main():
     
     bot_manager = BotManager()
     
-    # Add the primary strategy
+    # Use optimized configurations from ML config
+    margin_percent = float(os.environ.get('MARGIN_PERCENT', '0.20'))  # 20% risk rate by default
+    leverage = int(os.environ.get('LEVERAGE', '20'))  # Base leverage 20 from ML optimization
+    
+    # Add the primary strategy with optimized parameters
     primary_bot_id = bot_manager.add_bot(
         strategy_type=strategy_type,
         trading_pair=trading_pair,
         trade_quantity=trade_quantity,
-        margin_percent=0.20  # Fixed 20% risk rate
+        margin_percent=margin_percent,
+        leverage=leverage
     )
     
     # Check for multiple strategies from command line arguments
@@ -354,7 +359,8 @@ def main():
                     strategy_type=strategy.strip(),
                     trading_pair=trading_pair,
                     trade_quantity=trade_quantity,
-                    margin_percent=0.20  # Fixed 20% risk rate
+                    margin_percent=margin_percent,
+                    leverage=leverage
                 )
     else:
         # Always add ARIMA strategy by default if not specified in command line
@@ -363,9 +369,10 @@ def main():
                 strategy_type="arima",
                 trading_pair=trading_pair,
                 trade_quantity=trade_quantity,
-                margin_percent=0.20  # Fixed 20% risk rate
+                margin_percent=margin_percent,
+                leverage=leverage
             )
-            logger.info("Added default ARIMA strategy to run concurrently")
+            logger.info("Added default ARIMA strategy to run concurrently with optimized parameters")
     
     # Start all bots in separate threads
     bot_manager.start_all()

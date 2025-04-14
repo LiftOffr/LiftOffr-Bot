@@ -1,27 +1,69 @@
 {
-    "global": {
-        "confidence_threshold": 0.65,
-        "base_leverage": 20.0,
-        "max_leverage": 125.0,
-        "max_risk_per_trade": 0.2,
-        "trading_pairs": [
-            "SOL/USD"
-        ]
+  "pairs": ["SOL/USD", "BTC/USD", "ETH/USD", "DOT/USD", "ADA/USD", "LINK/USD"],
+  "base_leverage": 20.0,
+  "max_leverage": 125.0,
+  "risk_percentage": 0.20,
+  "confidence_threshold": 0.65,
+  "time_scales": ["1h", "4h", "1d"],
+  "use_ensemble": true,
+  "ensemble_models": ["tcn", "lstm", "attention_gru"],
+  "feature_importance": {
+    "SOL/USD": {
+      "price": 0.35,
+      "volume": 0.15,
+      "volatility": 0.25,
+      "trend": 0.20,
+      "sentiment": 0.05
     },
-    "strategy_integration": {
-        "signal_weight_multiplier": 1.5,
-        "max_signal_age_seconds": 300,
-        "use_ensemble_models": true,
-        "feature_scaling": "standard"
+    "BTC/USD": {
+      "price": 0.30,
+      "volume": 0.20,
+      "volatility": 0.20,
+      "trend": 0.25,
+      "sentiment": 0.05
     },
-    "ensemble": {
-        "SOLUSD": {
-            "model_weights": {
-                "lstm": 0.35,
-                "cnn": 0.35,
-                "transformer": 0.3
-            },
-            "confidence_scaling": "sigmoid"
-        }
+    "ETH/USD": {
+      "price": 0.30,
+      "volume": 0.20,
+      "volatility": 0.20,
+      "trend": 0.25,
+      "sentiment": 0.05
     }
+  },
+  "hyperparameters": {
+    "tcn": {
+      "dropout_rate": 0.2,
+      "kernel_size": 3,
+      "dilations": [1, 2, 4, 8],
+      "filters": 64,
+      "learning_rate": 0.001,
+      "batch_size": 64
+    },
+    "lstm": {
+      "units": 128,
+      "dropout_rate": 0.3,
+      "recurrent_dropout": 0.2,
+      "learning_rate": 0.0008,
+      "batch_size": 32
+    },
+    "attention_gru": {
+      "gru_units": 64,
+      "attention_units": 32,
+      "dropout_rate": 0.25,
+      "learning_rate": 0.0015,
+      "batch_size": 64
+    }
+  },
+  "optimization": {
+    "strategy_weight": {
+      "arima": 0.3,
+      "adaptive": 0.7
+    },
+    "min_signal_strength": 0.6,
+    "max_open_positions": 1,
+    "max_positions_per_pair": 1,
+    "drawdown_limit_percentage": 4.0,
+    "exit_multiplier": 1.5,
+    "trailing_stop_atr_multiplier": 3.0
+  }
 }
