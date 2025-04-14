@@ -2,28 +2,16 @@
 """
 ML Live Trading Integration
 
-This module integrates ML models into the live trading system, providing real-time
-predictions and trading signal generation based on advanced machine learning models.
+This module provides the integration layer between ML models and the live trading system.
 """
 
 import os
 import sys
-import time
 import json
 import logging
-import argparse
-from typing import Dict, List, Any, Optional, Tuple
-import numpy as np
-import pandas as pd
-from datetime import datetime, timedelta
-
-# Import ML components
-from model_collaboration_integrator import ModelCollaborationIntegrator
-
-# ML model function placeholders
-def load_model(path): return {"model": "dummy"}
-def preprocess_data(df): return np.zeros((10, 10)), ["feature"]
-def predict_price_movement(model, data): return {"direction": "up", "confidence": 0.75}
+import time
+from typing import List, Dict, Any, Optional
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(
@@ -31,223 +19,200 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('ml_live_trading.log')
+        logging.FileHandler('ml_live_integration.log')
     ]
 )
 logger = logging.getLogger(__name__)
 
 class MLLiveTradingIntegration:
     """
-    Integration of ML models with live trading system
+    Integration layer between ML models and live trading system
     """
     
     def __init__(
         self,
         assets: List[str] = ["SOL/USD", "ETH/USD", "BTC/USD"],
-        model_dir: str = "models",
         use_extreme_leverage: bool = False,
         log_level: str = "INFO"
     ):
         """
-        Initialize the ML live trading integration
+        Initialize the ML trading integration
         
         Args:
-            assets: List of assets to trade
-            model_dir: Directory containing trained models
+            assets: List of assets to predict
             use_extreme_leverage: Whether to use extreme leverage settings
             log_level: Logging level
         """
         self.assets = assets
-        self.model_dir = model_dir
         self.use_extreme_leverage = use_extreme_leverage
         
         # Set logging level
         logger.setLevel(getattr(logging, log_level))
         
-        # Initialize models
-        self.models = {}
+        # Load ML models
+        self.models = self._load_models()
         
-        # Load models
-        self._load_models()
-        
-        logger.info(f"ML Live Trading Integration initialized for assets: {assets}")
+        logger.info(f"ML Live Trading Integration initialized with {len(assets)} assets")
     
-    def _load_models(self):
-        """Load ML models for all assets"""
-        for asset in self.assets:
-            asset_key = asset.replace("/", "")
-            
-            # Load transformer model
-            transformer_path = os.path.join(self.model_dir, "transformer", f"{asset_key}_transformer.h5")
-            if os.path.exists(transformer_path):
-                try:
-                    self.models[f"{asset_key}_transformer"] = load_model(transformer_path)
-                    logger.info(f"Loaded transformer model for {asset}")
-                except Exception as e:
-                    logger.error(f"Error loading transformer model for {asset}: {e}")
-            
-            # Load TCN model
-            tcn_path = os.path.join(self.model_dir, "tcn", f"{asset_key}_tcn.h5")
-            if os.path.exists(tcn_path):
-                try:
-                    self.models[f"{asset_key}_tcn"] = load_model(tcn_path)
-                    logger.info(f"Loaded TCN model for {asset}")
-                except Exception as e:
-                    logger.error(f"Error loading TCN model for {asset}: {e}")
-            
-            # Load LSTM model
-            lstm_path = os.path.join(self.model_dir, "lstm", f"{asset_key}_lstm.h5")
-            if os.path.exists(lstm_path):
-                try:
-                    self.models[f"{asset_key}_lstm"] = load_model(lstm_path)
-                    logger.info(f"Loaded LSTM model for {asset}")
-                except Exception as e:
-                    logger.error(f"Error loading LSTM model for {asset}: {e}")
-    
-    def preprocess_market_data(
-        self,
-        data: Dict[str, Any],
-        asset: str
-    ) -> np.ndarray:
+    def _load_models(self) -> Dict[str, Dict[str, Any]]:
         """
-        Preprocess market data for ML prediction
+        Load ML models for all assets
+        
+        Returns:
+            Dict: ML models by asset
+        """
+        models = {}
+        
+        # Load models for each asset
+        for asset in self.assets:
+            asset_filename = asset.replace("/", "")
+            
+            # Check for ensemble model
+            ensemble_path = f"models/ensemble/{asset_filename}_ensemble.json"
+            position_sizing_path = f"models/ensemble/{asset_filename}_position_sizing.json"
+            
+            if os.path.exists(ensemble_path) and os.path.exists(position_sizing_path):
+                # Load ensemble model
+                try:
+                    with open(ensemble_path, 'r') as f:
+                        ensemble_config = json.load(f)
+                    
+                    # Load position sizing model
+                    with open(position_sizing_path, 'r') as f:
+                        position_sizing_config = json.load(f)
+                    
+                    # Store models
+                    models[asset] = {
+                        "ensemble": ensemble_config,
+                        "position_sizing": position_sizing_config,
+                        "transformer": self._load_transformer_model(asset),
+                        "tcn": self._load_tcn_model(asset),
+                        "lstm": self._load_lstm_model(asset)
+                    }
+                    
+                    logger.info(f"Loaded ML models for {asset}")
+                    
+                except Exception as e:
+                    logger.error(f"Error loading ML models for {asset}: {e}")
+            else:
+                logger.warning(f"ML models for {asset} not found")
+        
+        return models
+    
+    def _load_transformer_model(self, asset: str) -> Optional[Dict[str, Any]]:
+        """
+        Load transformer model for an asset
         
         Args:
-            data: Market data
-            asset: Asset to preprocess for
+            asset: Trading pair
             
         Returns:
-            ndarray: Preprocessed data
+            Dict: Transformer model (None if not found)
         """
-        try:
-            # In a real implementation, this would convert market data to the format
-            # expected by the ML models
+        asset_filename = asset.replace("/", "")
+        model_path = f"models/transformer/{asset_filename}_transformer.h5"
+        
+        if os.path.exists(model_path):
+            # In a real implementation, this would load a proper model
+            # For now, just return a placeholder
+            return {"type": "transformer", "path": model_path}
+        
+        return None
+    
+    def _load_tcn_model(self, asset: str) -> Optional[Dict[str, Any]]:
+        """
+        Load TCN model for an asset
+        
+        Args:
+            asset: Trading pair
             
-            # For now, just create a dummy array
-            preprocessed, features = preprocess_data(data)
+        Returns:
+            Dict: TCN model (None if not found)
+        """
+        asset_filename = asset.replace("/", "")
+        model_path = f"models/tcn/{asset_filename}_tcn.h5"
+        
+        if os.path.exists(model_path):
+            # In a real implementation, this would load a proper model
+            # For now, just return a placeholder
+            return {"type": "tcn", "path": model_path}
+        
+        return None
+    
+    def _load_lstm_model(self, asset: str) -> Optional[Dict[str, Any]]:
+        """
+        Load LSTM model for an asset
+        
+        Args:
+            asset: Trading pair
             
-            logger.debug(f"Preprocessed market data for {asset} with {len(features)} features")
-            return preprocessed
-            
-        except Exception as e:
-            logger.error(f"Error preprocessing market data for {asset}: {e}")
-            return np.zeros((10, 10))  # Dummy data in case of error
+        Returns:
+            Dict: LSTM model (None if not found)
+        """
+        asset_filename = asset.replace("/", "")
+        model_path = f"models/lstm/{asset_filename}_lstm.h5"
+        
+        if os.path.exists(model_path):
+            # In a real implementation, this would load a proper model
+            # For now, just return a placeholder
+            return {"type": "lstm", "path": model_path}
+        
+        return None
     
     def predict(
         self,
         asset: str,
         market_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    ) -> Optional[Dict[str, Any]]:
         """
-        Make prediction using ML models
+        Generate ML prediction for an asset
         
         Args:
-            asset: Asset to predict for
-            market_data: Market data
+            asset: Trading pair
+            market_data: Market data for the asset
             
         Returns:
-            Dict: Prediction
+            Dict: ML prediction
         """
-        asset_key = asset.replace("/", "")
-        
-        # Check if we have models for this asset
-        if not any(key.startswith(asset_key) for key in self.models):
-            logger.warning(f"No models available for {asset}")
+        if asset not in self.models:
+            logger.warning(f"No ML models available for {asset}")
             return None
         
+        logger.info(f"Generating ML prediction for {asset}")
+        
         try:
-            # Preprocess data
-            preprocessed_data = self.preprocess_market_data(market_data, asset)
+            # In a real implementation, this would use the models to generate
+            # a proper prediction based on the market data
             
-            # Make predictions with each model
-            predictions = {}
+            # For now, just return a placeholder prediction
+            current_price = float(market_data.get("ticker", {}).get("c", [0])[0])
             
-            if f"{asset_key}_transformer" in self.models:
-                transformer_pred = predict_price_movement(
-                    self.models[f"{asset_key}_transformer"],
-                    preprocessed_data
-                )
-                predictions["transformer"] = transformer_pred
+            # Simulate random prediction
+            import random
+            direction = random.choice(["BUY", "SELL", "NEUTRAL"])
+            confidence = random.uniform(0.6, 0.95)
             
-            if f"{asset_key}_tcn" in self.models:
-                tcn_pred = predict_price_movement(
-                    self.models[f"{asset_key}_tcn"],
-                    preprocessed_data
-                )
-                predictions["tcn"] = tcn_pred
+            # Generate prediction
+            prediction = {
+                "asset": asset,
+                "timestamp": datetime.now().isoformat(),
+                "current_price": current_price,
+                "direction": direction,
+                "confidence": confidence,
+                "predicted_price_change": random.uniform(-0.02, 0.02) * current_price,
+                "models": {
+                    "transformer": {"weight": 0.4, "direction": direction},
+                    "tcn": {"weight": 0.3, "direction": direction},
+                    "lstm": {"weight": 0.3, "direction": direction}
+                }
+            }
             
-            if f"{asset_key}_lstm" in self.models:
-                lstm_pred = predict_price_movement(
-                    self.models[f"{asset_key}_lstm"],
-                    preprocessed_data
-                )
-                predictions["lstm"] = lstm_pred
-            
-            # Combine predictions
-            combined = self._combine_predictions(predictions)
-            
-            # Add asset and timestamp
-            combined["asset"] = asset
-            combined["timestamp"] = datetime.now().isoformat()
-            
-            logger.info(f"ML prediction for {asset}: direction={combined['direction']}, confidence={combined['confidence']:.2f}")
-            return combined
+            logger.info(f"Generated {direction} prediction with {confidence:.2f} confidence for {asset}")
+            return prediction
             
         except Exception as e:
-            logger.error(f"Error making prediction for {asset}: {e}")
-            return {
-                "asset": asset,
-                "direction": "neutral",
-                "confidence": 0.0,
-                "timestamp": datetime.now().isoformat()
-            }
-    
-    def _combine_predictions(self, predictions: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Combine predictions from multiple models
-        
-        Args:
-            predictions: Predictions from different models
-            
-        Returns:
-            Dict: Combined prediction
-        """
-        if not predictions:
-            return {
-                "direction": "neutral",
-                "confidence": 0.0
-            }
-        
-        # Count votes for each direction
-        direction_votes = {"up": 0, "down": 0, "neutral": 0}
-        direction_confidence = {"up": 0.0, "down": 0.0, "neutral": 0.0}
-        
-        for model, pred in predictions.items():
-            direction = pred.get("direction", "neutral")
-            confidence = pred.get("confidence", 0.5)
-            
-            direction_votes[direction] += 1
-            direction_confidence[direction] += confidence
-        
-        # Find the direction with the most votes
-        max_votes = 0
-        final_direction = "neutral"
-        
-        for direction, votes in direction_votes.items():
-            if votes > max_votes:
-                max_votes = votes
-                final_direction = direction
-            elif votes == max_votes and direction_confidence[direction] > direction_confidence[final_direction]:
-                final_direction = direction
-        
-        # Calculate average confidence for the winning direction
-        avg_confidence = direction_confidence[final_direction] / max(1, direction_votes[final_direction])
-        
-        return {
-            "direction": final_direction,
-            "confidence": avg_confidence,
-            "model_predictions": predictions
-        }
+            logger.error(f"Error generating prediction for {asset}: {e}")
+            return None
     
     def generate_trading_signal(
         self,
@@ -262,44 +227,93 @@ class MLLiveTradingIntegration:
         Returns:
             Dict: Trading signal
         """
-        if not prediction:
+        try:
+            # Extract prediction components
+            asset = prediction.get("asset", "")
+            direction = prediction.get("direction", "NEUTRAL")
+            confidence = prediction.get("confidence", 0.0)
+            
+            # Map direction to signal type
+            signal_type = "NEUTRAL"
+            if direction == "BUY":
+                signal_type = "BUY"
+            elif direction == "SELL":
+                signal_type = "SELL"
+            
+            # Calculate signal strength based on confidence
+            strength = confidence
+            
+            # Determine leverage based on confidence
+            leverage = self._determine_leverage(asset, confidence)
+            
+            # Build trading signal
+            signal = {
+                "signal_type": signal_type,
+                "strength": strength,
+                "confidence": confidence,
+                "strategy": "MLStrategy",
+                "pair": asset,
+                "params": {
+                    "leverage": leverage,
+                    "confidence": confidence
+                }
+            }
+            
+            logger.info(f"Generated {signal_type} signal with strength {strength:.2f} for {asset}")
+            return signal
+            
+        except Exception as e:
+            logger.error(f"Error generating trading signal: {e}")
             return {
                 "signal_type": "NEUTRAL",
                 "strength": 0.0,
                 "confidence": 0.0,
                 "strategy": "MLStrategy",
-                "pair": "UNKNOWN/USD"
+                "pair": prediction.get("asset", ""),
+                "params": {}
             }
+    
+    def _determine_leverage(
+        self,
+        asset: str,
+        confidence: float
+    ) -> float:
+        """
+        Determine leverage based on confidence
         
-        # Extract prediction details
-        direction = prediction.get("direction", "neutral")
-        confidence = prediction.get("confidence", 0.0)
-        asset = prediction.get("asset", "UNKNOWN/USD")
+        Args:
+            asset: Trading pair
+            confidence: Prediction confidence
+            
+        Returns:
+            float: Leverage
+        """
+        # Get position sizing config for the asset
+        position_sizing = self.models.get(asset, {}).get("position_sizing", {})
         
-        # Map direction to signal type
-        if direction == "up":
-            signal_type = "BUY"
-        elif direction == "down":
-            signal_type = "SELL"
+        # Get leverage range
+        leverage_range = position_sizing.get("leverage_range", {})
+        
+        if self.use_extreme_leverage:
+            # Use extreme leverage settings
+            min_leverage = leverage_range.get("min", 5.0)
+            max_leverage = leverage_range.get("max", 20.0)
         else:
-            signal_type = "NEUTRAL"
+            # Use normal leverage settings
+            min_leverage = 1.0
+            max_leverage = leverage_range.get("default", 5.0)
         
-        # Calculate signal strength based on confidence
-        strength = min(1.0, max(0.3, confidence))
+        # Calculate leverage based on confidence
+        confidence_adjusted = (confidence - 0.5) * 2.0  # Scale confidence from 0.5-1.0 to 0.0-1.0
+        confidence_adjusted = max(0.0, min(1.0, confidence_adjusted))
         
-        signal = {
-            "signal_type": signal_type,
-            "strength": strength,
-            "confidence": confidence,
-            "strategy": "MLStrategy",
-            "pair": asset,
-            "params": {
-                "ml_confidence": confidence
-            }
-        }
+        leverage = min_leverage + confidence_adjusted * (max_leverage - min_leverage)
         
-        logger.info(f"Generated {signal_type} signal for {asset} with strength {strength:.2f}")
-        return signal
+        # Round to nearest 0.5
+        leverage = round(leverage * 2) / 2.0
+        
+        logger.info(f"Determined leverage {leverage:.1f}x for {asset} with confidence {confidence:.2f}")
+        return leverage
     
     def calculate_position_parameters(
         self,
@@ -308,7 +322,7 @@ class MLLiveTradingIntegration:
         current_price: float
     ) -> Dict[str, Any]:
         """
-        Calculate position parameters based on ML signal
+        Calculate position parameters for a signal
         
         Args:
             signal: Trading signal
@@ -318,229 +332,102 @@ class MLLiveTradingIntegration:
         Returns:
             Dict: Position parameters
         """
-        # Extract signal details
-        signal_type = signal.get("signal_type", "NEUTRAL")
-        confidence = signal.get("confidence", 0.0)
-        asset = signal.get("pair", "UNKNOWN/USD")
-        
-        # Skip neutral signals
-        if signal_type == "NEUTRAL":
-            return {
-                "size": 0.0,
-                "leverage": 1.0,
-                "margin_pct": 0.0
-            }
-        
-        # Determine base position size (% of capital)
-        base_size = 0.05  # 5% of capital
-        
-        # Scale size based on confidence
-        size_factor = min(1.0, max(0.2, confidence))
-        position_size = base_size * size_factor
-        
-        # Determine leverage based on confidence and extreme settings
-        if self.use_extreme_leverage:
-            # Asset-specific leverage ranges
-            leverage_ranges = {
-                "SOL/USD": (20, 125),
-                "ETH/USD": (15, 100),
-                "BTC/USD": (12, 85)
-            }
-            
-            # Get range for this asset (or default)
-            min_lev, max_lev = leverage_ranges.get(asset, (5, 20))
-            
-            # Scale leverage based on confidence
-            leverage_range = max_lev - min_lev
-            leverage = min_lev + (leverage_range * confidence)
-        else:
-            # Normal leverage range (1-10x)
-            leverage = 1.0 + (9.0 * confidence)
-        
-        # Ensure minimum leverage
-        leverage = max(1.0, leverage)
-        
-        # Calculate margin percentage
-        margin_pct = 1.0 / leverage
-        
-        # Calculate actual position size
-        position_value = available_capital * position_size
-        position_size_units = position_value / current_price
-        
-        params = {
-            "size": position_size,
-            "size_units": position_size_units,
-            "leverage": leverage,
-            "margin_pct": margin_pct,
-            "confidence": confidence
-        }
-        
-        logger.info(f"Calculated position parameters for {asset}: size={position_size:.2%}, leverage={leverage:.1f}x")
-        return params
-    
-    def integrate_with_bot_manager(self, bot_manager):
-        """
-        Integrate with bot manager for live trading
-        
-        Args:
-            bot_manager: Bot manager instance
-        """
-        # Register with bot manager
-        logger.info("Integrating ML trading with bot manager")
-        
-        # Placeholder for real implementation with actual bot manager
-    
-    def run_ml_trading_iteration(
-        self,
-        market_data: Dict[str, Dict[str, Any]],
-        bot_manager
-    ):
-        """
-        Run a single ML trading iteration
-        
-        Args:
-            market_data: Market data for all assets
-            bot_manager: Bot manager instance
-        """
-        logger.info("Running ML trading iteration")
-        
-        # Process each asset
-        for asset in self.assets:
-            try:
-                # Get market data for this asset
-                asset_data = market_data.get(asset)
-                
-                if not asset_data:
-                    logger.warning(f"No market data available for {asset}")
-                    continue
-                
-                # Make prediction
-                prediction = self.predict(asset, asset_data)
-                
-                if not prediction:
-                    logger.warning(f"Failed to generate prediction for {asset}")
-                    continue
-                
-                # Generate trading signal
-                signal = self.generate_trading_signal(prediction)
-                
-                # Register signal with bot manager
-                if bot_manager:
-                    bot_manager.register_signal(
-                        strategy_name="MLStrategy",
-                        signal_type=signal["signal_type"],
-                        strength=signal["strength"],
-                        pair=asset,
-                        price=asset_data.get("close"),
-                        params=signal.get("params", {})
-                    )
-                
-            except Exception as e:
-                logger.error(f"Error processing {asset} in ML trading iteration: {e}")
-    
-    def run_ml_trading_loop(
-        self,
-        bot_manager,
-        interval: int = 60,
-        max_iterations: Optional[int] = None
-    ):
-        """
-        Run ML trading loop
-        
-        Args:
-            bot_manager: Bot manager instance
-            interval: Seconds between iterations
-            max_iterations: Maximum number of iterations (None for infinite)
-        """
-        logger.info(f"Starting ML trading loop with interval {interval}s")
-        
-        iteration = 0
-        
         try:
-            while max_iterations is None or iteration < max_iterations:
-                # Get current market data (in a real implementation, this would
-                # be fetched from exchange or price feed)
-                market_data = self._get_current_market_data()
+            # Extract signal components
+            asset = signal.get("pair", "")
+            confidence = signal.get("confidence", 0.0)
+            signal_type = signal.get("signal_type", "NEUTRAL")
+            
+            # Skip if neutral signal
+            if signal_type == "NEUTRAL":
+                return {}
+            
+            # Get position sizing config for the asset
+            position_sizing = self.models.get(asset, {}).get("position_sizing", {})
+            
+            # Extract position sizing parameters
+            base_size = position_sizing.get("position_sizing", {}).get("base_size", 0.05)
+            min_size = position_sizing.get("position_sizing", {}).get("min_size", 0.01)
+            max_size = position_sizing.get("position_sizing", {}).get("max_size", 0.20)
+            
+            # Calculate position size based on confidence
+            if position_sizing.get("position_sizing", {}).get("confidence_scaling", True):
+                # Scale position size based on confidence
+                confidence_adjusted = (confidence - 0.5) * 2.0  # Scale confidence from 0.5-1.0 to 0.0-1.0
+                confidence_adjusted = max(0.0, min(1.0, confidence_adjusted))
                 
-                # Run trading iteration
-                self.run_ml_trading_iteration(market_data, bot_manager)
-                
-                # Increment iteration counter
-                iteration += 1
-                
-                # Sleep until next iteration
-                logger.debug(f"Completed iteration {iteration}, sleeping for {interval}s")
-                time.sleep(interval)
-                
-        except KeyboardInterrupt:
-            logger.info("ML trading loop stopped by user")
-        except Exception as e:
-            logger.error(f"Error in ML trading loop: {e}")
-    
-    def _get_current_market_data(self) -> Dict[str, Dict[str, Any]]:
-        """
-        Get current market data
-        
-        Returns:
-            Dict: Market data by asset
-        """
-        # In a real implementation, this would fetch current market data
-        # from the exchange or price feed
-        
-        # For now, just return dummy data
-        data = {}
-        
-        for asset in self.assets:
-            data[asset] = {
-                "open": 100.0,
-                "high": 101.0,
-                "low": 99.0,
-                "close": 100.5,
-                "volume": 1000.0,
-                "timestamp": datetime.now().isoformat()
+                position_size = min_size + confidence_adjusted * (max_size - min_size)
+            else:
+                # Use base position size
+                position_size = base_size
+            
+            # Calculate capital allocation
+            capital_allocation = position_size * available_capital
+            
+            # Calculate position parameters
+            leverage = signal.get("params", {}).get("leverage", 1.0)
+            
+            # Extract risk parameters
+            stop_loss = position_sizing.get("risk_parameters", {}).get("stop_loss", 0.04)
+            profit_target = position_sizing.get("risk_parameters", {}).get("profit_target", 0.30)
+            trailing_stop = position_sizing.get("risk_parameters", {}).get("trailing_stop", True)
+            
+            # Calculate stop prices
+            if signal_type == "BUY":
+                stop_price = current_price * (1.0 - stop_loss)
+                target_price = current_price * (1.0 + profit_target)
+            else:  # SELL
+                stop_price = current_price * (1.0 + stop_loss)
+                target_price = current_price * (1.0 - profit_target)
+            
+            # Build position parameters
+            params = {
+                "leverage": leverage,
+                "position_size": capital_allocation,
+                "stop_price": stop_price,
+                "target_price": target_price,
+                "trailing_stop": trailing_stop
             }
-        
-        return data
+            
+            logger.info(f"Calculated position parameters for {asset}: {params}")
+            return params
+            
+        except Exception as e:
+            logger.error(f"Error calculating position parameters: {e}")
+            return {}
 
 def main():
-    """Run ML live trading integration"""
-    parser = argparse.ArgumentParser(description='Run ML live trading integration')
+    """Test the ML live trading integration"""
+    logging.basicConfig(level=logging.INFO)
     
-    parser.add_argument('--assets', nargs='+', default=["SOL/USD", "ETH/USD", "BTC/USD"],
-                      help='Trading pairs to trade')
+    # Create integration
+    integration = MLLiveTradingIntegration()
     
-    parser.add_argument('--model-dir', type=str, default='models',
-                      help='Directory containing trained models')
+    # Create test market data
+    market_data = {
+        "ticker": {
+            "c": ["100.0"]
+        }
+    }
     
-    parser.add_argument('--extreme-leverage', action='store_true',
-                      help='Use extreme leverage settings (20-125x)')
+    # Generate prediction
+    prediction = integration.predict("SOL/USD", market_data)
     
-    parser.add_argument('--interval', type=int, default=60,
-                      help='Seconds between trading iterations')
-    
-    parser.add_argument('--max-iterations', type=int, default=None,
-                      help='Maximum number of iterations (None for infinite)')
-    
-    args = parser.parse_args()
-    
-    # Initialize ML trading integration
-    ml_trading = MLLiveTradingIntegration(
-        assets=args.assets,
-        model_dir=args.model_dir,
-        use_extreme_leverage=args.extreme_leverage
-    )
-    
-    # In a real implementation, this would get a real bot manager instance
-    bot_manager = None
-    
-    # Run trading loop
-    ml_trading.run_ml_trading_loop(
-        bot_manager=bot_manager,
-        interval=args.interval,
-        max_iterations=args.max_iterations
-    )
-    
-    return 0
+    if prediction:
+        # Generate trading signal
+        signal = integration.generate_trading_signal(prediction)
+        
+        # Calculate position parameters
+        params = integration.calculate_position_parameters(
+            signal=signal,
+            available_capital=10000.0,
+            current_price=100.0
+        )
+        
+        # Print results
+        print(json.dumps(prediction, indent=2))
+        print(json.dumps(signal, indent=2))
+        print(json.dumps(params, indent=2))
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
