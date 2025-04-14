@@ -1,0 +1,45 @@
+{
+    "global": {
+        "confidence_threshold": 0.65,
+        "base_leverage": 20.0,
+        "max_leverage": 125.0,
+        "max_risk_per_trade": 0.2,
+        "trading_pairs": [
+            "SOL/USD",
+            "BTC/USD",
+            "ETH/USD"
+        ]
+    },
+    "strategy_integration": {
+        "signal_weight_multiplier": 1.5,
+        "max_signal_age_seconds": 300,
+        "use_ensemble_models": true,
+        "feature_scaling": "standard"
+    },
+    "ensemble": {
+        "SOLUSD": {
+            "model_weights": {
+                "lstm": 0.35,
+                "cnn": 0.35,
+                "transformer": 0.3
+            },
+            "confidence_scaling": "sigmoid"
+        },
+        "BTCUSD": {
+            "model_weights": {
+                "lstm": 0.35,
+                "cnn": 0.35,
+                "transformer": 0.3
+            },
+            "confidence_scaling": "sigmoid"
+        },
+        "ETHUSD": {
+            "model_weights": {
+                "lstm": 0.35,
+                "cnn": 0.35,
+                "transformer": 0.3
+            },
+            "confidence_scaling": "sigmoid"
+        }
+    }
+}

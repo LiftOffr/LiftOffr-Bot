@@ -2,16 +2,12 @@
 """
 Improved Model Retraining Script
 
-This script addresses the input shape mismatch issue between our models (expecting shape=(None, 60, 20))
-and our enhanced dataset features (shape=(None, 1, 56)). It provides a systematic approach to:
-
-1. Preprocess and reshape the enhanced dataset
-2. Configure and train models with the correct input shape
-3. Create ensemble models with proper weights
-4. Update ML configuration to integrate with the trading system
+This script retrains our ML models to match the reshaped input data.
+It addresses the issue where our models expect input shape (None, 1, 56)
+but our reshaped data now has shape (None, 60, 20).
 
 Usage:
-    python improved_model_retraining.py --pairs SOLUSD,BTCUSD,ETHUSD --models lstm,tcn,transformer
+    python improved_model_retraining.py --pair SOL/USD --model lstm,tcn,transformer
 """
 
 import os
@@ -19,16 +15,23 @@ import sys
 import json
 import logging
 import argparse
-import numpy as np
-import pandas as pd
-from datetime import datetime
-from pathlib import Path
-import tensorflow as tf
-from tensorflow.keras.models import load_model, Model
-from tensorflow.keras.layers import Input, Dense, LSTM, Conv1D, MaxPooling1D, Flatten, Concatenate, Dropout
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
-from sklearn.preprocessing import StandardScaler, RobustScaler
-from sklearn.model_selection import train_test_split
+import datetime
+from typing import List, Dict, Any, Tuple, Optional, Union
+
+try:
+    import numpy as np
+    import pandas as pd
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.model_selection import train_test_split
+    import tensorflow as tf
+    from tensorflow.keras.models import Model, Sequential, load_model, save_model
+    from tensorflow.keras.layers import Dense, LSTM, Dropout, Input, Bidirectional
+    from tensorflow.keras.layers import Conv1D, MaxPooling1D, Flatten, GlobalAveragePooling1D
+    from tensorflow.keras.layers import MultiHeadAttention, LayerNormalization, Concatenate
+    from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+    TENSORFLOW_AVAILABLE = True
+except ImportError:
+    TENSORFLOW_AVAILABLE = False
 
 # Configure logging
 logging.basicConfig(
@@ -42,288 +45,325 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Constants
-MODEL_TYPES = ['lstm', 'tcn', 'transformer', 'cnn', 'gru', 'bilstm', 'attention', 'hybrid']
-ASSETS = ['SOLUSD', 'BTCUSD', 'ETHUSD', 'DOTUSD', 'LINKUSD']
-TARGET_LOOKBACK = 60
-TARGET_FEATURES = 20
-RANDOM_SEED = 42
-INPUT_SHAPE_ERROR_MSG = "input shape mismatch"
+DEFAULT_PAIRS = ['SOL/USD', 'BTC/USD', 'ETH/USD']
+DEFAULT_MODELS = ['lstm', 'tcn', 'transformer']
+DEFAULT_LOOKBACK = 60
+DEFAULT_FEATURES = 20
+DEFAULT_EPOCHS = 100
+DEFAULT_BATCH_SIZE = 32
+DEFAULT_VALIDATION_SPLIT = 0.2
+DEFAULT_PATIENCE = 15
+DEFAULT_LEARNING_RATE = 0.001
 
 def parse_arguments():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description='Improved model retraining with correct input shapes')
-    parser.add_argument('--pairs', type=str, default='SOLUSD', 
-                        help='Comma-separated list of trading pairs to retrain models for')
-    parser.add_argument('--models', type=str, default='lstm,tcn,transformer', 
+    parser = argparse.ArgumentParser(description='Improved Model Retraining')
+    parser.add_argument('--pair', type=str, default='SOL/USD',
+                        help='Trading pair to retrain models for')
+    parser.add_argument('--models', type=str, default=','.join(DEFAULT_MODELS),
                         help='Comma-separated list of models to retrain')
-    parser.add_argument('--timeframe', type=str, default='1h', 
-                        help='Timeframe for training data (1h, 4h, 1d)')
-    parser.add_argument('--epochs', type=int, default=200, 
-                        help='Number of training epochs')
-    parser.add_argument('--batch-size', type=int, default=32, 
-                        help='Batch size for training')
-    parser.add_argument('--patience', type=int, default=20, 
-                        help='Early stopping patience')
-    parser.add_argument('--update-config', action='store_true', 
-                        help='Update ML config after retraining')
-    parser.add_argument('--create-ensemble', action='store_true', 
-                        help='Create ensemble model after retraining')
-    parser.add_argument('--debug', action='store_true', 
-                        help='Enable debug logging')
+    parser.add_argument('--lookback', type=int, default=DEFAULT_LOOKBACK,
+                        help=f'Lookback period for model training (default: {DEFAULT_LOOKBACK})')
+    parser.add_argument('--features', type=int, default=DEFAULT_FEATURES,
+                        help=f'Number of features for model training (default: {DEFAULT_FEATURES})')
+    parser.add_argument('--epochs', type=int, default=DEFAULT_EPOCHS,
+                        help=f'Number of epochs for training (default: {DEFAULT_EPOCHS})')
+    parser.add_argument('--batch-size', type=int, default=DEFAULT_BATCH_SIZE,
+                        help=f'Batch size for training (default: {DEFAULT_BATCH_SIZE})')
+    parser.add_argument('--validation-split', type=float, default=DEFAULT_VALIDATION_SPLIT,
+                        help=f'Validation split for training (default: {DEFAULT_VALIDATION_SPLIT})')
+    parser.add_argument('--patience', type=int, default=DEFAULT_PATIENCE,
+                        help=f'Patience for early stopping (default: {DEFAULT_PATIENCE})')
+    parser.add_argument('--learning-rate', type=float, default=DEFAULT_LEARNING_RATE,
+                        help=f'Learning rate for model training (default: {DEFAULT_LEARNING_RATE})')
+    parser.add_argument('--verbose', action='store_true',
+                        help='Verbose output')
     
     return parser.parse_args()
 
-def load_enhanced_dataset(asset, timeframe='1h'):
+def load_dataset(pair: str) -> Tuple[pd.DataFrame, List[str]]:
     """
-    Load enhanced dataset for the specified asset and timeframe.
+    Load dataset for the specified pair.
     
     Args:
-        asset (str): Asset symbol (e.g., 'SOLUSD')
-        timeframe (str): Timeframe (e.g., '1h', '4h', '1d')
+        pair: Trading pair (e.g., 'SOL/USD')
         
     Returns:
-        pd.DataFrame: Enhanced dataset
+        Tuple of (DataFrame with dataset, list of feature column names)
     """
-    filepath = f'training_data/{asset}_{timeframe}_enhanced.csv'
+    pair_formatted = pair.replace('/', '')
+    input_file = f'training_data/{pair_formatted}_1h_enhanced_reshaped.csv'
     
-    if not os.path.exists(filepath):
-        logger.error(f"Dataset file not found: {filepath}")
-        return None
+    if not os.path.exists(input_file):
+        logger.warning(f"Reshaped file {input_file} not found, trying to find alternative files")
+        
+        alt_files = []
+        training_dir = 'training_data'
+        if os.path.exists(training_dir):
+            for file in os.listdir(training_dir):
+                if file.startswith(pair_formatted) and file.endswith('.csv'):
+                    alt_files.append(os.path.join(training_dir, file))
+        
+        if not alt_files:
+            logger.error(f"No files found for {pair}")
+            return None, []
+        
+        # Use the first alternative file
+        input_file = alt_files[0]
+        logger.info(f"Using alternative file: {input_file}")
     
-    logger.info(f"Loading enhanced dataset from {filepath}")
-    df = pd.read_csv(filepath)
-    
-    return df
+    try:
+        df = pd.read_csv(input_file)
+        logger.info(f"Loaded {len(df)} rows from {input_file}")
+        
+        # Get feature column names (excluding target columns)
+        feature_cols = [col for col in df.columns if not col.startswith('target_') and col != 'timestamp']
+        
+        return df, feature_cols
+    except Exception as e:
+        logger.error(f"Error loading dataset: {str(e)}")
+        return None, []
 
-def preprocess_dataset(df, sequence_length=60, target_col='target_direction_24', 
-                        strategy_columns=None, drop_cols=None):
+def load_feature_metadata(pair: str) -> Dict[str, Any]:
     """
-    Preprocess the dataset for model training.
+    Load feature metadata for the specified pair.
     
     Args:
-        df (pd.DataFrame): Enhanced dataset
-        sequence_length (int): Sequence length for time series
-        target_col (str): Target column for prediction
-        strategy_columns (list): Strategy-related columns to include
-        drop_cols (list): Columns to exclude from features
+        pair: Trading pair (e.g., 'SOL/USD')
         
     Returns:
-        tuple: X, y, feature_cols, scalers
+        Dictionary with feature metadata
     """
-    logger.info(f"Preprocessing dataset with {len(df)} samples")
+    pair_formatted = pair.replace('/', '')
+    metadata_file = f'training_data/{pair_formatted}_features_metadata.json'
     
-    # Default columns to drop if not specified
-    if drop_cols is None:
-        drop_cols = ['timestamp', 'arima_forecast', 'adaptive_prediction', 
-                    'strategy_agreement', 'strategy_combined_strength',
-                    'arima_dominance', 'adaptive_dominance', 'dominant_strategy']
-    
-    # Include strategy columns if specified
-    if strategy_columns is None:
-        strategy_columns = ['arima_prediction', 'arima_strength', 
-                           'adaptive_prediction', 'adaptive_strength',
-                           'adaptive_volatility', 'combined_prediction']
-    
-    # Remove any drop_cols that might be in strategy_columns
-    for col in strategy_columns:
-        if col in drop_cols:
-            drop_cols.remove(col)
-    
-    # Handle any missing columns gracefully
-    for col in drop_cols.copy():
-        if col not in df.columns:
-            drop_cols.remove(col)
-            logger.warning(f"Column {col} not found in dataset, skipping")
-    
-    # Identify target columns
-    target_columns = [col for col in df.columns if col.startswith('target_')]
-    
-    # Ensure target_col exists in the dataset
-    if target_col not in df.columns:
-        logger.warning(f"Target column {target_col} not found, using target_direction_24 as fallback")
-        target_col = 'target_direction_24' if 'target_direction_24' in df.columns else target_columns[0]
-    
-    # Separate target and drop from features
-    y = df[target_col].values
-    
-    # Calculate columns to keep as features
-    feature_cols = [col for col in df.columns 
-                   if col not in drop_cols + target_columns + [target_col]]
-    
-    # Handle non-numeric columns
-    for col in feature_cols.copy():
-        if df[col].dtype == 'object':
-            logger.warning(f"Dropping non-numeric column: {col}")
-            feature_cols.remove(col)
-    
-    # Select features
-    X_raw = df[feature_cols].values
-    
-    # Scale features
-    feature_scaler = RobustScaler()
-    X_scaled = feature_scaler.fit_transform(X_raw)
-    
-    # Create sequences
-    X_sequences = []
-    y_targets = []
-    
-    for i in range(len(X_scaled) - sequence_length):
-        X_sequences.append(X_scaled[i:i+sequence_length])
-        y_targets.append(y[i+sequence_length])
-    
-    X = np.array(X_sequences)
-    y_final = np.array(y_targets)
-    
-    # Reshape for expected model input shape (None, 60, 20)
-    if X.shape[2] != TARGET_FEATURES:
-        logger.info(f"Reshaping features from {X.shape} to match expected input shape")
+    if not os.path.exists(metadata_file):
+        logger.warning(f"Feature metadata file {metadata_file} not found")
         
-        # If we have more features than needed, select the most important ones
-        if X.shape[2] > TARGET_FEATURES:
-            # Ensure we have enough features
-            if len(feature_cols) < TARGET_FEATURES:
-                logger.error(f"Not enough features ({len(feature_cols)}) to create {TARGET_FEATURES} target features")
-                return None, None, None, None
+        # Try in models directory
+        model_dirs = ['lstm', 'tcn', 'transformer']
+        for model_dir in model_dirs:
+            alt_file = f'models/{model_dir}/feature_names.json'
+            if os.path.exists(alt_file):
+                logger.info(f"Using alternative metadata file: {alt_file}")
+                try:
+                    with open(alt_file, 'r') as f:
+                        return json.load(f)
+                except Exception as e:
+                    logger.error(f"Error loading alternative metadata file: {str(e)}")
+                break
+        
+        # Return empty metadata
+        return {}
+    
+    try:
+        with open(metadata_file, 'r') as f:
+            metadata = json.load(f)
+        
+        logger.info(f"Loaded feature metadata from {metadata_file}")
+        return metadata
+    except Exception as e:
+        logger.error(f"Error loading feature metadata: {str(e)}")
+        return {}
+
+def prepare_training_data(df: pd.DataFrame, feature_cols: List[str], 
+                          lookback: int = DEFAULT_LOOKBACK,
+                          target_col: str = 'target_direction_24') -> Tuple[np.ndarray, np.ndarray, StandardScaler]:
+    """
+    Prepare training data from dataset.
+    
+    Args:
+        df: DataFrame with dataset
+        feature_cols: List of feature column names
+        lookback: Lookback period
+        target_col: Target column name
+        
+    Returns:
+        Tuple of (X, y, scaler)
+    """
+    if df is None or feature_cols is None or len(feature_cols) == 0:
+        logger.error("Invalid input data for preparing training data")
+        return None, None, None
+    
+    try:
+        # Select features and target
+        X_data = df[feature_cols].values
+        y_data = df[target_col].values if target_col in df.columns else None
+        
+        if y_data is None:
+            logger.error(f"Target column {target_col} not found in dataset")
+            return None, None, None
+        
+        # Normalize features
+        scaler = StandardScaler()
+        X_data = scaler.fit_transform(X_data)
+        
+        # Create sequences - check if data is already in sequence format
+        if len(X_data.shape) == 3:
+            # Data is already in sequence format (samples, timesteps, features)
+            logger.info(f"Data already in sequence format with shape {X_data.shape}")
+            X = X_data
+            y = y_data[:len(X)]
+        else:
+            # Need to create sequences
+            X_sequences = []
+            y_sequences = []
             
-            # Select most important features (first N features including price and key indicators)
-            X = X[:, :, :TARGET_FEATURES]
-            feature_cols = feature_cols[:TARGET_FEATURES]
-            logger.info(f"Selected {TARGET_FEATURES} features from {len(feature_cols)} available")
+            for i in range(len(df) - lookback):
+                X_sequences.append(X_data[i:i+lookback])
+                y_sequences.append(y_data[i+lookback])
+            
+            X = np.array(X_sequences)
+            y = np.array(y_sequences)
         
-        # If we have fewer features than needed, pad with zeros
-        elif X.shape[2] < TARGET_FEATURES:
-            logger.info(f"Padding features from {X.shape[2]} to {TARGET_FEATURES}")
-            padding_width = TARGET_FEATURES - X.shape[2]
-            X_padded = np.zeros((X.shape[0], X.shape[1], TARGET_FEATURES))
-            X_padded[:, :, :X.shape[2]] = X
-            X = X_padded
-    
-    # Check final dimensions
-    logger.info(f"Final feature shape: {X.shape}, target shape: {y_final.shape}")
-    
-    return X, y_final, feature_cols, {"feature_scaler": feature_scaler}
+        logger.info(f"Prepared {len(X)} sequences with shape {X.shape}")
+        return X, y, scaler
+    except Exception as e:
+        logger.error(f"Error preparing training data: {str(e)}")
+        return None, None, None
 
-def create_lstm_model(input_shape):
-    """Create LSTM model with the correct input shape."""
-    inputs = Input(shape=input_shape)
-    
-    x = LSTM(128, return_sequences=True)(inputs)
-    x = Dropout(0.3)(x)
-    x = LSTM(64)(x)
-    x = Dropout(0.3)(x)
-    
-    outputs = Dense(1, activation='sigmoid')(x)
-    
-    model = Model(inputs=inputs, outputs=outputs)
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-        loss='binary_crossentropy',
-        metrics=['accuracy']
-    )
-    
-    return model
-
-def create_cnn_model(input_shape):
-    """Create CNN model with the correct input shape."""
-    inputs = Input(shape=input_shape)
-    
-    x = Conv1D(filters=64, kernel_size=3, activation='relu')(inputs)
-    x = MaxPooling1D(pool_size=2)(x)
-    x = Conv1D(filters=128, kernel_size=3, activation='relu')(x)
-    x = MaxPooling1D(pool_size=2)(x)
-    x = Flatten()(x)
-    x = Dense(64, activation='relu')(x)
-    x = Dropout(0.3)(x)
-    
-    outputs = Dense(1, activation='sigmoid')(x)
-    
-    model = Model(inputs=inputs, outputs=outputs)
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-        loss='binary_crossentropy',
-        metrics=['accuracy']
-    )
-    
-    return model
-
-def create_hybrid_model(input_shape):
-    """Create hybrid model combining CNN and LSTM."""
-    inputs = Input(shape=input_shape)
-    
-    # CNN path
-    cnn = Conv1D(filters=64, kernel_size=3, activation='relu')(inputs)
-    cnn = MaxPooling1D(pool_size=2)(cnn)
-    cnn = Conv1D(filters=128, kernel_size=3, activation='relu')(cnn)
-    cnn = MaxPooling1D(pool_size=2)(cnn)
-    cnn = Flatten()(cnn)
-    
-    # LSTM path
-    lstm = LSTM(128, return_sequences=True)(inputs)
-    lstm = Dropout(0.3)(lstm)
-    lstm = LSTM(64)(lstm)
-    
-    # Combine paths
-    combined = Concatenate()([cnn, lstm])
-    x = Dense(64, activation='relu')(combined)
-    x = Dropout(0.3)(x)
-    
-    outputs = Dense(1, activation='sigmoid')(x)
-    
-    model = Model(inputs=inputs, outputs=outputs)
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-        loss='binary_crossentropy',
-        metrics=['accuracy']
-    )
-    
-    return model
-
-def train_model(model_type, X_train, y_train, X_val, y_val, asset, 
-               epochs=200, batch_size=32, patience=20):
+def create_lstm_model(input_shape: Tuple[int, int]) -> Model:
     """
-    Train a model with the specified architecture and save it.
+    Create LSTM model.
     
     Args:
-        model_type (str): Type of model to train
-        X_train (np.ndarray): Training features
-        y_train (np.ndarray): Training targets
-        X_val (np.ndarray): Validation features
-        y_val (np.ndarray): Validation targets
-        asset (str): Asset symbol
-        epochs (int): Number of training epochs
-        batch_size (int): Batch size for training
-        patience (int): Early stopping patience
+        input_shape: Input shape for the model
         
     Returns:
-        tuple: (trained model, training history)
+        Compiled model
     """
-    input_shape = X_train.shape[1:]
-    logger.info(f"Training {model_type} model for {asset} with input shape {input_shape}")
+    model = Sequential([
+        LSTM(64, input_shape=input_shape, return_sequences=True),
+        Dropout(0.3),
+        LSTM(32),
+        Dropout(0.3),
+        Dense(16, activation='relu'),
+        Dense(1, activation='sigmoid')
+    ])
     
-    # Model factory based on type
+    model.compile(
+        optimizer='adam',
+        loss='binary_crossentropy',
+        metrics=['accuracy']
+    )
+    
+    return model
+
+def create_tcn_model(input_shape: Tuple[int, int]) -> Model:
+    """
+    Create TCN model.
+    
+    Args:
+        input_shape: Input shape for the model
+        
+    Returns:
+        Compiled model
+    """
+    # Simple convolutional model as a substitute for TCN
+    model = Sequential([
+        Conv1D(64, kernel_size=3, activation='relu', input_shape=input_shape),
+        Dropout(0.2),
+        Conv1D(64, kernel_size=3, activation='relu'),
+        Dropout(0.2),
+        Conv1D(64, kernel_size=3, activation='relu'),
+        GlobalAveragePooling1D(),
+        Dense(32, activation='relu'),
+        Dense(1, activation='sigmoid')
+    ])
+    
+    model.compile(
+        optimizer='adam',
+        loss='binary_crossentropy',
+        metrics=['accuracy']
+    )
+    
+    return model
+
+def create_transformer_model(input_shape: Tuple[int, int]) -> Model:
+    """
+    Create Transformer model.
+    
+    Args:
+        input_shape: Input shape for the model
+        
+    Returns:
+        Compiled model
+    """
+    inputs = Input(shape=input_shape)
+    
+    # Transformer layer
+    attention_output = MultiHeadAttention(
+        num_heads=4, key_dim=32
+    )(inputs, inputs)
+    x = LayerNormalization()(attention_output + inputs)
+    
+    # Conv layer
+    conv_output = Conv1D(32, kernel_size=3, activation='relu')(x)
+    pool_output = GlobalAveragePooling1D()(conv_output)
+    
+    # Dense layers
+    x = Dense(32, activation='relu')(pool_output)
+    x = Dropout(0.2)(x)
+    outputs = Dense(1, activation='sigmoid')(x)
+    
+    model = Model(inputs=inputs, outputs=outputs)
+    
+    model.compile(
+        optimizer='adam',
+        loss='binary_crossentropy',
+        metrics=['accuracy']
+    )
+    
+    return model
+
+def create_model(model_type: str, input_shape: Tuple[int, int]) -> Model:
+    """
+    Create model of the specified type.
+    
+    Args:
+        model_type: Model type (lstm, tcn, transformer)
+        input_shape: Input shape for the model
+        
+    Returns:
+        Compiled model
+    """
     if model_type == 'lstm':
-        model = create_lstm_model(input_shape)
-    elif model_type == 'cnn':
-        model = create_cnn_model(input_shape)
-    elif model_type == 'hybrid':
-        model = create_hybrid_model(input_shape)
+        return create_lstm_model(input_shape)
+    elif model_type == 'tcn':
+        return create_tcn_model(input_shape)
+    elif model_type == 'transformer':
+        return create_transformer_model(input_shape)
     else:
-        logger.warning(f"Model type {model_type} not directly supported in this script.")
-        logger.warning("Using LSTM model as fallback.")
-        model = create_lstm_model(input_shape)
+        logger.error(f"Unknown model type: {model_type}")
+        return None
+
+def train_model(model: Model, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray,
+               epochs: int = DEFAULT_EPOCHS, batch_size: int = DEFAULT_BATCH_SIZE,
+               patience: int = DEFAULT_PATIENCE) -> Tuple[Model, Dict[str, Any]]:
+    """
+    Train model.
     
-    # Setup callbacks
+    Args:
+        model: Model to train
+        X_train: Training data
+        y_train: Training labels
+        X_val: Validation data
+        y_val: Validation labels
+        epochs: Number of epochs
+        batch_size: Batch size
+        patience: Patience for early stopping
+        
+    Returns:
+        Tuple of (trained model, training history)
+    """
     callbacks = [
-        EarlyStopping(monitor='val_loss', patience=patience, restore_best_weights=True),
-        ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=patience//2, min_lr=1e-6),
-        ModelCheckpoint(
-            filepath=f'models/{model_type}/{asset}_{model_type}.h5',
+        EarlyStopping(
             monitor='val_loss',
-            save_best_only=True
+            patience=patience,
+            restore_best_weights=True
         )
     ]
     
-    # Train model
     history = model.fit(
         X_train, y_train,
         validation_data=(X_val, y_val),
@@ -333,283 +373,325 @@ def train_model(model_type, X_train, y_train, X_val, y_val, asset,
         verbose=1
     )
     
-    # Save final model and standardized filename for compatibility
-    model_dir = f'models/{model_type}'
-    os.makedirs(model_dir, exist_ok=True)
-    
-    model.save(f'{model_dir}/{asset}.h5')
-    
-    # Save a copy with the expected naming convention for ensemble models
-    model.save(f'{model_dir}/{asset}_{model_type}.h5')
-    
-    # Save metrics
-    metrics = {
-        "accuracy": float(history.history['accuracy'][-1]),
-        "val_accuracy": float(history.history['val_accuracy'][-1]),
-        "loss": float(history.history['loss'][-1]),
-        "val_loss": float(history.history['val_loss'][-1]),
-        "training_date": datetime.now().isoformat(),
-        "input_shape": list(input_shape),
-        "epochs_trained": len(history.history['loss']),
-        "early_stopping": len(history.history['loss']) < epochs
-    }
-    
-    with open(f'{model_dir}/{asset}_metrics.json', 'w') as f:
-        json.dump(metrics, f, indent=2)
-    
-    logger.info(f"Model training completed: val_accuracy={metrics['val_accuracy']:.4f}")
-    
-    return model, history
+    return model, history.history
 
-def create_ensemble_config(asset, model_types, base_weights=None):
+def save_trained_model(model: Model, model_type: str, pair: str) -> bool:
     """
-    Create or update ensemble configuration for the specified asset.
+    Save trained model.
     
     Args:
-        asset (str): Asset symbol
-        model_types (list): List of model types to include in ensemble
-        base_weights (dict): Base weights for models (optional)
+        model: Trained model
+        model_type: Model type (lstm, tcn, transformer)
+        pair: Trading pair (e.g., 'SOL/USD')
         
     Returns:
-        dict: Ensemble configuration
+        True if successful, False otherwise
     """
-    logger.info(f"Creating ensemble configuration for {asset}")
+    pair_formatted = pair.replace('/', '')
+    model_dir = f'models/{model_type}'
+    model_path = f'{model_dir}/{pair_formatted}.h5'
     
-    # Create models directory if it doesn't exist
-    ensemble_dir = 'models/ensemble'
-    os.makedirs(ensemble_dir, exist_ok=True)
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
     
-    # Initialize ensemble config
-    weights_path = f'{ensemble_dir}/{asset}_weights.json'
-    ensemble_path = f'{ensemble_dir}/{asset}_ensemble.json'
-    position_sizing_path = f'{ensemble_dir}/{asset}_position_sizing.json'
-    
-    # Load existing weights if available, otherwise use equal weights
-    if os.path.exists(weights_path) and base_weights is None:
-        with open(weights_path, 'r') as f:
-            weights = json.load(f)
-        logger.info(f"Loaded existing weights from {weights_path}")
-    else:
-        # Use provided base weights or equal weighting
-        if base_weights is None:
-            weight_value = 1.0 / len(model_types)
-            weights = {model_type: weight_value for model_type in model_types}
-        else:
-            weights = base_weights.copy()
-            
-            # Add missing models with minimal weight
-            for model_type in model_types:
-                if model_type not in weights:
-                    weights[model_type] = 0.05
-            
-            # Normalize weights to sum to 1.0
-            weight_sum = sum(weights.values())
-            weights = {k: v / weight_sum for k, v in weights.items()}
-        
-        logger.info(f"Created new weights configuration")
-    
-    # Save weights configuration
-    with open(weights_path, 'w') as f:
-        json.dump(weights, f, indent=2)
-    
-    # Create ensemble configuration
-    ensemble_config = {
-        "models": {}
-    }
-    
-    # Add models with highest weights to ensemble config
-    sorted_models = sorted(weights.items(), key=lambda x: x[1], reverse=True)
-    top_models = sorted_models[:3]  # Use top 3 models for ensemble
-    
-    # Normalize weights for top models
-    top_weight_sum = sum(weight for _, weight in top_models)
-    
-    for model_type, weight in top_models:
-        model_path = f"models/{model_type}/{asset}_{model_type}.h5"
-        if os.path.exists(model_path):
-            ensemble_config["models"][model_type] = {
-                "path": model_path,
-                "weight": weight / top_weight_sum  # Normalize to sum to 1.0
-            }
-        else:
-            logger.warning(f"Model file not found: {model_path}")
-    
-    # Add metadata
-    ensemble_config["parameters"] = {
-        "confidence_threshold": 0.65,
-        "voting_method": "weighted",
-        "trained_date": datetime.now().isoformat()
-    }
-    
-    # Save ensemble configuration
-    with open(ensemble_path, 'w') as f:
-        json.dump(ensemble_config, f, indent=2)
-    
-    # Create or update position sizing configuration if it doesn't exist
-    if not os.path.exists(position_sizing_path):
-        position_sizing_config = {
-            "max_leverage": 125,
-            "min_leverage": 20,
-            "confidence_scaling": {
-                "min_confidence": 0.5,
-                "max_confidence": 0.95
-            },
-            "regime_adjustments": {
-                "trending_up": 1.2,
-                "trending_down": 1.0,
-                "volatile": 1.5,
-                "sideways": 0.7,
-                "uncertain": 0.4
-            },
-            "risk_limits": {
-                "max_capital_allocation": 0.5,
-                "max_drawdown_percentage": 0.2,
-                "profit_taking_threshold": 0.1
-            },
-            "trained_date": datetime.now().isoformat()
-        }
-        
-        with open(position_sizing_path, 'w') as f:
-            json.dump(position_sizing_config, f, indent=2)
-        
-        logger.info(f"Created new position sizing configuration")
-    
-    logger.info(f"Ensemble configuration created successfully")
-    
-    return ensemble_config
+    try:
+        model.save(model_path)
+        logger.info(f"Saved {model_type} model to {model_path}")
+        return True
+    except Exception as e:
+        logger.error(f"Error saving {model_type} model: {str(e)}")
+        return False
 
-def update_ml_config(trained_assets):
+def save_model_metrics(metrics: Dict[str, Any], model_type: str, pair: str) -> bool:
     """
-    Update the ML configuration to reflect the newly trained models.
+    Save model metrics.
     
     Args:
-        trained_assets (list): List of assets that were trained
+        metrics: Dictionary with model metrics
+        model_type: Model type (lstm, tcn, transformer)
+        pair: Trading pair (e.g., 'SOL/USD')
+        
+    Returns:
+        True if successful, False otherwise
     """
-    logger.info(f"Updating ML configuration")
+    pair_formatted = pair.replace('/', '')
+    metrics_path = f'models/{model_type}/{pair_formatted}_metrics.json'
     
-    config_path = 'ml_config.json'
+    try:
+        with open(metrics_path, 'w') as f:
+            json.dump(metrics, f, indent=2)
+        
+        logger.info(f"Saved {model_type} metrics to {metrics_path}")
+        return True
+    except Exception as e:
+        logger.error(f"Error saving {model_type} metrics: {str(e)}")
+        return False
+
+def save_feature_metadata(feature_cols: List[str], scaler: StandardScaler, model_type: str) -> bool:
+    """
+    Save feature metadata.
     
-    if not os.path.exists(config_path):
-        logger.error(f"ML configuration file not found: {config_path}")
+    Args:
+        feature_cols: List of feature column names
+        scaler: Fitted scaler
+        model_type: Model type (lstm, tcn, transformer)
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    model_dir = f'models/{model_type}'
+    
+    # Save feature names
+    try:
+        with open(f'{model_dir}/feature_names.json', 'w') as f:
+            json.dump(feature_cols, f, indent=2)
+        
+        logger.info(f"Saved feature names to {model_dir}/feature_names.json")
+    except Exception as e:
+        logger.error(f"Error saving feature names: {str(e)}")
         return False
     
-    # Load existing configuration
-    with open(config_path, 'r') as f:
-        config = json.load(f)
+    # Save normalization parameters
+    try:
+        norm_params = {
+            'mean': scaler.mean_.tolist(),
+            'scale': scaler.scale_.tolist()
+        }
+        
+        with open(f'{model_dir}/norm_params.json', 'w') as f:
+            json.dump(norm_params, f, indent=2)
+        
+        logger.info(f"Saved normalization parameters to {model_dir}/norm_params.json")
+        return True
+    except Exception as e:
+        logger.error(f"Error saving normalization parameters: {str(e)}")
+        return False
+
+def update_ensemble_config(pair: str, models: List[str]) -> bool:
+    """
+    Update ensemble configuration for the specified pair.
     
-    # Update configuration
-    config['updated_at'] = datetime.now().isoformat()
+    Args:
+        pair: Trading pair (e.g., 'SOL/USD')
+        models: List of model types
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    pair_formatted = pair.replace('/', '')
+    ensemble_dir = 'models/ensemble'
+    ensemble_config_path = f'{ensemble_dir}/{pair_formatted}_ensemble.json'
+    weights_path = f'{ensemble_dir}/{pair_formatted}_weights.json'
     
-    # Ensure the min_required_data is adjusted for the current dataset size
-    for asset in trained_assets:
-        asset_key = f"{asset[:3]}/{asset[3:]}"
-        if asset_key in config['asset_specific_settings']:
-            # Set min_required_data to a reasonable value based on our dataset
-            config['asset_specific_settings'][asset_key]['min_required_data'] = 456  # Match our dataset size
-            config['asset_specific_settings'][asset_key]['trading_enabled'] = True
+    if not os.path.exists(ensemble_dir):
+        os.makedirs(ensemble_dir)
     
-    # Adjust global training parameters
-    config['training_parameters']['training_data_min_samples'] = 456  # Match our dataset size
+    # Create/update ensemble configuration
+    try:
+        if os.path.exists(ensemble_config_path):
+            with open(ensemble_config_path, 'r') as f:
+                ensemble_config = json.load(f)
+        else:
+            ensemble_config = {
+                'models': [],
+                'parameters': {}
+            }
+        
+        # Update models list
+        ensemble_models = []
+        for model_type in models:
+            model_config = {
+                'type': model_type,
+                'enabled': True,
+                'confidence_scaling': 1.0
+            }
+            
+            if model_type == 'lstm':
+                model_config['confidence_scaling'] = 1.2
+            elif model_type == 'tcn':
+                model_config['confidence_scaling'] = 1.1
+            elif model_type == 'transformer':
+                model_config['confidence_scaling'] = 1.15
+            
+            ensemble_models.append(model_config)
+        
+        ensemble_config['models'] = ensemble_models
+        
+        # Update parameters
+        ensemble_config['parameters'] = {
+            'method': 'weighted_voting',
+            'confidence_threshold': 0.65,
+            'use_confidence_scaling': True,
+            'use_dynamic_weights': True,
+            'update_frequency': 24,
+            'last_updated': datetime.datetime.now().isoformat()
+        }
+        
+        with open(ensemble_config_path, 'w') as f:
+            json.dump(ensemble_config, f, indent=2)
+        
+        logger.info(f"Updated ensemble configuration in {ensemble_config_path}")
+    except Exception as e:
+        logger.error(f"Error updating ensemble configuration: {str(e)}")
+        return False
     
-    # Update strategy integration
-    config['strategy_integration']['integrate_arima_adaptive'] = True
-    config['strategy_integration']['arima_weight'] = 0.5
-    config['strategy_integration']['adaptive_weight'] = 0.5
-    config['strategy_integration']['use_combined_signals'] = True
+    # Create/update weights configuration
+    try:
+        weights = {}
+        
+        # Assign weights based on model type
+        total_weight = len(models)
+        for model_type in models:
+            if model_type == 'lstm':
+                weights[model_type] = 0.2
+            elif model_type == 'tcn':
+                weights[model_type] = 0.2
+            elif model_type == 'transformer':
+                weights[model_type] = 0.15
+            else:
+                weights[model_type] = 0.1
+        
+        # Ensure weights sum to 1.0
+        weight_sum = sum(weights.values())
+        if weight_sum > 0:
+            for model_type in weights:
+                weights[model_type] /= weight_sum
+        
+        with open(weights_path, 'w') as f:
+            json.dump(weights, f, indent=2)
+        
+        logger.info(f"Updated ensemble weights in {weights_path}")
+        return True
+    except Exception as e:
+        logger.error(f"Error updating ensemble weights: {str(e)}")
+        return False
+
+def retrain_models_for_pair(pair: str, models: List[str], args) -> bool:
+    """
+    Retrain models for a specific pair.
     
-    # Save updated configuration
-    with open(config_path, 'w') as f:
-        json.dump(config, f, indent=2)
+    Args:
+        pair: Trading pair (e.g., 'SOL/USD')
+        models: List of model types to retrain
+        args: Command line arguments
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    # Load dataset
+    df, feature_cols = load_dataset(pair)
     
-    logger.info(f"ML configuration updated successfully")
+    if df is None or len(feature_cols) == 0:
+        logger.error(f"Failed to load dataset for {pair}")
+        return False
     
-    return True
+    # Load feature metadata
+    feature_metadata = load_feature_metadata(pair)
+    
+    # Prepare training data
+    X, y, scaler = prepare_training_data(df, feature_cols, args.lookback)
+    
+    if X is None or y is None:
+        logger.error(f"Failed to prepare training data for {pair}")
+        return False
+    
+    logger.info(f"Prepared training data with shape {X.shape}")
+    
+    # Get actual features from loaded data, not command line args
+    actual_timesteps = X.shape[1]
+    actual_features = X.shape[2]
+    logger.info(f"Using actual input shape: ({actual_timesteps}, {actual_features})")
+    
+    # Split data into training and validation sets
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=args.validation_split, random_state=42
+    )
+    
+    logger.info(f"Training data shape: {X_train.shape}, Validation data shape: {X_val.shape}")
+    
+    success = True
+    
+    # Train models
+    for model_type in models:
+        logger.info(f"Training {model_type} model for {pair}")
+        
+        # Create model with actual dimensions from the data
+        model = create_model(model_type, input_shape=(actual_timesteps, actual_features))
+        
+        if model is None:
+            logger.error(f"Failed to create {model_type} model for {pair}")
+            success = False
+            continue
+        
+        # Train model
+        trained_model, history = train_model(
+            model, X_train, y_train, X_val, y_val,
+            epochs=args.epochs, batch_size=args.batch_size, patience=args.patience
+        )
+        
+        # Calculate metrics
+        val_accuracy = max(history.get('val_accuracy', [0]))
+        val_loss = min(history.get('val_loss', [1]))
+        
+        metrics = {
+            'validation_accuracy': val_accuracy,
+            'validation_loss': val_loss,
+            'epochs_trained': len(history.get('loss', [])),
+            'training_date': datetime.datetime.now().isoformat()
+        }
+        
+        logger.info(f"{model_type} model for {pair}: val_accuracy={val_accuracy:.4f}, val_loss={val_loss:.4f}")
+        
+        # Save model
+        if not save_trained_model(trained_model, model_type, pair):
+            logger.error(f"Failed to save {model_type} model for {pair}")
+            success = False
+        
+        # Save metrics
+        if not save_model_metrics(metrics, model_type, pair):
+            logger.error(f"Failed to save {model_type} metrics for {pair}")
+            success = False
+        
+        # Save feature metadata
+        if not save_feature_metadata(feature_cols, scaler, model_type):
+            logger.error(f"Failed to save feature metadata for {model_type}")
+            success = False
+    
+    # Update ensemble configuration
+    if not update_ensemble_config(pair, models):
+        logger.error(f"Failed to update ensemble configuration for {pair}")
+        success = False
+    
+    return success
 
 def main():
-    """Main function to retrain models with correct input shapes."""
+    """Main function."""
     args = parse_arguments()
     
     # Set logging level
-    if args.debug:
+    if args.verbose:
         logger.setLevel(logging.DEBUG)
     
-    # Parse comma-separated list of pairs and models
-    pairs = [pair.strip().upper() for pair in args.pairs.split(',')]
-    model_types = [model.strip().lower() for model in args.models.split(',')]
+    # Check if TensorFlow is available
+    if not TENSORFLOW_AVAILABLE:
+        logger.error("TensorFlow is not available, please install TensorFlow and required dependencies")
+        return 1
     
-    # Validate inputs
-    for pair in pairs:
-        if pair not in ASSETS:
-            logger.warning(f"Unknown asset: {pair}, will try to process anyway")
+    # Parse models
+    models = [model.strip() for model in args.models.split(',')]
     
-    for model_type in model_types:
-        if model_type not in MODEL_TYPES:
-            logger.error(f"Unsupported model type: {model_type}")
-            return
+    logger.info(f"Starting model retraining for {args.pair} with models: {', '.join(models)}")
+    logger.info(f"Using input shape: ({args.lookback}, {args.features})")
     
-    # Process each pair
-    trained_pairs = []
+    # Retrain models
+    success = retrain_models_for_pair(args.pair, models, args)
     
-    for pair in pairs:
-        logger.info(f"Processing {pair}")
-        
-        # Load dataset
-        df = load_enhanced_dataset(pair, args.timeframe)
-        if df is None:
-            logger.error(f"Failed to load dataset for {pair}")
-            continue
-        
-        # Preprocess dataset
-        X, y, feature_cols, scalers = preprocess_dataset(df)
-        if X is None:
-            logger.error(f"Failed to preprocess dataset for {pair}")
-            continue
-        
-        # Split data
-        X_train, X_val, y_train, y_val = train_test_split(
-            X, y, test_size=0.2, random_state=RANDOM_SEED
-        )
-        
-        # Train models
-        trained_models = []
-        for model_type in model_types:
-            try:
-                model, history = train_model(
-                    model_type, X_train, y_train, X_val, y_val, pair,
-                    epochs=args.epochs, batch_size=args.batch_size, patience=args.patience
-                )
-                trained_models.append(model_type)
-                logger.info(f"Successfully trained {model_type} model for {pair}")
-            except Exception as e:
-                if INPUT_SHAPE_ERROR_MSG in str(e).lower():
-                    logger.error(f"Input shape mismatch error for {model_type}: {str(e)}")
-                else:
-                    logger.error(f"Error training {model_type} model for {pair}: {str(e)}")
-        
-        # Create ensemble if requested and at least one model was trained
-        if args.create_ensemble and trained_models:
-            try:
-                ensemble_config = create_ensemble_config(pair, trained_models)
-                logger.info(f"Created ensemble configuration for {pair}")
-            except Exception as e:
-                logger.error(f"Error creating ensemble for {pair}: {str(e)}")
-        
-        if trained_models:
-            trained_pairs.append(pair)
-    
-    # Update ML config if requested and at least one pair was trained
-    if args.update_config and trained_pairs:
-        try:
-            update_ml_config(trained_pairs)
-            logger.info(f"Updated ML configuration")
-        except Exception as e:
-            logger.error(f"Error updating ML configuration: {str(e)}")
-    
-    if trained_pairs:
-        logger.info(f"Successfully processed {len(trained_pairs)} pairs: {', '.join(trained_pairs)}")
-        logger.info("Model retraining completed successfully")
+    if success:
+        logger.info(f"Model retraining for {args.pair} completed successfully")
     else:
-        logger.error("No pairs were successfully processed")
+        logger.error(f"Model retraining for {args.pair} failed")
+    
+    return 0 if success else 1
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

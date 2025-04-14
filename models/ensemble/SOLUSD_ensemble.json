@@ -1,21 +1,52 @@
 {
-  "models": {
-    "tcn": {
-      "path": "models/tcn/SOLUSD_tcn.h5",
-      "weight": 0.3333333333333333
+  "models": [
+    {
+      "type": "lstm",
+      "enabled": true,
+      "confidence_scaling": 1.2
     },
-    "cnn": {
-      "path": "models/cnn/SOLUSD.h5",
-      "weight": 0.3333333333333333
+    {
+      "type": "tcn",
+      "enabled": true,
+      "confidence_scaling": 1.1
     },
-    "lstm": {
-      "path": "models/lstm/SOLUSD_lstm.h5",
-      "weight": 0.3333333333333333
+    {
+      "type": "transformer",
+      "enabled": true,
+      "confidence_scaling": 1.15
+    },
+    {
+      "type": "cnn",
+      "enabled": true,
+      "confidence_scaling": 1.0
+    },
+    {
+      "type": "gru",
+      "enabled": true,
+      "confidence_scaling": 1.05
+    },
+    {
+      "type": "bilstm",
+      "enabled": true,
+      "confidence_scaling": 1.1
+    },
+    {
+      "type": "attention",
+      "enabled": true,
+      "confidence_scaling": 1.15
+    },
+    {
+      "type": "hybrid",
+      "enabled": true,
+      "confidence_scaling": 1.2
     }
-  },
+  ],
   "parameters": {
+    "method": "weighted_voting",
     "confidence_threshold": 0.65,
-    "voting_method": "weighted",
-    "trained_date": "2025-04-14T16:49:10.791899"
+    "use_confidence_scaling": true,
+    "use_dynamic_weights": true,
+    "update_frequency": 24,
+    "last_updated": "2025-04-14T17:39:06.740004"
   }
 }

@@ -1,21 +1,9 @@
 {
-  "max_leverage": 85,
-  "min_leverage": 12,
-  "confidence_scaling": {
-    "min_confidence": 0.5,
-    "max_confidence": 0.95
-  },
-  "regime_adjustments": {
-    "trending_up": 1.2,
-    "trending_down": 1.0,
-    "volatile": 1.5,
-    "sideways": 0.7,
-    "uncertain": 0.4
-  },
-  "risk_limits": {
-    "max_capital_allocation": 0.5,
-    "max_drawdown_percentage": 0.2,
-    "profit_taking_threshold": 0.1
-  },
-  "trained_date": "2025-04-14T02:52:27.997267"
+  "base_risk_percentage": 0.02,
+  "max_risk_percentage": 0.05,
+  "confidence_scaling": true,
+  "volatility_scaling": true,
+  "min_position_size": 0.001,
+  "max_position_size": 0.5,
+  "last_updated": "2025-04-14T17:39:06.742735"
 }

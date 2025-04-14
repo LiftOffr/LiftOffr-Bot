@@ -1,0 +1,32 @@
+{
+  "original_shape": [
+    396,
+    60,
+    20
+  ],
+  "feature_columns": [
+    "volume_sma",
+    "bb_lower",
+    "kc_lower",
+    "close",
+    "vwap",
+    "ema9",
+    "bb_middle",
+    "kc_middle",
+    "ema21",
+    "kc_upper",
+    "ema50",
+    "bb_upper",
+    "ema100",
+    "rsi",
+    "atr",
+    "volume_ratio",
+    "future_return_96",
+    "future_return_48",
+    "bb_width",
+    "future_return_24"
+  ],
+  "reshaped_at": "2025-04-14T17:12:25.689180",
+  "lookback": 60,
+  "features": 20
+}

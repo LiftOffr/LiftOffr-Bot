@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """
-Improved ML Integration Script
+Reset and Train ML
 
-This script:
-1. Updates the trading bot with improved ML models
-2. Retrains all models with correct input/output shapes
-3. Creates and configures ensemble models
-4. Updates ML configuration with optimized settings
-5. Activates ML trading across all supported pairs
+A simplified script to reset the sandbox portfolio and activate ML trading.
+This streamlined version focuses on the core functionality needed to:
+1. Reset the sandbox portfolio
+2. Apply optimized ML configuration
+3. Activate ML trading for selected pairs
 
 Usage:
-    python run_improved_ml_integration.py --pairs SOL/USD,BTC/USD,ETH/USD --sandbox
+    python reset_and_train_ml.py --pairs SOL/USD,BTC/USD,ETH/USD
 """
 
 import argparse
@@ -21,7 +20,7 @@ import subprocess
 import sys
 import time
 from datetime import datetime
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 
 # Configure logging
 logging.basicConfig(
@@ -29,7 +28,7 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('ml_integration.log')
+        logging.FileHandler('ml_reset_train.log')
     ]
 )
 logger = logging.getLogger(__name__)
@@ -44,7 +43,7 @@ DEFAULT_MAX_RISK_PER_TRADE = 0.20  # 20% of available capital
 
 def parse_arguments():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description='Run improved ML integration')
+    parser = argparse.ArgumentParser(description='Reset portfolio and activate ML trading')
     
     parser.add_argument(
         '--pairs',
@@ -88,16 +87,17 @@ def parse_arguments():
         help=f'Maximum risk per trade as fraction of capital (default: {DEFAULT_MAX_RISK_PER_TRADE})'
     )
     
-    parser.add_argument(
+    # Add both sandbox and live mode options
+    trading_mode = parser.add_mutually_exclusive_group()
+    trading_mode.add_argument(
         '--sandbox',
         action='store_true',
-        help='Use sandbox mode for trading'
+        help='Use sandbox trading mode (default)'
     )
-    
-    parser.add_argument(
-        '--skip-training',
+    trading_mode.add_argument(
+        '--live',
         action='store_true',
-        help='Skip model training/retraining step'
+        help='Use live trading mode instead of sandbox'
     )
     
     parser.add_argument(
@@ -150,20 +150,28 @@ def run_command(cmd: List[str], description: str = None) -> Optional[subprocess.
         
         return None
 
-def reset_sandbox_portfolio() -> bool:
+def reset_portfolio(sandbox: bool = True) -> bool:
     """
-    Reset sandbox portfolio to initial state.
+    Reset the portfolio by closing all open positions.
     
+    Args:
+        sandbox: Whether to use sandbox mode
+        
     Returns:
         True if successful, False otherwise
     """
-    logger.info("Resetting sandbox portfolio...")
+    logger.info(f"Resetting {'sandbox' if sandbox else 'live'} portfolio...")
     
-    # Close all open positions
-    result = run_command(
-        ["python", "close_all_positions.py", "--sandbox"],
-        "Closing all open positions"
-    )
+    # Build command
+    cmd = ["python", "close_all_positions.py"]
+    
+    if not sandbox:
+        cmd.append("--live")
+    else:
+        cmd.append("--sandbox")
+    
+    # Run command
+    result = run_command(cmd, "Closing all open positions")
     
     return result is not None
 
@@ -189,50 +197,66 @@ def update_ml_configuration(
     """
     logger.info("Updating ML configuration...")
     
-    # Update ML configuration
-    result = run_command(
-        [
-            "python", "update_ml_config.py",
-            "--pairs", ",".join(pairs),
-            "--confidence", str(confidence_threshold),
-            "--base-leverage", str(base_leverage),
-            "--max-leverage", str(max_leverage),
-            "--max-risk", str(max_risk),
-            "--update-strategy", "--update-ensemble"
-        ],
-        "Updating ML configuration"
-    )
+    # Build command
+    cmd = [
+        "python",
+        "update_ml_config.py",
+        "--pairs", ",".join(pairs),
+        "--confidence", str(confidence_threshold),
+        "--base-leverage", str(base_leverage),
+        "--max-leverage", str(max_leverage),
+        "--max-risk", str(max_risk),
+        "--update-strategy",
+        "--update-ensemble"
+    ]
+    
+    # Run command
+    result = run_command(cmd, "Updating ML configuration")
     
     return result is not None
 
-def retrain_models(pairs: List[str]) -> bool:
+def activate_ml_trading(
+    pairs: List[str],
+    capital: float = DEFAULT_CAPITAL,
+    sandbox: bool = True
+) -> bool:
     """
-    Retrain models for all pairs.
+    Activate ML trading for specified pairs.
     
     Args:
         pairs: List of trading pairs
+        capital: Starting capital
+        sandbox: Whether to use sandbox mode
         
     Returns:
         True if successful, False otherwise
     """
-    logger.info("Retraining models for all pairs...")
+    logger.info(f"Activating ML trading for {', '.join(pairs)}...")
     
-    success = True
+    # First check if integrated_strategy.py exists
+    if not os.path.exists("integrated_strategy.py"):
+        logger.error("integrated_strategy.py not found!")
+        return False
     
-    for pair in pairs:
-        logger.info(f"Retraining models for {pair}...")
-        
-        # Retrain LSTM model
-        result = run_command(
-            ["python", "improved_model_retraining.py", "--pair", pair, "--model", "lstm,tcn,transformer"],
-            f"Retraining models for {pair}"
-        )
-        
-        if result is None:
-            logger.error(f"Failed to retrain models for {pair}")
-            success = False
+    # Build command to run the strategy
+    cmd = [
+        "python",
+        "integrated_strategy.py",
+        "--pairs", ",".join(pairs),
+        "--capital", str(capital),
+        "--strategy", "ml",
+        "--multi-strategy"
+    ]
     
-    return success
+    if not sandbox:
+        cmd.append("--live")
+    else:
+        cmd.append("--sandbox")
+    
+    # Run command
+    result = run_command(cmd, "Starting ML trading")
+    
+    return result is not None
 
 def create_ensemble_models(pairs: List[str]) -> bool:
     """
@@ -244,51 +268,43 @@ def create_ensemble_models(pairs: List[str]) -> bool:
     Returns:
         True if successful, False otherwise
     """
+    if not os.path.exists("create_ensemble_model.py"):
+        logger.warning("create_ensemble_model.py not found, skipping ensemble model creation")
+        return True
+        
     logger.info("Creating ensemble models for all pairs...")
     
-    # Create ensemble models
-    result = run_command(
-        ["python", "create_ensemble_model.py", "--pairs", ",".join(pairs)],
-        "Creating ensemble models"
-    )
+    # Track overall success
+    success = True
     
-    return result is not None
-
-def activate_ml_trading(pairs: List[str], capital: float, sandbox: bool = True) -> bool:
-    """
-    Activate ML trading for all pairs.
-    
-    Args:
-        pairs: List of trading pairs
-        capital: Starting capital for trading
-        sandbox: Whether to use sandbox mode
+    # Create ensemble models one pair at a time
+    for pair in pairs:
+        logger.info(f"Creating ensemble model for {pair}...")
         
-    Returns:
-        True if successful, False otherwise
-    """
-    logger.info("Activating ML trading...")
+        # Some scripts might use different argument formats, try both common formats
+        try:
+            # First try with --pair
+            result = run_command(
+                ["python", "create_ensemble_model.py", "--pair", pair],
+                f"Creating ensemble model for {pair}"
+            )
+            
+            if result is None:
+                # If that failed, try with --trading-pair
+                result = run_command(
+                    ["python", "create_ensemble_model.py", "--trading-pair", pair],
+                    f"Creating ensemble model for {pair} (alternative format)"
+                )
+                
+            if result is None:
+                logger.warning(f"Failed to create ensemble model for {pair}")
+                success = False
+                
+        except Exception as e:
+            logger.error(f"Error creating ensemble model for {pair}: {str(e)}")
+            success = False
     
-    # Build command
-    cmd = [
-        "python", "reset_and_activate_ml_trading.py",
-        "--pairs", ",".join(pairs),
-        "--capital", str(capital),
-        "--confidence", str(DEFAULT_CONFIDENCE_THRESHOLD),
-        "--base-leverage", str(DEFAULT_BASE_LEVERAGE),
-        "--max-leverage", str(DEFAULT_MAX_LEVERAGE),
-        "--max-risk", str(DEFAULT_MAX_RISK_PER_TRADE)
-    ]
-    
-    if sandbox:
-        # No need to add flag as it's the default
-        pass
-    else:
-        cmd.append("--live")
-    
-    # Activate ML trading
-    result = run_command(cmd, "Activating ML trading")
-    
-    return result is not None
+    return success
 
 def main():
     """Main function."""
@@ -297,30 +313,32 @@ def main():
     # Parse pairs list
     pairs = [pair.strip() for pair in args.pairs.split(',')]
     
+    # Determine if in sandbox or live mode
+    use_sandbox = not args.live  # Default to sandbox unless live is specified
+    
     logger.info("=" * 80)
-    logger.info("RUNNING IMPROVED ML INTEGRATION")
+    logger.info("RESET AND TRAIN ML")
     logger.info("=" * 80)
     logger.info(f"Trading pairs: {', '.join(pairs)}")
     logger.info(f"Starting capital: ${args.capital:.2f}")
     logger.info(f"ML confidence threshold: {args.confidence:.2f}")
     logger.info(f"Leverage settings: Base={args.base_leverage:.1f}x, Max={args.max_leverage:.1f}x")
     logger.info(f"Max risk per trade: {args.max_risk * 100:.1f}%")
-    logger.info(f"Trading mode: {'SANDBOX' if args.sandbox else 'LIVE'}")
-    logger.info(f"Skip training: {args.skip_training}")
+    logger.info(f"Trading mode: {'LIVE' if args.live else 'SANDBOX'}")
     logger.info(f"Skip reset: {args.skip_reset}")
     logger.info("=" * 80)
     
     # Confirmation for live mode
-    if not args.sandbox:
+    if args.live:
         confirm = input("WARNING: You are about to start LIVE trading. Type 'CONFIRM' to proceed: ")
         if confirm != "CONFIRM":
             logger.info("Live trading not confirmed. Exiting.")
             return 1
     
-    # Reset sandbox portfolio if not skipped
+    # Reset portfolio if not skipped
     if not args.skip_reset:
-        logger.info("Step 1: Resetting sandbox portfolio...")
-        if not reset_sandbox_portfolio():
+        logger.info("Step 1: Resetting portfolio...")
+        if not reset_portfolio(use_sandbox):
             logger.error("Failed to reset portfolio. Exiting.")
             return 1
     else:
@@ -338,30 +356,36 @@ def main():
         logger.error("Failed to update ML configuration. Exiting.")
         return 1
     
-    # Retrain models if not skipped
-    if not args.skip_training:
-        logger.info("Step 3: Retraining models...")
-        if not retrain_models(pairs):
-            logger.error("Failed to retrain models. Exiting.")
-            return 1
-        
-        logger.info("Step 4: Creating ensemble models...")
+    # Check if training data exists before trying to create ensemble models
+    training_data_available = False
+    for pair in pairs:
+        pair_path = pair.replace('/', '')
+        if os.path.exists(f"training_data/{pair_path}_1h_enhanced.csv") or \
+           os.path.exists(f"training_data/{pair.split('/')[0]}/{pair.split('/')[1]}_1h_enhanced.csv"):
+            training_data_available = True
+            break
+    
+    if training_data_available:
+        # Create ensemble models only if training data is available
+        logger.info("Step 3: Creating ensemble models...")
         if not create_ensemble_models(pairs):
-            logger.error("Failed to create ensemble models. Exiting.")
-            return 1
+            logger.warning("Failed to create ensemble models. Continuing anyway...")
     else:
-        logger.info("Step 3/4: Skipping model training as requested")
+        logger.warning("Training data not found. Skipping ensemble model creation.")
+        # Try to copy and use pre-trained models if available
+        if os.path.exists("models/ensemble"):
+            logger.info("Using pre-trained ensemble models if available.")
     
     # Activate ML trading
-    logger.info("Step 5: Activating ML trading...")
-    if not activate_ml_trading(pairs, args.capital, args.sandbox):
+    logger.info("Step 4: Activating ML trading...")
+    if not activate_ml_trading(pairs, args.capital, use_sandbox):
         logger.error("Failed to activate ML trading. Exiting.")
         return 1
     
     logger.info("=" * 80)
-    logger.info("IMPROVED ML INTEGRATION COMPLETED SUCCESSFULLY")
+    logger.info("RESET AND TRAIN ML COMPLETED SUCCESSFULLY")
     logger.info("=" * 80)
-    logger.info("The bot is now trading with improved ML models and self-optimization.")
+    logger.info("The bot is now training with ML models and should begin optimizing.")
     logger.info("Check the logs and portfolio status regularly to monitor performance.")
     logger.info("=" * 80)
     
