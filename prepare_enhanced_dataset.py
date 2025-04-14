@@ -546,10 +546,17 @@ def main():
     
     # Prepare and save the dataset
     df = preparation.prepare_enhanced_dataset()
-    if df is not None and len(df) >= args.min_samples:
+    if df is not None:
+        # Still warn about limited data but proceed with saving
+        if len(df) < args.min_samples:
+            logger.warning(f"Limited data for {args.pair}: {len(df)} < {args.min_samples} samples, but proceeding anyway")
+        
         output_path = preparation.save_dataset(df)
-        logger.info(f"Successfully prepared and saved enhanced dataset for {args.pair} to {output_path}")
-        logger.info(f"Dataset contains {len(df)} samples with {len(df.columns)} features")
+        if output_path:
+            logger.info(f"Successfully prepared and saved enhanced dataset for {args.pair} to {output_path}")
+            logger.info(f"Dataset contains {len(df)} samples with {len(df.columns)} features")
+        else:
+            logger.error(f"Failed to save dataset for {args.pair}")
     else:
         logger.error(f"Failed to prepare enhanced dataset for {args.pair}")
 
