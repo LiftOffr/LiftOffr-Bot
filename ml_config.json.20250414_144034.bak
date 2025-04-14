@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "updated_at": "2025-04-14T14:40:34.784635",
+  "updated_at": "2025-04-14T04:41:53.464241",
   "global_settings": {
     "default_capital_allocation": {
       "SOL/USD": 0.2,
@@ -12,46 +12,41 @@
     "max_open_positions": 5,
     "portfolio_rebalance_interval": 24,
     "enable_dynamic_allocation": true,
-    "ml_confidence_threshold": 0.75,
+    "ml_confidence_threshold": 0.65,
     "minimum_trading_data": 1000,
     "sandbox_mode": true,
-    "log_level": "INFO",
-    "extreme_leverage_enabled": true,
-    "model_pruning_threshold": 0.6,
-    "model_selection_frequency": 12,
-    "continuous_learning": true,
-    "training_priority": "critical"
+    "log_level": "INFO"
   },
   "model_settings": {
     "gru": {
       "enabled": true,
-      "lookback_period": 60,
-      "epochs": 200,
+      "lookback_period": 40,
+      "epochs": 100,
+      "batch_size": 64,
+      "dropout_rate": 0.2,
+      "validation_split": 0.2,
+      "use_early_stopping": true,
+      "patience": 10
+    },
+    "lstm": {
+      "enabled": true,
+      "lookback_period": 50,
+      "epochs": 120,
       "batch_size": 32,
       "dropout_rate": 0.3,
       "validation_split": 0.2,
       "use_early_stopping": true,
       "patience": 15
     },
-    "lstm": {
-      "enabled": true,
-      "lookback_period": 80,
-      "epochs": 250,
-      "batch_size": 32,
-      "dropout_rate": 0.3,
-      "validation_split": 0.2,
-      "use_early_stopping": true,
-      "patience": 20
-    },
     "tcn": {
       "enabled": true,
-      "lookback_period": 100,
-      "epochs": 300,
+      "lookback_period": 60,
+      "epochs": 150,
       "batch_size": 32,
       "dropout_rate": 0.2,
       "validation_split": 0.2,
       "use_early_stopping": true,
-      "patience": 20,
+      "patience": 15,
       "nb_filters": 64,
       "kernel_size": 3,
       "nb_stacks": 2,
@@ -61,8 +56,7 @@
         4,
         8,
         16,
-        32,
-        64
+        32
       ]
     }
   },
@@ -84,40 +78,40 @@
       "close",
       "volume"
     ],
-    "normalization": "robust_scaler",
+    "normalization": "min_max",
     "feature_engineering": true,
     "auto_feature_selection": true
   },
   "asset_specific_settings": {
     "SOL/USD": {
       "trading_enabled": true,
-      "min_required_data": 2000,
+      "min_required_data": 1000,
       "hyperparameters": {
         "gru": {
-          "learning_rate": 0.0005,
-          "units": 128,
-          "dropout": 0.3,
-          "recurrent_dropout": 0.3
+          "learning_rate": 0.001,
+          "units": 64,
+          "dropout": 0.2,
+          "recurrent_dropout": 0.2
         },
         "lstm": {
-          "learning_rate": 0.0005,
-          "units": 128,
+          "learning_rate": 0.001,
+          "units": 64,
           "dropout": 0.3,
           "recurrent_dropout": 0.3
         },
         "tcn": {
-          "learning_rate": 0.0005,
+          "learning_rate": 0.001,
           "optimization": "adam"
         }
       },
       "regime_weights": {
-        "bullish": 1.5,
-        "bearish": 1.2,
+        "bullish": 1.2,
+        "bearish": 1.0,
         "sideways": 0.8,
-        "volatile": 2.0
+        "volatile": 1.5
       },
       "risk_params": {
-        "max_leverage": 125,
+        "max_leverage": 20,
         "confidence_threshold": 0.7,
         "stop_loss_pct": 0.03,
         "take_profit_pct": 0.05,
@@ -126,33 +120,33 @@
     },
     "ETH/USD": {
       "trading_enabled": true,
-      "min_required_data": 2000,
+      "min_required_data": 1000,
       "hyperparameters": {
         "gru": {
-          "learning_rate": 0.0005,
-          "units": 128,
-          "dropout": 0.3,
-          "recurrent_dropout": 0.3
+          "learning_rate": 0.001,
+          "units": 64,
+          "dropout": 0.2,
+          "recurrent_dropout": 0.2
         },
         "lstm": {
-          "learning_rate": 0.0005,
-          "units": 128,
+          "learning_rate": 0.001,
+          "units": 64,
           "dropout": 0.3,
           "recurrent_dropout": 0.3
         },
         "tcn": {
-          "learning_rate": 0.0005,
+          "learning_rate": 0.001,
           "optimization": "adam"
         }
       },
       "regime_weights": {
-        "bullish": 1.5,
-        "bearish": 1.2,
+        "bullish": 1.2,
+        "bearish": 1.0,
         "sideways": 0.8,
-        "volatile": 2.0
+        "volatile": 1.5
       },
       "risk_params": {
-        "max_leverage": 125,
+        "max_leverage": 20,
         "confidence_threshold": 0.7,
         "stop_loss_pct": 0.03,
         "take_profit_pct": 0.05,
@@ -161,33 +155,33 @@
     },
     "BTC/USD": {
       "trading_enabled": true,
-      "min_required_data": 2000,
+      "min_required_data": 1000,
       "hyperparameters": {
         "gru": {
-          "learning_rate": 0.0005,
-          "units": 128,
-          "dropout": 0.3,
-          "recurrent_dropout": 0.3
+          "learning_rate": 0.001,
+          "units": 64,
+          "dropout": 0.2,
+          "recurrent_dropout": 0.2
         },
         "lstm": {
-          "learning_rate": 0.0005,
-          "units": 128,
+          "learning_rate": 0.001,
+          "units": 64,
           "dropout": 0.3,
           "recurrent_dropout": 0.3
         },
         "tcn": {
-          "learning_rate": 0.0005,
+          "learning_rate": 0.001,
           "optimization": "adam"
         }
       },
       "regime_weights": {
-        "bullish": 1.5,
-        "bearish": 1.2,
+        "bullish": 1.2,
+        "bearish": 1.0,
         "sideways": 0.8,
-        "volatile": 2.0
+        "volatile": 1.5
       },
       "risk_params": {
-        "max_leverage": 125,
+        "max_leverage": 20,
         "confidence_threshold": 0.7,
         "stop_loss_pct": 0.03,
         "take_profit_pct": 0.05,
@@ -196,33 +190,33 @@
     },
     "DOT/USD": {
       "trading_enabled": true,
-      "min_required_data": 2000,
+      "min_required_data": 1000,
       "hyperparameters": {
         "gru": {
-          "learning_rate": 0.0005,
-          "units": 128,
-          "dropout": 0.3,
-          "recurrent_dropout": 0.3
+          "learning_rate": 0.001,
+          "units": 64,
+          "dropout": 0.2,
+          "recurrent_dropout": 0.2
         },
         "lstm": {
-          "learning_rate": 0.0005,
-          "units": 128,
+          "learning_rate": 0.001,
+          "units": 64,
           "dropout": 0.3,
           "recurrent_dropout": 0.3
         },
         "tcn": {
-          "learning_rate": 0.0005,
+          "learning_rate": 0.001,
           "optimization": "adam"
         }
       },
       "regime_weights": {
-        "bullish": 1.5,
-        "bearish": 1.2,
+        "bullish": 1.2,
+        "bearish": 1.0,
         "sideways": 0.8,
-        "volatile": 2.0
+        "volatile": 1.5
       },
       "risk_params": {
-        "max_leverage": 125,
+        "max_leverage": 20,
         "confidence_threshold": 0.7,
         "stop_loss_pct": 0.03,
         "take_profit_pct": 0.05,
@@ -231,67 +225,38 @@
     },
     "LINK/USD": {
       "trading_enabled": true,
-      "min_required_data": 2000,
+      "min_required_data": 1000,
       "hyperparameters": {
         "gru": {
-          "learning_rate": 0.0005,
-          "units": 128,
-          "dropout": 0.3,
-          "recurrent_dropout": 0.3
+          "learning_rate": 0.001,
+          "units": 64,
+          "dropout": 0.2,
+          "recurrent_dropout": 0.2
         },
         "lstm": {
-          "learning_rate": 0.0005,
-          "units": 128,
+          "learning_rate": 0.001,
+          "units": 64,
           "dropout": 0.3,
           "recurrent_dropout": 0.3
         },
         "tcn": {
-          "learning_rate": 0.0005,
+          "learning_rate": 0.001,
           "optimization": "adam"
         }
       },
       "regime_weights": {
-        "bullish": 1.5,
-        "bearish": 1.2,
+        "bullish": 1.2,
+        "bearish": 1.0,
         "sideways": 0.8,
-        "volatile": 2.0
+        "volatile": 1.5
       },
       "risk_params": {
-        "max_leverage": 125,
+        "max_leverage": 20,
         "confidence_threshold": 0.7,
         "stop_loss_pct": 0.03,
         "take_profit_pct": 0.05,
         "trailing_stop_pct": 0.02
       }
     }
-  },
-  "training_parameters": {
-    "priority": "high",
-    "max_epochs": 500,
-    "early_stopping_patience": 25,
-    "learning_rate_schedule": "cosine_decay",
-    "batch_size": 32,
-    "validation_split": 0.2,
-    "training_data_min_samples": 5000,
-    "augment_data": true,
-    "shuffle_training_data": true,
-    "stratify_samples": true
-  },
-  "strategy_integration": {
-    "integrate_arima_adaptive": true,
-    "arima_weight": 0.5,
-    "adaptive_weight": 0.5,
-    "use_combined_signals": true,
-    "signal_priority": "confidence",
-    "signal_threshold": 0.7
-  },
-  "leverage_optimization": {
-    "base_leverage": 5,
-    "max_leverage": 125,
-    "min_leverage": 1,
-    "confidence_multiplier": 1.5,
-    "win_streak_bonus": 0.2,
-    "loss_streak_penalty": 0.5,
-    "volatility_scaling": true
   }
 }
