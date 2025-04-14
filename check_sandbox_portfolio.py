@@ -28,7 +28,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Constants
-DEFAULT_STARTING_CAPITAL = 10000.0  # $10,000
+DEFAULT_STARTING_CAPITAL = 20000.0  # $20,000
 POSITION_DATA_FILE = "data/sandbox_positions.json"
 TRADE_HISTORY_FILE = "data/sandbox_trades.json"
 PORTFOLIO_HISTORY_FILE = "data/sandbox_portfolio_history.json"

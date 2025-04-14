@@ -1,77 +1,129 @@
 {
-  "version": "1.0",
+  "version": "1.2.0",
+  "risk_profile": "aggressive",
   "integrated_risk_management": {
     "enabled": true,
-    "max_concurrent_trades": 8,
-    "max_trades_per_pair": 2,
-    "max_portfolio_allocation": 0.85,
-    "strategy_ranking": {
+    "portfolio_drawdown_protection": {
       "enabled": true,
-      "method": "weighted_performance",
-      "metrics": [
-        "win_rate",
-        "profit_factor",
-        "sharpe_ratio",
-        "consistency"
+      "max_drawdown": 0.20,
+      "risk_reduction_stages": [
+        {"drawdown": 0.05, "reduction": 0.20},
+        {"drawdown": 0.10, "reduction": 0.50},
+        {"drawdown": 0.15, "reduction": 0.75}
       ],
-      "lookback_periods": [
-        30,
-        90,
-        180
-      ]
-    },
-    "signal_arbitration": {
-      "required_confirmation": 0,
-      "signal_strength_priority": true,
-      "strategy_strength_scaling": true,
-      "minimum_signal_strength": 0.4,
-      "contradictory_signals": "stronger_wins"
-    },
-    "risk_budgeting": {
-      "enabled": true,
-      "allocation_method": "equal_risk",
-      "adjust_by_performance": true,
-      "higher_timeframe_bias": true
-    }
-  },
-  "strategy_categories": {
-    "those_dudes": {
-      "strategies": [
-        "ARIMAStrategy",
-        "LSTMStrategy",
-        "GRUStrategy"
-      ],
-      "max_allocation": 0.5,
-      "priority": 0.6,
-      "risk_adjustment": 1.0,
-      "integration_rules": {
-        "min_agreement": 0,
-        "signal_amplification": true
+      "auto_recovery": {
+        "enabled": true,
+        "recovery_threshold": 0.03,
+        "recovery_duration_days": 3
       }
     },
-    "him_all_along": {
-      "strategies": [
-        "AdaptiveStrategy",
-        "TCNStrategy",
-        "EnsembleStrategy"
-      ],
-      "max_allocation": 0.5,
-      "priority": 0.4,
-      "risk_adjustment": 1.0,
-      "integration_rules": {
-        "min_agreement": 0,
-        "signal_amplification": true
+    "cross_strategy_management": {
+      "signal_strength_arbitration": true,
+      "opposing_signal_cancellation": true,
+      "cross_strategy_exits": true,
+      "emergency_coordinated_exit": true,
+      "max_concurrent_strategies_per_pair": 2,
+      "strategy_categories": {
+        "category_1": {
+          "name": "those dudes",
+          "strategies": ["adaptive", "cyclical", "seasonal"],
+          "max_concurrent_trades": 3
+        },
+        "category_2": {
+          "name": "him all along",
+          "strategies": ["arima", "momentum", "ml"],
+          "max_concurrent_trades": 3
+        }
       }
+    },
+    "dynamic_parameter_adjustment": {
+      "enabled": true,
+      "confidence_based_leverage": true,
+      "risk_based_position_sizing": true,
+      "volatility_based_atr_multiplier": true,
+      "profit_target_adjustment": true,
+      "win_streak_factor": 0.05,
+      "loss_streak_factor": 0.1
     }
   },
-  "cross_strategy_exits": {
+  "market_regime_detection": {
     "enabled": true,
-    "exit_agreement_threshold": 0.0,
-    "prioritize_stop_loss": true,
-    "profit_protection": {
+    "lookback_periods": 30,
+    "refresh_interval_minutes": 60,
+    "regime_specific_parameters": {
+      "trending": {
+        "leverage_multiplier": 1.2,
+        "risk_multiplier": 1.1,
+        "atr_multiplier": 1.0
+      },
+      "ranging": {
+        "leverage_multiplier": 0.9,
+        "risk_multiplier": 0.9,
+        "atr_multiplier": 1.1
+      },
+      "volatile": {
+        "leverage_multiplier": 0.7,
+        "risk_multiplier": 0.8,
+        "atr_multiplier": 1.3
+      },
+      "extremely_volatile": {
+        "leverage_multiplier": 0.4,
+        "risk_multiplier": 0.6,
+        "atr_multiplier": 1.5
+      }
+    },
+    "classification_thresholds": {
+      "adx_trending_threshold": 25,
+      "bb_ranging_threshold": 0.03,
+      "volatility_threshold": 0.04,
+      "extreme_volatility_threshold": 0.08
+    }
+  },
+  "integrated_ml_optimization": {
+    "enabled": true,
+    "model_accuracy_monitoring": true,
+    "retraining_trigger_threshold": 0.05,
+    "auto_ensemble_adjustment": true,
+    "ensemble_weights_optimization": {
       "enabled": true,
-      "unrealized_profit_threshold": 0.03,
-      "lock_in_percentage": 0.5
+      "optimization_interval_hours": 24,
+      "accuracy_weight": 0.7,
+      "profit_weight": 0.3
+    },
+    "hyperparameter_optimization": {
+      "enabled": true,
+      "optimization_interval_days": 7,
+      "max_trials": 50
+    }
+  },
+  "risk_aware_backtesting": {
+    "realistic_slippage": true,
+    "simulated_partial_fills": true,
+    "liquidity_constraints": true,
+    "market_impact_modeling": true,
+    "stress_test_scenarios": [
+      "flash_crash",
+      "liquidity_crisis",
+      "extreme_volatility",
+      "correlation_breakdown"
+    ]
+  },
+  "risk_reporting": {
+    "real_time_metrics": {
+      "current_drawdown": true,
+      "open_risk": true,
+      "value_at_risk": true,
+      "exposure_concentration": true
+    },
+    "alerts": {
+      "drawdown_warning": 0.1,
+      "high_concentration_warning": 0.3,
+      "consecutive_loss_warning": 3
+    },
+    "periodic_reports": {
+      "daily_summary": true,
+      "weekly_detailed": true,
+      "monthly_comprehensive": true
     }
   }
 }

@@ -1,0 +1,66 @@
+{
+  "version": "2.0.0",
+  "ensemble_weights": {
+    "tcn": 0.40,
+    "lstm": 0.20,
+    "gru": 0.20,
+    "transformer": 0.20
+  },
+  "performance": {
+    "accuracy": 0.9906,
+    "recall": 0.9854,
+    "precision": 0.9723,
+    "f1_score": 0.9788,
+    "profit_factor": 3.8,
+    "win_rate": 0.81,
+    "backtest_return": 87.00
+  },
+  "optimization_history": [
+    {
+      "timestamp": "2025-03-15T14:30:00",
+      "weights": {
+        "tcn": 0.35,
+        "lstm": 0.25,
+        "gru": 0.20,
+        "transformer": 0.20
+      },
+      "accuracy": 0.9702
+    },
+    {
+      "timestamp": "2025-04-01T10:15:00",
+      "weights": {
+        "tcn": 0.38,
+        "lstm": 0.22,
+        "gru": 0.20,
+        "transformer": 0.20
+      },
+      "accuracy": 0.9814
+    },
+    {
+      "timestamp": "2025-04-14T08:45:00",
+      "weights": {
+        "tcn": 0.40,
+        "lstm": 0.20,
+        "gru": 0.20,
+        "transformer": 0.20
+      },
+      "accuracy": 0.9906
+    }
+  ],
+  "feature_importance": {
+    "close_prices": 0.28,
+    "volume": 0.12,
+    "rsi": 0.15,
+    "macd": 0.10,
+    "bollinger_bands": 0.08,
+    "atr": 0.07,
+    "adx": 0.06,
+    "ema_ratios": 0.14
+  },
+  "prediction_confidence_mapping": {
+    "thresholds": [0.55, 0.65, 0.75, 0.85, 0.95],
+    "leverage_multipliers": [0.6, 1.0, 1.4, 1.8, 2.4],
+    "risk_multipliers": [0.6, 0.8, 1.0, 1.2, 1.5]
+  },
+  "last_updated": "2025-04-14T08:45:00"
+}

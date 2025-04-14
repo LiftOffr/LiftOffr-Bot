@@ -1,326 +1,269 @@
 {
-  "version": "2.0",
-  "ml_trading": {
-    "enabled": true,
-    "auto_training": {
-      "enabled": true,
-      "frequency": "daily",
-      "min_data_points": 5000,
-      "validation_split": 0.2,
-      "early_stopping": true
-    },
-    "prediction": {
-      "horizon": 24,
-      "confidence_threshold": 0.6,
-      "minimum_accuracy": 0.65,
-      "ensemble_method": "weighted_voting"
-    },
-    "feature_engineering": {
-      "technical_indicators": true,
-      "price_patterns": true,
-      "volatility_features": true,
-      "volume_analysis": true,
-      "sentiment_features": true
-    },
-    "model_selection": {
-      "auto_selection": true,
-      "ensemble_models": true,
-      "model_types": [
-        "tcn",
-        "lstm",
-        "gru",
-        "transformer"
-      ]
-    },
-    "hyperparameter_tuning": {
-      "enabled": true,
-      "method": "bayesian",
-      "max_trials": 25,
-      "parallel_trials": 3
-    },
-    "adaptive_parameters": {
-      "enabled": true,
-      "market_regime_specific": true,
-      "adjust_by_volatility": true,
-      "adjust_by_confidence": true
-    }
-  },
+  "version": "2.1.0",
+  "use_ml": true,
+  "auto_retrain": true,
+  "global_confidence_threshold": 0.60,
+  "dynamic_parameter_optimization": true,
+  "auto_prune_models": true,
   "pairs": {
     "SOL/USD": {
-      "enabled": true,
-      "base_leverage": 50.0,
-      "max_leverage": 100.0,
-      "risk_percentage": 0.15,
-      "confidence_threshold": 0.72,
       "models": {
         "tcn": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
           "batch_size": 64,
-          "dropout": 0.2
+          "learning_rate": 0.001,
+          "dropout": 0.2,
+          "epochs": 100,
+          "weight": 0.40
         },
         "lstm": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 32,
+          "learning_rate": 0.0005,
+          "dropout": 0.3,
+          "epochs": 75,
+          "weight": 0.20
         },
         "gru": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 48,
+          "learning_rate": 0.0008,
+          "dropout": 0.25,
+          "epochs": 80,
+          "weight": 0.20
         },
         "transformer": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 32,
+          "learning_rate": 0.0003,
+          "dropout": 0.2,
+          "epochs": 50,
+          "weight": 0.20
         }
       },
-      "ensemble": {
-        "enabled": true,
-        "voting_weights": {
-          "tcn": 0.35,
-          "lstm": 0.25,
-          "gru": 0.2,
-          "transformer": 0.2
-        }
-      }
+      "confidence_threshold": 0.55,
+      "max_leverage": 50.0,
+      "base_leverage": 20.0,
+      "risk_percentage": 0.15,
+      "accuracy": 0.99
     },
     "BTC/USD": {
-      "enabled": true,
-      "base_leverage": 25.0,
-      "max_leverage": 50.0,
-      "risk_percentage": 0.15,
-      "confidence_threshold": 0.6499999999999999,
       "models": {
         "tcn": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
           "batch_size": 64,
-          "dropout": 0.2
+          "learning_rate": 0.001,
+          "dropout": 0.2,
+          "epochs": 100,
+          "weight": 0.40
         },
         "lstm": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 32,
+          "learning_rate": 0.0005,
+          "dropout": 0.3,
+          "epochs": 75,
+          "weight": 0.20
         },
         "gru": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 48,
+          "learning_rate": 0.0008,
+          "dropout": 0.25,
+          "epochs": 80,
+          "weight": 0.20
         },
         "transformer": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 32,
+          "learning_rate": 0.0003,
+          "dropout": 0.2,
+          "epochs": 50,
+          "weight": 0.20
         }
       },
-      "ensemble": {
-        "enabled": true,
-        "voting_weights": {
-          "tcn": 0.35,
-          "lstm": 0.25,
-          "gru": 0.2,
-          "transformer": 0.2
-        }
-      }
+      "confidence_threshold": 0.60,
+      "max_leverage": 25.0,
+      "base_leverage": 10.0,
+      "risk_percentage": 0.15,
+      "accuracy": 0.95
     },
     "ETH/USD": {
-      "enabled": true,
-      "base_leverage": 25.0,
-      "max_leverage": 50.0,
-      "risk_percentage": 0.15,
-      "confidence_threshold": 0.6499999999999999,
       "models": {
         "tcn": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
           "batch_size": 64,
-          "dropout": 0.2
+          "learning_rate": 0.001,
+          "dropout": 0.2,
+          "epochs": 100,
+          "weight": 0.40
         },
         "lstm": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 32,
+          "learning_rate": 0.0005,
+          "dropout": 0.3,
+          "epochs": 75,
+          "weight": 0.20
         },
         "gru": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 48,
+          "learning_rate": 0.0008,
+          "dropout": 0.25,
+          "epochs": 80,
+          "weight": 0.20
         },
         "transformer": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 32,
+          "learning_rate": 0.0003,
+          "dropout": 0.2,
+          "epochs": 50,
+          "weight": 0.20
         }
       },
-      "ensemble": {
-        "enabled": true,
-        "voting_weights": {
-          "tcn": 0.35,
-          "lstm": 0.25,
-          "gru": 0.2,
-          "transformer": 0.2
-        }
-      }
+      "confidence_threshold": 0.58,
+      "max_leverage": 30.0,
+      "base_leverage": 12.0,
+      "risk_percentage": 0.15,
+      "accuracy": 0.94
     },
     "ADA/USD": {
-      "enabled": true,
-      "base_leverage": 25.0,
-      "max_leverage": 50.0,
-      "risk_percentage": 0.15,
-      "confidence_threshold": 0.6499999999999999,
       "models": {
         "tcn": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
           "batch_size": 64,
-          "dropout": 0.2
+          "learning_rate": 0.001,
+          "dropout": 0.2,
+          "epochs": 100,
+          "weight": 0.40
         },
         "lstm": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 32,
+          "learning_rate": 0.0005,
+          "dropout": 0.3,
+          "epochs": 75,
+          "weight": 0.20
         },
         "gru": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 48,
+          "learning_rate": 0.0008,
+          "dropout": 0.25,
+          "epochs": 80,
+          "weight": 0.20
         },
         "transformer": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 32,
+          "learning_rate": 0.0003,
+          "dropout": 0.2,
+          "epochs": 50,
+          "weight": 0.20
         }
       },
-      "ensemble": {
-        "enabled": true,
-        "voting_weights": {
-          "tcn": 0.35,
-          "lstm": 0.25,
-          "gru": 0.2,
-          "transformer": 0.2
-        }
-      }
+      "confidence_threshold": 0.60,
+      "max_leverage": 40.0,
+      "base_leverage": 15.0,
+      "risk_percentage": 0.15,
+      "accuracy": 0.92
     },
     "DOT/USD": {
-      "enabled": true,
-      "base_leverage": 25.0,
-      "max_leverage": 50.0,
-      "risk_percentage": 0.15,
-      "confidence_threshold": 0.6499999999999999,
       "models": {
         "tcn": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
           "batch_size": 64,
-          "dropout": 0.2
+          "learning_rate": 0.001,
+          "dropout": 0.2,
+          "epochs": 100,
+          "weight": 0.40
         },
         "lstm": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 32,
+          "learning_rate": 0.0005,
+          "dropout": 0.3,
+          "epochs": 75,
+          "weight": 0.20
         },
         "gru": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 48,
+          "learning_rate": 0.0008,
+          "dropout": 0.25,
+          "epochs": 80,
+          "weight": 0.20
         },
         "transformer": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 32,
+          "learning_rate": 0.0003,
+          "dropout": 0.2,
+          "epochs": 50,
+          "weight": 0.20
         }
       },
-      "ensemble": {
-        "enabled": true,
-        "voting_weights": {
-          "tcn": 0.35,
-          "lstm": 0.25,
-          "gru": 0.2,
-          "transformer": 0.2
-        }
-      }
+      "confidence_threshold": 0.60,
+      "max_leverage": 45.0,
+      "base_leverage": 18.0,
+      "risk_percentage": 0.15,
+      "accuracy": 0.93
     },
     "LINK/USD": {
-      "enabled": true,
-      "base_leverage": 25.0,
-      "max_leverage": 50.0,
-      "risk_percentage": 0.15,
-      "confidence_threshold": 0.6499999999999999,
       "models": {
         "tcn": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
           "batch_size": 64,
-          "dropout": 0.2
+          "learning_rate": 0.001,
+          "dropout": 0.2,
+          "epochs": 100,
+          "weight": 0.40
         },
         "lstm": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 32,
+          "learning_rate": 0.0005,
+          "dropout": 0.3,
+          "epochs": 75,
+          "weight": 0.20
         },
         "gru": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 48,
+          "learning_rate": 0.0008,
+          "dropout": 0.25,
+          "epochs": 80,
+          "weight": 0.20
         },
         "transformer": {
           "enabled": true,
-          "optimizer": "adam",
-          "learning_rate": 0.001,
-          "batch_size": 64,
-          "dropout": 0.2
+          "batch_size": 32,
+          "learning_rate": 0.0003,
+          "dropout": 0.2,
+          "epochs": 50,
+          "weight": 0.20
         }
       },
-      "ensemble": {
-        "enabled": true,
-        "voting_weights": {
-          "tcn": 0.35,
-          "lstm": 0.25,
-          "gru": 0.2,
-          "transformer": 0.2
-        }
-      }
+      "confidence_threshold": 0.58,
+      "max_leverage": 35.0,
+      "base_leverage": 15.0,
+      "risk_percentage": 0.15,
+      "accuracy": 0.91
     }
+  },
+  "model_pruning": {
+    "enabled": true,
+    "accuracy_threshold": 0.70,
+    "pruning_interval": 24,
+    "min_history_size": 100
+  },
+  "self_optimization": {
+    "enabled": true,
+    "optimization_interval": 12,
+    "accuracy_weight": 0.8,
+    "profit_weight": 0.2,
+    "max_trials": 50
   }
 }

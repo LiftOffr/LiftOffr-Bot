@@ -1,36 +1,82 @@
 {
+  "last_updated": "2025-04-14T23:45:00",
   "current_risk_level": "Medium",
-  "volatility": {
-    "level": "Low",
-    "value": 0.018,
-    "threshold": 0.03
-  },
   "max_drawdown": 0.024,
   "value_at_risk": 0.035,
   "kelly_criterion": 0.42,
   "optimal_leverage": 20.0,
-  "market_regime": "TRENDING_UP",
-  "regime_confidence": 0.78,
-  "recommended_position_sizing": {
-    "base_risk_percentage": 0.05,
-    "adjusted_risk_percentage": 0.07,
-    "max_margin_per_trade": 200.0,
-    "min_margin_per_trade": 50.0
+  "volatility": {
+    "level": "Low",
+    "value": 0.018,
+    "lookback_days": 30
   },
-  "stop_loss_strategy": {
-    "type": "volatility_based",
-    "atr_multiplier": 1.5,
-    "fixed_percentage": 0.04,
-    "ratcheting_enabled": true,
-    "trailing_enabled": true
+  "exposure": {
+    "total_exposure": 0.4,
+    "highest_pair_exposure": "SOL/USD",
+    "highest_pair_percentage": 0.15
   },
-  "asset_specific": {
+  "pair_metrics": {
     "SOL/USD": {
       "volatility": 0.022,
-      "trend_strength": 0.65,
-      "optimal_leverage": 20.0,
-      "support_levels": [126.5, 124.8, 122.3],
-      "resistance_levels": [132.5, 135.0, 138.6]
+      "optimal_leverage": 50.0,
+      "optimal_risk_percentage": 0.15,
+      "sharpe_ratio": 2.1,
+      "win_rate": 0.71
+    },
+    "BTC/USD": {
+      "volatility": 0.016,
+      "optimal_leverage": 25.0,
+      "optimal_risk_percentage": 0.15,
+      "sharpe_ratio": 1.9,
+      "win_rate": 0.68
+    },
+    "ETH/USD": {
+      "volatility": 0.018,
+      "optimal_leverage": 30.0,
+      "optimal_risk_percentage": 0.15,
+      "sharpe_ratio": 1.8,
+      "win_rate": 0.65
+    },
+    "ADA/USD": {
+      "volatility": 0.025,
+      "optimal_leverage": 40.0,
+      "optimal_risk_percentage": 0.15,
+      "sharpe_ratio": 2.0,
+      "win_rate": 0.66
+    },
+    "DOT/USD": {
+      "volatility": 0.024,
+      "optimal_leverage": 45.0,
+      "optimal_risk_percentage": 0.15,
+      "sharpe_ratio": 2.2,
+      "win_rate": 0.69
+    },
+    "LINK/USD": {
+      "volatility": 0.020,
+      "optimal_leverage": 35.0,
+      "optimal_risk_percentage": 0.15,
+      "sharpe_ratio": 1.7,
+      "win_rate": 0.64
     }
+  },
+  "stress_test_results": {
+    "flash_crash_10pct": {
+      "max_loss": 0.08,
+      "recovery_time_days": 5
+    },
+    "volatility_spike_3x": {
+      "max_loss": 0.12,
+      "recovery_time_days": 14
+    },
+    "liquidity_crisis": {
+      "max_loss": 0.14,
+      "recovery_time_days": 21
+    }
+  },
+  "risk_recommendations": {
+    "current_leverage_cap": 50.0,
+    "current_position_size_cap": 0.15,
+    "recommended_pairs": ["SOL/USD", "DOT/USD", "BTC/USD"],
+    "reduce_exposure_pairs": []
   }
 }

@@ -1,102 +1,58 @@
 {
-  "version": "1.0",
+  "version": "1.5.0",
   "dynamic_parameters": {
     "enabled": true,
-    "update_frequency": "candle",
-    "market_regime_detection": {
-      "enabled": true,
-      "regime_types": [
-        "trending_up",
-        "trending_down",
-        "ranging",
-        "volatile"
-      ],
-      "detection_methods": [
-        "price_action",
-        "volatility",
-        "momentum"
-      ]
-    },
-    "parameter_adjustment": {
-      "volatility_based": true,
-      "confidence_based": true,
-      "win_rate_based": true,
-      "regime_based": true
-    },
     "learning_rate": 0.15,
-    "min_adjustment": 0.5,
-    "max_adjustment": 2.5
+    "adaptation_interval": 12,
+    "max_adjustment": 0.3,
+    "min_adjustment": 0.05,
+    "confidence_scaling": true,
+    "volatility_scaling": true,
+    "market_regime_adaptation": true
   },
-  "adjustable_parameters": {
-    "leverage": {
-      "enabled": true,
-      "base_value": 50.0,
-      "min_value": 1.0,
-      "max_value": 125.0,
-      "step_size": 1.0,
-      "volatility_scaling": true,
-      "confidence_scaling": true
-    },
-    "risk_percentage": {
-      "enabled": true,
-      "base_value": 0.15,
-      "min_value": 0.01,
-      "max_value": 0.2,
-      "step_size": 0.01,
-      "volatility_scaling": true,
-      "confidence_scaling": true
-    },
-    "take_profit": {
-      "enabled": true,
-      "base_value": 0.1,
-      "min_value": 0.02,
-      "max_value": 0.5,
-      "step_size": 0.01,
-      "volatility_scaling": true,
-      "regime_scaling": true
-    },
-    "stop_loss": {
-      "enabled": true,
-      "base_value": 0.05,
-      "min_value": 0.01,
-      "max_value": 0.1,
-      "step_size": 0.005,
-      "volatility_scaling": true,
-      "confidence_scaling": true
-    },
-    "trailing_stop": {
-      "enabled": true,
-      "base_value": 0.02,
-      "min_value": 0.005,
-      "max_value": 0.05,
-      "step_size": 0.005,
-      "profit_scaling": true
-    }
+  "leverage_adjustment": {
+    "enabled": true,
+    "min_leverage_multiplier": 0.5,
+    "max_leverage_multiplier": 2.5,
+    "confidence_threshold_high": 0.85,
+    "confidence_threshold_low": 0.6
   },
-  "regime_specific_values": {
-    "trending_up": {
-      "leverage_multiplier": 1.2,
-      "risk_percentage_multiplier": 1.2,
-      "take_profit_multiplier": 1.0,
-      "stop_loss_multiplier": 0.8
-    },
-    "trending_down": {
-      "leverage_multiplier": 1.0,
-      "risk_percentage_multiplier": 1.0,
-      "take_profit_multiplier": 0.8,
-      "stop_loss_multiplier": 1.0
-    },
-    "ranging": {
-      "leverage_multiplier": 0.8,
-      "risk_percentage_multiplier": 0.8,
-      "take_profit_multiplier": 0.7,
-      "stop_loss_multiplier": 1.2
-    },
-    "volatile": {
-      "leverage_multiplier": 0.6,
-      "risk_percentage_multiplier": 0.6,
-      "take_profit_multiplier": 1.2,
-      "stop_loss_multiplier": 1.4
-    }
+  "risk_adjustment": {
+    "enabled": true,
+    "min_risk_multiplier": 0.5,
+    "max_risk_multiplier": 2.0,
+    "win_streak_factor": 0.1,
+    "loss_streak_factor": 0.15
+  },
+  "take_profit_adjustment": {
+    "enabled": true,
+    "baseline_tp_factor": 1.0,
+    "min_tp_multiplier": 0.7,
+    "max_tp_multiplier": 2.0,
+    "recent_volatility_weight": 0.6
+  },
+  "stop_loss_adjustment": {
+    "enabled": true,
+    "baseline_sl_factor": 1.0,
+    "min_sl_multiplier": 0.8,
+    "max_sl_multiplier": 1.5,
+    "atr_weight": 0.7
+  },
+  "position_sizing": {
+    "kelly_criterion_enabled": true,
+    "kelly_fraction": 0.5,
+    "volatility_adjustment_enabled": true,
+    "max_capital_per_trade": 0.25
+  },
+  "trade_duration": {
+    "dynamic_duration_enabled": true,
+    "min_duration_minutes": 15,
+    "max_duration_minutes": 1440,
+    "trend_strength_weight": 0.6
+  },
+  "market_regime_thresholds": {
+    "trending_adx_threshold": 25,
+    "consolidation_bb_width_threshold": 0.03,
+    "volatile_historical_vol_threshold": 0.04
   }
 }
