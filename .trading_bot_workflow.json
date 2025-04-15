@@ -1,0 +1,8 @@
+{
+  "workflows": [
+    {
+      "name": "trading_bot",
+      "entrypoint": "python start_trading_with_liquidation.py"
+    }
+  ]
+}
