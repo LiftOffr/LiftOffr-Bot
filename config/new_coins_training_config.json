@@ -1,0 +1,179 @@
+{
+  "training_config": {
+    "common": {
+      "epochs": 150,
+      "batch_size": 64,
+      "validation_split": 0.2,
+      "test_split": 0.1,
+      "early_stopping_patience": 15,
+      "early_stopping_min_delta": 0.0005,
+      "learning_rate_reduction_factor": 0.5,
+      "learning_rate_patience": 10,
+      "loss_function": "binary_crossentropy",
+      "metrics": ["accuracy", "precision", "recall"],
+      "optimizer": "adam",
+      "dropout_rate": 0.3,
+      "target_accuracy": 0.95
+    },
+    "tcn": {
+      "num_filters": 64,
+      "kernel_size": 3,
+      "dilations": [1, 2, 4, 8, 16, 32],
+      "nb_stacks": 2,
+      "padding": "causal",
+      "use_skip_connections": true,
+      "return_sequences": false,
+      "activation": "relu",
+      "use_batch_norm": true,
+      "use_layer_norm": false,
+      "use_weight_norm": true,
+      "dropout_rate": 0.2
+    },
+    "lstm": {
+      "units": [128, 64, 32],
+      "activation": "tanh",
+      "recurrent_activation": "sigmoid",
+      "use_bias": true,
+      "dropout": 0.3,
+      "recurrent_dropout": 0.3,
+      "bidirectional": true,
+      "use_batch_norm": true,
+      "attention_mechanism": true
+    },
+    "attention_gru": {
+      "gru_units": [96, 64, 32],
+      "attention_units": 64,
+      "use_batch_norm": true,
+      "dropout_rate": 0.3,
+      "activation": "tanh",
+      "recurrent_activation": "sigmoid",
+      "attention_activation": "tanh",
+      "use_bias": true,
+      "bidirectional": true
+    },
+    "transformer": {
+      "num_layers": 3,
+      "d_model": 128,
+      "num_heads": 8,
+      "dff": 512,
+      "dropout_rate": 0.2,
+      "use_batch_norm": true,
+      "layer_norm": true,
+      "max_sequence_length": 128,
+      "positional_encoding": true,
+      "use_causal_mask": false
+    },
+    "ensemble": {
+      "models": ["tcn", "lstm", "attention_gru", "transformer"],
+      "weights": [0.35, 0.25, 0.25, 0.15],
+      "calibrate_probabilities": true,
+      "optimize_weights": true,
+      "stacking_method": "weighted_average",
+      "use_cross_validation": true,
+      "cv_folds": 5
+    }
+  },
+  "feature_engineering": {
+    "technical_indicators": [
+      "rsi", "macd", "bbands", "atr", "adx", "cci", "obv", "mfi", "cmf", "ichimoku",
+      "stochastic", "williams_r", "parabolic_sar", "trix", "keltner", "dpo", "ultimate_oscillator",
+      "vwap", "supertrend", "vortex", "psar", "pivot_points", "fibonacci_retracement"
+    ],
+    "derived_features": [
+      "price_momentum", "volatility_indicator", "trend_strength", "range_breakout", 
+      "volume_momentum", "support_resistance", "sentiment_score", "correlation_feature"
+    ],
+    "feature_importance": true,
+    "feature_selection": true,
+    "normalization": "standardization",
+    "outlier_removal": "winsorization",
+    "cross_asset_correlations": true,
+    "timeframes": ["1h", "4h", "1d"],
+    "market_regimes": ["trending", "ranging", "volatile"],
+    "use_fourier_features": true,
+    "wavelet_decomposition": true
+  },
+  "hyperparameter_optimization": {
+    "optimizer": "bayesian",
+    "max_trials": 50,
+    "objective": "val_accuracy",
+    "direction": "maximize",
+    "early_stopping": true,
+    "cross_validation": true,
+    "n_splits": 5,
+    "parameters": {
+      "tcn": {
+        "num_filters": [32, 64, 128],
+        "kernel_size": [2, 3, 4],
+        "nb_stacks": [1, 2],
+        "dropout_rate": [0.1, 0.2, 0.3, 0.4]
+      },
+      "lstm": {
+        "units": [[64, 32], [128, 64], [128, 64, 32]],
+        "dropout": [0.2, 0.3, 0.4],
+        "recurrent_dropout": [0.2, 0.3, 0.4]
+      },
+      "attention_gru": {
+        "gru_units": [[64, 32], [96, 64], [96, 64, 32]],
+        "attention_units": [32, 64, 96],
+        "dropout_rate": [0.2, 0.3, 0.4]
+      },
+      "transformer": {
+        "num_layers": [2, 3, 4],
+        "d_model": [64, 96, 128],
+        "num_heads": [4, 8],
+        "dropout_rate": [0.1, 0.2, 0.3]
+      }
+    }
+  },
+  "pair_specific_settings": {
+    "AVAX/USD": {
+      "lookback_window": 120,
+      "prediction_horizon": 12,
+      "base_leverage": 38.0,
+      "max_leverage": 125.0,
+      "confidence_threshold": 0.67,
+      "risk_percentage": 0.20,
+      "target_accuracy": 0.96,
+      "feature_importance_threshold": 0.01,
+      "max_feature_correlation": 0.85,
+      "additional_features": ["eth_correlation", "btc_correlation"]
+    },
+    "MATIC/USD": {
+      "lookback_window": 96,
+      "prediction_horizon": 8,
+      "base_leverage": 39.0,
+      "max_leverage": 125.0,
+      "confidence_threshold": 0.68,
+      "risk_percentage": 0.20,
+      "target_accuracy": 0.95,
+      "feature_importance_threshold": 0.02,
+      "max_feature_correlation": 0.85,
+      "additional_features": ["eth_correlation", "defi_sector_performance"]
+    },
+    "UNI/USD": {
+      "lookback_window": 96,
+      "prediction_horizon": 10,
+      "base_leverage": 38.5,
+      "max_leverage": 125.0,
+      "confidence_threshold": 0.68,
+      "risk_percentage": 0.20,
+      "target_accuracy": 0.95,
+      "feature_importance_threshold": 0.02,
+      "max_feature_correlation": 0.85,
+      "additional_features": ["eth_correlation", "defi_sentiment", "protocol_tvl"]
+    },
+    "ATOM/USD": {
+      "lookback_window": 110,
+      "prediction_horizon": 12,
+      "base_leverage": 38.0,
+      "max_leverage": 125.0,
+      "confidence_threshold": 0.66,
+      "risk_percentage": 0.20,
+      "target_accuracy": 0.95,
+      "feature_importance_threshold": 0.01,
+      "max_feature_correlation": 0.85,
+      "additional_features": ["btc_correlation", "interchain_activity"]
+    }
+  }
+}

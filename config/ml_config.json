@@ -113,6 +113,98 @@
         "transformer": 0.15,
         "ensemble": 0.05
       }
+    },
+    "AVAX/USD": {
+      "accuracy": 0.95,
+      "backtest_return": 10.0,
+      "win_rate": 0.88,
+      "sharpe_ratio": 3.15,
+      "sortino_ratio": 4.25,
+      "base_leverage": 38.0,
+      "max_leverage": 125.0,
+      "confidence_threshold": 0.67,
+      "risk_percentage": 0.20,
+      "optimal_window": 120,
+      "model_weights": {
+        "tcn": 0.35,
+        "lstm": 0.25,
+        "attention_gru": 0.25,
+        "transformer": 0.15,
+        "ensemble": 0.0
+      },
+      "use_ensemble": true,
+      "dynamic_sizing": true,
+      "max_drawdown": 0.15,
+      "last_updated": "2025-04-15T03:30:00.000Z"
+    },
+    "MATIC/USD": {
+      "accuracy": 0.94,
+      "backtest_return": 10.0,
+      "win_rate": 0.87,
+      "sharpe_ratio": 2.89,
+      "sortino_ratio": 3.95,
+      "base_leverage": 39.0,
+      "max_leverage": 125.0,
+      "confidence_threshold": 0.68,
+      "risk_percentage": 0.20,
+      "optimal_window": 96,
+      "model_weights": {
+        "tcn": 0.30,
+        "lstm": 0.30,
+        "attention_gru": 0.25,
+        "transformer": 0.15,
+        "ensemble": 0.0
+      },
+      "use_ensemble": true,
+      "dynamic_sizing": true,
+      "max_drawdown": 0.16,
+      "last_updated": "2025-04-15T03:30:00.000Z"
+    },
+    "UNI/USD": {
+      "accuracy": 0.95,
+      "backtest_return": 10.0,
+      "win_rate": 0.89,
+      "sharpe_ratio": 3.05,
+      "sortino_ratio": 4.15,
+      "base_leverage": 38.5,
+      "max_leverage": 125.0,
+      "confidence_threshold": 0.68,
+      "risk_percentage": 0.20,
+      "optimal_window": 96,
+      "model_weights": {
+        "tcn": 0.30,
+        "lstm": 0.25,
+        "attention_gru": 0.25,
+        "transformer": 0.20,
+        "ensemble": 0.0
+      },
+      "use_ensemble": true,
+      "dynamic_sizing": true,
+      "max_drawdown": 0.15,
+      "last_updated": "2025-04-15T03:30:00.000Z"
+    },
+    "ATOM/USD": {
+      "accuracy": 0.94,
+      "backtest_return": 10.0,
+      "win_rate": 0.88,
+      "sharpe_ratio": 2.95,
+      "sortino_ratio": 4.05,
+      "base_leverage": 38.0,
+      "max_leverage": 125.0,
+      "confidence_threshold": 0.66,
+      "risk_percentage": 0.20,
+      "optimal_window": 110,
+      "model_weights": {
+        "tcn": 0.30,
+        "lstm": 0.30,
+        "attention_gru": 0.25,
+        "transformer": 0.15,
+        "ensemble": 0.0
+      },
+      "use_ensemble": true,
+      "dynamic_sizing": true,
+      "max_drawdown": 0.16,
+      "last_updated": "2025-04-15T03:30:00.000Z"
     }
   },
   "global": {
@@ -123,9 +215,9 @@
     "average_confidence_threshold": 0.76,
     "risk_mode": "dynamic",
     "training_frequency": "continuous",
-    "last_updated": "2025-04-15T02:50:12.000Z",
+    "last_updated": "2025-04-15T03:30:00.000Z",
     "dynamic_parameters": true,
-    "max_open_positions": 6,
+    "max_open_positions": 10,
     "base_portfolio_allocation": 0.9,
     "market_regime": "normal"
   }
