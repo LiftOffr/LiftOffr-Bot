@@ -1,0 +1,8 @@
+{
+    "workflows": [
+        {
+            "name": "dashboard",
+            "entrypoint": "gunicorn --bind 0.0.0.0:8080 --reuse-port --reload dashboard_app:app"
+        }
+    ]
+}

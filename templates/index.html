@@ -8,8 +8,6 @@
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Chart.js Plugin for Gradients -->
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-gradient"></script>
     <style>
         .card {
             margin-bottom: 20px;
@@ -35,15 +33,6 @@
         .negative {
             color: #e63946;
         }
-        .highlight {
-            background: rgba(42, 157, 244, 0.1);
-            border-left: 4px solid #2a9df4;
-            padding: 12px;
-            border-radius: 4px;
-        }
-        .table th {
-            font-weight: 600;
-        }
         .chart-container {
             position: relative;
             height: 300px;
@@ -63,19 +52,6 @@
         }
         .risk-high {
             color: #e63946;
-        }
-        .confidence-badge {
-            padding: 5px 10px;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 0.8rem;
-        }
-        .model-accuracy-chart {
-            height: 300px;
-        }
-        .donut-chart-container {
-            height: 300px;
-            position: relative;
         }
         .position-badge {
             padding: 5px 10px;
@@ -97,641 +73,302 @@
         .progress-bar {
             border-radius: 4px;
         }
-        .auto-refresh-badge {
-            cursor: pointer;
-        }
-        @media (max-width: 768px) {
-            .header-metric {
-                font-size: 1.8rem;
-            }
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="dashboard-header">
             <div class="row align-items-center">
-                <div class="col-lg-8">
-                    <h1 class="display-5 fw-bold">Trading Bot Dashboard</h1>
-                    <p class="lead">Advanced ML Trading System with Dynamic Risk Management</p>
+                <div class="col-md-6">
+                    <h1 class="mb-0">Trading Dashboard</h1>
+                    <p class="text-muted">Last updated: {{ current_time }}</p>
                 </div>
-                <div class="col-lg-4 text-lg-end">
-                    <div class="d-flex justify-content-lg-end align-items-center">
-                        <span class="me-3">Last Updated: {{ current_time }}</span>
-                        <a href="/refresh" class="btn btn-outline-info">Refresh</a>
-                    </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="javascript:location.reload();" class="btn btn-primary btn-sm">
+                        <i class="fas fa-sync"></i> Refresh Data
+                    </a>
                 </div>
             </div>
         </div>
 
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card metric-card h-100">
-                    <div class="card-body">
-                        <h6 class="card-subtitle mb-2 text-muted">Portfolio Balance</h6>
-                        <h2 class="header-metric">${{ "%.2f"|format(portfolio.balance|float) }}</h2>
-                        <div class="mt-2">
-                            <p class="mb-0">Equity: ${{ "%.2f"|format(portfolio.equity|float) }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card metric-card h-100">
-                    <div class="card-body">
-                        <h6 class="card-subtitle mb-2 text-muted">Win Rate</h6>
-                        <h2 class="header-metric">{{ "%.1f"|format(risk_metrics.win_rate * 100) }}%</h2>
-                        <div class="mt-2">
-                            <p class="mb-0">Completed Trades: {{ trades|length }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card metric-card h-100">
-                    <div class="card-body">
-                        <h6 class="card-subtitle mb-2 text-muted">Avg Model Accuracy</h6>
-                        <h2 class="header-metric">
-                            {% set total_accuracy = 0 %}
-                            {% for pair, accuracy in accuracy_data.items() %}
-                                {% set total_accuracy = total_accuracy + accuracy %}
-                            {% endfor %}
-                            {% if accuracy_data|length > 0 %}
-                                {{ "%.1f"|format((total_accuracy / accuracy_data|length) * 100) }}%
-                            {% else %}
-                                0.0%
-                            {% endif %}
-                        </h2>
-                        <div class="mt-2">
-                            <p class="mb-0">Trading {{ accuracy_data|length }} Pairs</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card metric-card h-100">
-                    <div class="card-body">
-                        <h6 class="card-subtitle mb-2 text-muted">Current Risk Level</h6>
-                        <h2 class="header-metric risk-{{ risk_metrics.current_risk_level|lower }}">
-                            {{ risk_metrics.current_risk_level }}
-                        </h2>
-                        <div class="mt-2">
-                            <p class="mb-0">Open Positions: {{ positions|length }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Total Unrealized PnL Section -->
-        {% if positions|length > 0 %}
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0">Unrealized PnL (All Positions)</h5>
-                            <div class="d-flex align-items-center">
-                                <div class="me-4">
-                                    <span class="small text-muted me-2">PnL %:</span>
-                                    <span class="badge fs-6 {% if portfolio.unrealized_pnl_pct > 0 %}bg-success{% else %}bg-danger{% endif %}">
-                                        {{ "%.2f"|format(portfolio.unrealized_pnl_pct) }}%
-                                    </span>
-                                </div>
-                                <div>
-                                    <span class="small text-muted me-2">PnL USD:</span>
-                                    <span class="badge fs-6 {% if portfolio.unrealized_pnl_usd > 0 %}bg-success{% else %}bg-danger{% endif %}">
-                                        ${{ "%.2f"|format(portfolio.unrealized_pnl_usd) }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Debug Info for PnL Calculation -->
-                        <div class="mt-3">
-                            <div class="alert alert-info small">
-                                <p class="mb-1"><strong>Portfolio Summary</strong></p>
-                                <p class="mb-1">Starting Capital: $20,000.00</p>
-                                <p class="mb-1">Current Balance: ${{ "%.2f"|format(portfolio.balance) }}</p>
-                                <p class="mb-1">Current Equity: ${{ "%.2f"|format(portfolio.equity) }}</p>
-                                <p class="mb-1">Total Unrealized PnL: ${{ "%.2f"|format(portfolio.unrealized_pnl_usd) }}</p>
-                                <p class="mb-1">Total Return: {{ "%.2f"|format(portfolio.total_return_percentage) }}%</p>
-                                <p class="mb-0">Open Positions: {{ positions|length }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
+        <!-- Portfolio Overview -->
         <div class="row">
-            <div class="col-lg-8">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Portfolio Performance</h5>
-                    </div>
+            <div class="col-md-4">
+                <div class="card bg-dark metric-card">
                     <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">Portfolio Value</h6>
+                        <h2 class="header-metric">${{ "%.2f"|format(portfolio.balance) }}</h2>
+                        <p class="mb-0 
+                        {% if portfolio.total_pnl_pct > 0 %}positive{% else %}negative{% endif %}">
+                            {{ "%.2f"|format(portfolio.total_pnl_pct) }}% 
+                            ({{ "$%.2f"|format(portfolio.total_pnl) }})
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-dark metric-card">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">Unrealized P&L</h6>
+                        <h2 class="header-metric 
+                        {% if portfolio.unrealized_pnl_usd > 0 %}positive{% else %}negative{% endif %}">
+                            ${{ "%.2f"|format(portfolio.unrealized_pnl_usd) }}
+                        </h2>
+                        <p class="mb-0 
+                        {% if portfolio.unrealized_pnl_pct > 0 %}positive{% else %}negative{% endif %}">
+                            {{ "%.2f"|format(portfolio.unrealized_pnl_pct) }}% of initial capital
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-dark metric-card">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">Open Positions</h6>
+                        <h2 class="header-metric">{{ portfolio.open_positions_count }}</h2>
+                        <p class="mb-0 text-muted">Active trades across all pairs</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Portfolio History Chart -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card bg-dark">
+                    <div class="card-body">
+                        <h5 class="card-title">Portfolio Performance</h5>
                         <div class="chart-container">
                             <canvas id="portfolioChart"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-4">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Model Accuracy</h5>
-                    </div>
+        </div>
+
+        <!-- Model Accuracy and Risk Metrics -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card bg-dark h-100">
                     <div class="card-body">
-                        <div class="model-accuracy-chart">
+                        <h5 class="card-title">Model Accuracy</h5>
+                        <div class="chart-container">
                             <canvas id="accuracyChart"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
+            <div class="col-md-6">
+                <div class="card bg-dark h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Risk Metrics</h5>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="p-2 bg-dark bg-opacity-10 rounded">
+                                    <small class="text-muted d-block">Win Rate</small>
+                                    <span class="fs-5 positive">{{ "%.1f"|format(risk_metrics.win_rate * 100) }}%</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 bg-dark bg-opacity-10 rounded">
+                                    <small class="text-muted d-block">Profit Factor</small>
+                                    <span class="fs-5 positive">{{ "%.2f"|format(risk_metrics.profit_factor) }}</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 bg-dark bg-opacity-10 rounded">
+                                    <small class="text-muted d-block">Max Drawdown</small>
+                                    <span class="fs-5 negative">{{ "%.1f"|format(risk_metrics.max_drawdown * 100) }}%</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 bg-dark bg-opacity-10 rounded">
+                                    <small class="text-muted d-block">Sharpe Ratio</small>
+                                    <span class="fs-5">{{ "%.2f"|format(risk_metrics.sharpe_ratio) }}</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 bg-dark bg-opacity-10 rounded">
+                                    <small class="text-muted d-block">Avg Win/Loss</small>
+                                    <span class="fs-5">{{ "%.2f"|format(risk_metrics.avg_win_loss_ratio) }}</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 bg-dark bg-opacity-10 rounded">
+                                    <small class="text-muted d-block">Avg Leverage</small>
+                                    <span class="fs-5">{{ "%.1f"|format(risk_metrics.avg_leverage_used) }}x</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="row">
-            <div class="col-lg-8">
-                <div class="card mb-4">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Recent Trades</h5>
-                        <span class="badge bg-primary">{{ trades|length }} total</span>
-                    </div>
+        <!-- Open Positions -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card bg-dark">
                     <div class="card-body">
+                        <h5 class="card-title">Open Positions</h5>
                         <div class="table-responsive">
-                            <table class="table table-hover">
+                            <table class="table table-dark table-borderless table-hover">
                                 <thead>
                                     <tr>
                                         <th>Pair</th>
+                                        <th>Direction</th>
+                                        <th>Size</th>
+                                        <th>Entry Price</th>
+                                        <th>Current Price</th>
+                                        <th>Leverage</th>
+                                        <th>Unrealized P&L</th>
+                                        <th>Duration</th>
+                                        <th>Strategy</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if positions %}
+                                        {% for position in positions %}
+                                        <tr>
+                                            <td><strong>{{ position.pair }}</strong></td>
+                                            <td>
+                                                <span class="position-badge 
+                                                {% if position.direction == 'LONG' %}badge-long{% else %}badge-short{% endif %}">
+                                                {{ position.direction }}
+                                                </span>
+                                            </td>
+                                            <td>{{ "%.2f"|format(position.size) }}</td>
+                                            <td>${{ "%.4f"|format(position.entry_price) }}</td>
+                                            <td>${{ "%.4f"|format(position.current_price) }}</td>
+                                            <td>{{ "%.1f"|format(position.leverage) }}x</td>
+                                            <td class="{% if position.unrealized_pnl > 0 %}positive{% else %}negative{% endif %}">
+                                                ${{ "%.2f"|format(position.unrealized_pnl) }}
+                                                ({{ "%.2f"|format(position.unrealized_pnl_pct) }}%)
+                                            </td>
+                                            <td>{{ position.duration }}</td>
+                                            <td>{{ position.strategy }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="9" class="text-center">No open positions</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Trades -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card bg-dark">
+                    <div class="card-body">
+                        <h5 class="card-title">Recent Trades</h5>
+                        <div class="table-responsive">
+                            <table class="table table-dark table-borderless table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Pair</th>
+                                        <th>Type</th>
                                         <th>Direction</th>
                                         <th>Entry Price</th>
                                         <th>Exit Price</th>
-                                        <th>PnL</th>
-                                        <th>Leverage</th>
-                                        <th>Confidence</th>
+                                        <th>Size</th>
+                                        <th>P&L</th>
+                                        <th>Strategy</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for trade in trades[:10] %}
-                                    <tr>
-                                        <td>{{ trade.pair }}</td>
-                                        <td>
-                                            <span class="position-badge {% if trade.direction|lower == 'long' %}badge-long{% else %}badge-short{% endif %}">
+                                    {% if trades %}
+                                        {% for trade in trades %}
+                                        <tr>
+                                            <td>{{ trade.timestamp }}</td>
+                                            <td><strong>{{ trade.pair }}</strong></td>
+                                            <td>{{ trade.type }}</td>
+                                            <td>
+                                                <span class="position-badge 
+                                                {% if trade.direction == 'Long' %}badge-long{% else %}badge-short{% endif %}">
                                                 {{ trade.direction }}
-                                            </span>
-                                        </td>
-                                        <td>${{ "%.2f"|format(trade.entry_price) }}</td>
-                                        <td>${{ "%.2f"|format(trade.exit_price) }}</td>
-                                        <td class="{% if trade.pnl_percentage > 0 %}positive{% else %}negative{% endif %}">
-                                            {{ "%.2f"|format(trade.pnl_percentage) }}% (${{ "%.2f"|format(trade.pnl_amount) }})
-                                        </td>
-                                        <td>{{ "%.1f"|format(trade.leverage) }}x</td>
-                                        <td>
-                                            <div class="progress">
-                                                <div class="progress-bar bg-info" role="progressbar" style="width: {{ trade.confidence * 100 }}%"
-                                                    aria-valuenow="{{ trade.confidence * 100 }}" aria-valuemin="0" aria-valuemax="100"></div>
-                                            </div>
-                                            <span class="small">{{ "%.1f"|format(trade.confidence * 100) }}%</span>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Open Positions</h5>
-                    </div>
-                    <div class="card-body">
-                        {% if positions|length > 0 %}
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Pair</th>
-                                        <th>Direction</th>
-                                        <th>Entry</th>
-                                        <th>Current</th>
-                                        <th>PnL</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for position in positions %}
-                                    <tr>
-                                        <td>{{ position.pair }}</td>
-                                        <td>
-                                            <span class="position-badge {% if position.direction|lower == 'long' %}badge-long{% else %}badge-short{% endif %}">
-                                                {{ position.direction }}
-                                            </span>
-                                        </td>
-                                        <td>${{ "%.2f"|format(position.entry_price) }}</td>
-                                        <td>${{ "%.2f"|format(position.current_price) }}</td>
-                                        <td class="{% if position.unrealized_pnl > 0 %}positive{% else %}negative{% endif %}">
-                                            {{ "%.2f"|format(position.unrealized_pnl * 100) }}%
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% else %}
-                        <div class="alert alert-info mb-0">
-                            <i class="me-2">ℹ️</i> No open positions at the moment.
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Model Contribution</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="donut-chart-container">
-                            <canvas id="modelContributionChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row mb-4">
-            <div class="col-lg-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Risk Metrics</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3">
-                                <div class="card h-100 border-0">
-                                    <div class="card-body text-center">
-                                        <h6 class="text-muted">Sharpe Ratio</h6>
-                                        <h3>{{ "%.2f"|format(risk_metrics.sharpe_ratio) }}</h3>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card h-100 border-0">
-                                    <div class="card-body text-center">
-                                        <h6 class="text-muted">Profit Factor</h6>
-                                        <h3>{{ "%.2f"|format(risk_metrics.profit_factor) }}</h3>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card h-100 border-0">
-                                    <div class="card-body text-center">
-                                        <h6 class="text-muted">Win/Loss Ratio</h6>
-                                        <h3>{{ "%.2f"|format(risk_metrics.avg_win_loss_ratio) }}</h3>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card h-100 border-0">
-                                    <div class="card-body text-center">
-                                        <h6 class="text-muted">Max Drawdown</h6>
-                                        <h3>{{ "%.2f"|format(risk_metrics.max_drawdown * 100) }}%</h3>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Advanced Trading Metrics -->
-        <div class="row mb-4">
-            <div class="col-lg-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Advanced Trading Metrics</h5>
-                        <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#advancedMetricsCollapse" aria-expanded="false" aria-controls="advancedMetricsCollapse">
-                            Toggle Details
-                        </button>
-                    </div>
-                    <div class="collapse show" id="advancedMetricsCollapse">
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-3 mb-3">
-                                    <div class="card h-100 border-0 bg-dark bg-opacity-25">
-                                        <div class="card-body text-center">
-                                            <h6 class="text-muted">Return on Capital</h6>
-                                            <h3 class="{% if risk_metrics.return_on_capital > 0 %}positive{% else %}negative{% endif %}">
-                                                {{ "%.2f"|format(risk_metrics.return_on_capital) }}%
-                                            </h3>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <div class="card h-100 border-0 bg-dark bg-opacity-25">
-                                        <div class="card-body text-center">
-                                            <h6 class="text-muted">Avg Leverage</h6>
-                                            <h3>{{ "%.1f"|format(risk_metrics.avg_leverage_used) }}x</h3>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <div class="card h-100 border-0 bg-dark bg-opacity-25">
-                                        <div class="card-body text-center">
-                                            <h6 class="text-muted">Calmar Ratio</h6>
-                                            <h3>{{ "%.2f"|format(risk_metrics.calmar_ratio) }}</h3>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <div class="card h-100 border-0 bg-dark bg-opacity-25">
-                                        <div class="card-body text-center">
-                                            <h6 class="text-muted">Kelly Criterion</h6>
-                                            <h3>{{ "%.2f"|format(risk_metrics.kelly_criterion) }}</h3>
-                                            <small class="text-muted">Optimal position size</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-3 mb-3">
-                                    <div class="card h-100 border-0 bg-dark bg-opacity-25">
-                                        <div class="card-body text-center">
-                                            <h6 class="text-muted">Longest Win Streak</h6>
-                                            <h3 class="positive">{{ risk_metrics.consecutive_wins }}</h3>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <div class="card h-100 border-0 bg-dark bg-opacity-25">
-                                        <div class="card-body text-center">
-                                            <h6 class="text-muted">Longest Loss Streak</h6>
-                                            <h3 class="negative">{{ risk_metrics.consecutive_losses }}</h3>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <div class="card h-100 border-0 bg-dark bg-opacity-25">
-                                        <div class="card-body text-center">
-                                            <h6 class="text-muted">Largest Win</h6>
-                                            <h3 class="positive">{{ "%.2f"|format(risk_metrics.largest_win) }}%</h3>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <div class="card h-100 border-0 bg-dark bg-opacity-25">
-                                        <div class="card-body text-center">
-                                            <h6 class="text-muted">Largest Loss</h6>
-                                            <h3 class="negative">{{ "%.2f"|format(risk_metrics.largest_loss) }}%</h3>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-3 mb-3">
-                                    <div class="card h-100 border-0 bg-dark bg-opacity-25">
-                                        <div class="card-body text-center">
-                                            <h6 class="text-muted">Avg Trade Duration</h6>
-                                            <h3>{{ "%.1f"|format(risk_metrics.avg_trade_duration) }} hrs</h3>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <div class="card h-100 border-0 bg-dark bg-opacity-25">
-                                        <div class="card-body text-center">
-                                            <h6 class="text-muted">Avg Position Size</h6>
-                                            <h3>{{ "%.1f"|format(risk_metrics.avg_position_size) }}%</h3>
-                                            <small class="text-muted">of portfolio</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <div class="card h-100 border-0 bg-dark bg-opacity-25">
-                                        <div class="card-body text-center">
-                                            <h6 class="text-muted">Recovery Factor</h6>
-                                            <h3>{{ "%.2f"|format(risk_metrics.recovery_factor) }}</h3>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <div class="card h-100 border-0 bg-dark bg-opacity-25">
-                                        <div class="card-body text-center">
-                                            <h6 class="text-muted">Trade Expectancy</h6>
-                                            <h3 class="{% if risk_metrics.expectancy > 0 %}positive{% else %}negative{% endif %}">
-                                                ${{ "%.2f"|format(risk_metrics.expectancy) }}
-                                            </h3>
-                                            <small class="text-muted">per trade</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Strategy Performance Metrics -->
-        <div class="row mb-4">
-            <div class="col-lg-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Trading Strategy Performance</h5>
-                        <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#strategyMetricsCollapse" aria-expanded="false" aria-controls="strategyMetricsCollapse">
-                            Toggle Details
-                        </button>
-                    </div>
-                    <div class="collapse show" id="strategyMetricsCollapse">
-                        <div class="card-body">
-                            <!-- Category Summary -->
-                            <div class="row mb-4">
-                                <div class="col-12">
-                                    <h6 class="fw-bold mb-3">Strategy Categories</h6>
-                                    <div class="row">
-                                        {% for category_name, category in strategy_performance.categories.items() %}
-                                        <div class="col-md-6 mb-3">
-                                            <div class="card h-100 bg-dark bg-opacity-10">
-                                                <div class="card-body">
-                                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                                        <h5 class="m-0">{{ category_name }}</h5>
-                                                        <span class="badge bg-info">{{ "%.0f"|format(category.contribution * 100) }}% contribution</span>
-                                                    </div>
-                                                    <div class="row">
-                                                        <div class="col-6">
-                                                            <div class="mb-2">
-                                                                <span class="small text-muted">Win Rate:</span>
-                                                                <span class="fw-bold positive">{{ "%.1f"|format(category.win_rate * 100) }}%</span>
-                                                            </div>
-                                                            <div>
-                                                                <span class="small text-muted">Total PnL:</span>
-                                                                <span class="fw-bold positive">${{ "%.2f"|format(category.total_pnl) }}</span>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-6">
-                                                            <div class="mb-2">
-                                                                <span class="small text-muted">Trades:</span>
-                                                                <span class="fw-bold">{{ category.trades }}</span>
-                                                            </div>
-                                                            <div>
-                                                                <span class="small text-muted">Avg Confidence:</span>
-                                                                <span class="fw-bold">{{ "%.0f"|format(category.avg_confidence * 100) }}%</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                                                </span>
+                                            </td>
+                                            <td>${{ "%.4f"|format(trade.entry_price) }}</td>
+                                            <td>${{ "%.4f"|format(trade.exit_price or 0) }}</td>
+                                            <td>{{ "%.2f"|format(trade.size) }}</td>
+                                            <td class="{% if trade.exit_price and trade.exit_price > trade.entry_price %}positive{% elif trade.exit_price %}negative{% else %}text-muted{% endif %}">
+                                                {% if trade.exit_price %}
+                                                    ${{ "%.2f"|format((trade.exit_price - trade.entry_price) * trade.size) }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ trade.strategy }}</td>
+                                        </tr>
                                         {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Strategy Performance Table -->
-                            <div class="row">
-                                <div class="col-12">
-                                    <h6 class="fw-bold mb-3">Strategy Details</h6>
-                                    <div class="table-responsive">
-                                        <table class="table table-hover">
-                                            <thead>
-                                                <tr>
-                                                    <th>Strategy</th>
-                                                    <th>Category</th>
-                                                    <th>Trades</th>
-                                                    <th>Win Rate</th>
-                                                    <th>Total PnL</th>
-                                                    <th>Avg Duration</th>
-                                                    <th>Avg Leverage</th>
-                                                    <th>Avg Confidence</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% for strategy_name, strategy in strategy_performance.strategies.items() %}
-                                                <tr>
-                                                    <td class="fw-bold">{{ strategy_name }}</td>
-                                                    <td>
-                                                        <span class="badge {% if strategy.category == 'him_all_along' %}bg-info{% else %}bg-warning text-dark{% endif %}">
-                                                            {{ strategy.category }}
-                                                        </span>
-                                                    </td>
-                                                    <td>{{ strategy.trades }}</td>
-                                                    <td class="{% if strategy.win_rate >= 0.8 %}positive{% elif strategy.win_rate >= 0.5 %}text-warning{% else %}negative{% endif %}">
-                                                        {{ "%.1f"|format(strategy.win_rate * 100) }}%
-                                                    </td>
-                                                    <td class="{% if strategy.total_pnl > 0 %}positive{% else %}negative{% endif %}">
-                                                        ${{ "%.2f"|format(strategy.total_pnl) }}
-                                                    </td>
-                                                    <td>{{ "%.1f"|format(strategy.avg_trade_duration) }} hrs</td>
-                                                    <td>{{ "%.1f"|format(strategy.avg_leverage) }}x</td>
-                                                    <td>
-                                                        <div class="progress" style="height: 8px;">
-                                                            <div class="progress-bar bg-info" role="progressbar" style="width: {{ strategy.avg_confidence * 100 }}%"></div>
-                                                        </div>
-                                                        <span class="small">{{ "%.0f"|format(strategy.avg_confidence * 100) }}%</span>
-                                                    </td>
-                                                </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="9" class="text-center">No recent trades</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <footer class="py-3 my-4">
-            <p class="text-center text-muted">© 2025 Advanced ML Trading Bot</p>
+
+        <footer class="py-4 text-center text-muted">
+            <small>Advanced Trading Bot Dashboard &copy; 2025</small>
         </footer>
     </div>
 
-    <!-- JavaScript for Charts -->
     <script>
-        // Portfolio Performance Chart
+        // Portfolio Chart
         const portfolioCtx = document.getElementById('portfolioChart').getContext('2d');
         const portfolioData = {
             labels: [
-                {% for point in portfolio_history %}
-                    "{{ point.timestamp.split('T')[0] if point.timestamp and 'T' in point.timestamp else point.timestamp }}",
+                {% for entry in portfolio_history %}
+                    "{{ entry.timestamp.split('T')[0] if 'T' in entry.timestamp else entry.timestamp }}",
                 {% endfor %}
             ],
             datasets: [{
                 label: 'Portfolio Value',
                 data: [
-                    {% for point in portfolio_history %}
-                        {{ point.portfolio_value if point.portfolio_value is defined else 20000.0 }},
+                    {% for entry in portfolio_history %}
+                        {{ entry.portfolio_value }},
                     {% endfor %}
                 ],
                 borderColor: '#2a9df4',
-                backgroundColor: (context) => {
-                    const chart = context.chart;
-                    const {ctx, chartArea} = chart;
-                    if (!chartArea) {
-                        return null;
-                    }
-                    const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-                    gradient.addColorStop(0, 'rgba(42, 157, 244, 0)');
-                    gradient.addColorStop(1, 'rgba(42, 157, 244, 0.2)');
-                    return gradient;
-                },
-                borderWidth: 2,
-                tension: 0.4,
-                fill: true
+                backgroundColor: 'rgba(42, 157, 244, 0.1)',
+                fill: true,
+                tension: 0.4
             }]
         };
-
         new Chart(portfolioCtx, {
             type: 'line',
             data: portfolioData,
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            maxRotation: 0,
-                            autoSkip: true,
-                            maxTicksLimit: 8
-                        }
-                    },
-                    y: {
-                        beginAtZero: false,
-                        ticks: {
-                            callback: function(value) {
-                                return '$' + value.toLocaleString();
-                            }
-                        },
-                        title: {
-                            display: true,
-                            text: 'Portfolio Value ($)'
-                        }
-                    }
-                },
                 plugins: {
                     legend: {
                         display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return '$' + context.parsed.y.toLocaleString();
-                            }
-                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false
                     }
                 },
                 interaction: {
-                    intersect: false,
-                    mode: 'index'
-                }
+                    mode: 'index',
+                    intersect: false
+                },
+                responsive: true,
+                maintainAspectRatio: false
             }
         });
 
@@ -739,119 +376,49 @@
         const accuracyCtx = document.getElementById('accuracyChart').getContext('2d');
         const accuracyData = {
             labels: [
-                {% for pair, _ in accuracy_data.items() %}
+                {% for pair, accuracy in accuracy_data.items() %}
                     "{{ pair }}",
                 {% endfor %}
             ],
             datasets: [{
                 label: 'Model Accuracy',
                 data: [
-                    {% for _, accuracy in accuracy_data.items() %}
+                    {% for pair, accuracy in accuracy_data.items() %}
                         {{ accuracy * 100 }},
                     {% endfor %}
                 ],
                 backgroundColor: [
-                    'rgba(0, 200, 83, 0.7)',
+                    'rgba(66, 135, 245, 0.7)',
                     'rgba(42, 157, 244, 0.7)',
+                    'rgba(38, 198, 218, 0.7)',
+                    'rgba(0, 200, 83, 0.7)',
                     'rgba(156, 39, 176, 0.7)',
-                    'rgba(255, 112, 67, 0.7)',
-                    'rgba(41, 121, 255, 0.7)',
-                    'rgba(229, 57, 53, 0.7)'
+                    'rgba(229, 57, 53, 0.7)',
+                    'rgba(255, 152, 0, 0.7)',
+                    'rgba(121, 85, 72, 0.7)',
+                    'rgba(96, 125, 139, 0.7)',
+                    'rgba(0, 188, 212, 0.7)'
                 ],
                 borderWidth: 1
             }]
         };
-
         new Chart(accuracyCtx, {
             type: 'bar',
             data: accuracyData,
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: {
-                            callback: function(value) {
-                                return value + '%';
-                            }
-                        },
-                        title: {
-                            display: true,
-                            text: 'Accuracy (%)'
-                        }
-                    },
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Trading Pairs'
-                        }
-                    }
-                },
                 plugins: {
                     legend: {
                         display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.parsed.y.toFixed(2) + '%';
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        // Model Contribution Donut Chart
-        const contributionCtx = document.getElementById('modelContributionChart').getContext('2d');
-        const contributionData = {
-            labels: [
-                'TCN Neural Network',
-                'LSTM Model',
-                'Attention GRU',
-                'Transformer',
-                'Ensemble Voting'
-            ],
-            datasets: [{
-                label: 'Contribution to Predictions',
-                data: [30, 25, 20, 15, 10],  // Example data
-                backgroundColor: [
-                    'rgba(0, 200, 83, 0.8)',
-                    'rgba(42, 157, 244, 0.8)',
-                    'rgba(156, 39, 176, 0.8)',
-                    'rgba(255, 112, 67, 0.8)',
-                    'rgba(41, 121, 255, 0.8)'
-                ],
-                borderWidth: 1
-            }]
-        };
-
-        new Chart(contributionCtx, {
-            type: 'doughnut',
-            data: contributionData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.label + ': ' + context.parsed + '%';
-                            }
-                        }
                     }
                 },
-                cutout: '65%'
+                scales: {
+                    y: {
+                        min: 80,
+                        max: 100
+                    }
+                },
+                responsive: true,
+                maintainAspectRatio: false
             }
         });
     </script>
