@@ -1,8 +1,8 @@
 [
   {
-    "timestamp": "2025-04-15T17:26:20.500775",
+    "timestamp": "2025-04-15T17:27:28.717515",
     "total_value": 20000.0,
-    "available_capital": 17915.94439770833,
+    "available_capital": 17747.694770868085,
     "total_pnl": 0.0,
     "total_pnl_pct": 0.0,
     "unrealized_pnl": 0,
@@ -12,15 +12,15 @@
     "profitable_trades": 0
   },
   {
-    "timestamp": "2025-04-15T17:26:25.968500",
-    "total_value": 17915.94439770833,
-    "available_capital": 17915.94439770833,
-    "total_pnl": -2084.0556022916717,
-    "total_pnl_pct": -10.42027801145836,
+    "timestamp": "2025-04-15T17:27:34.167632",
+    "total_value": 17747.694770868085,
+    "available_capital": 15963.711468552412,
+    "total_pnl": -2252.3052291319145,
+    "total_pnl_pct": -11.261526145659573,
     "unrealized_pnl": 0.0,
     "unrealized_pnl_pct": 0.0,
     "win_rate": 0.0,
-    "total_trades": 1,
+    "total_trades": 0,
     "profitable_trades": 0
   }
 ]
