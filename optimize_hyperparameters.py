@@ -1399,7 +1399,7 @@ def main():
     # Parse command line arguments
     args = parse_arguments()
     
-    logger.info(f"Starting hyperparameter optimization for {args.pair} {args.model_type}")
+    logger.info(f"Starting hyperparameter optimization for {args.pair} {args.model}")
     logger.info(f"Optimization objective: {args.objective}")
     logger.info(f"Number of trials: {args.trials}")
     
@@ -1420,7 +1420,7 @@ def main():
         return 1
     
     # Determine if model requires sequence input
-    sequence_model = args.model_type in ['tcn', 'lstm', 'attention_gru', 'transformer']
+    sequence_model = args.model in ['tcn', 'lstm', 'attention_gru', 'transformer']
     
     # Create sequences for time series models
     if sequence_model:
@@ -1428,17 +1428,17 @@ def main():
         logger.info(f"Created sequences with shape: {X.shape}")
     
     # Get parameter space for the specified model type
-    param_space = get_parameter_space(args.model_type, config)
+    param_space = get_parameter_space(args.model, config)
     if not param_space:
-        logger.warning(f"Using default parameter space for {args.model_type}")
+        logger.warning(f"Using default parameter space for {args.model}")
         param_space = {}
     
     # Run optimization
-    best_params = optimize_model(args.model_type, X, y, param_space, args)
+    best_params = optimize_model(args.model, X, y, param_space, args)
     
     # Update configuration with best parameters
     if best_params:
-        update_config_with_best_params(config, args.model_type, best_params, args.pair)
+        update_config_with_best_params(config, args.model, best_params, args.pair)
     
     logger.info("Hyperparameter optimization completed")
     

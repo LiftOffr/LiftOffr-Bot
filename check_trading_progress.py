@@ -448,7 +448,7 @@ def print_trading_metrics(metrics: Dict):
     print("-" * 60)
 
 
-def print_strategy_performance(performance: Dict):
+def print_strategy_performance(performance: Optional[Dict]):
     """
     Print strategy performance.
     

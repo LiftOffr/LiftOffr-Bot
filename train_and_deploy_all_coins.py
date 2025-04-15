@@ -506,6 +506,10 @@ def integrate_with_trading_system(pairs: List[str], args) -> bool:
         logger.warning("Integration script not found, skipping")
         return False
     
+    if not pairs:
+        logger.error("No pairs to integrate")
+        return False
+        
     pairs_arg = ",".join(pairs)
     
     cmd = [
