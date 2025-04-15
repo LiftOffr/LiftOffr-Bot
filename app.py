@@ -62,43 +62,55 @@ def get_portfolio_data():
     portfolio_history = load_file(PORTFOLIO_HISTORY_FILE, [])
     
     # Calculate total unrealized PnL
-    total_position_value = 0
-    total_entry_value = 0
-    unrealized_pnl_usd = 0
+    total_unrealized_pnl = 0
+    starting_capital = 20000.0
     
     for position in positions:
-        position_size = position.get("position_size", 0.0)
+        # Get position data
+        size = position.get("size", 0.0)
         leverage = position.get("leverage", 1.0)
         entry_price = position.get("entry_price", 0.0)
         current_price = position.get("current_price", entry_price)
         direction = position.get("direction", "").lower()
         
-        if direction == "long":
-            position_pnl = (current_price - entry_price) / entry_price * leverage * position_size
-        else:  # short
-            position_pnl = (entry_price - current_price) / entry_price * leverage * position_size
-            
-        unrealized_pnl_usd += position_pnl
+        # Calculate margin (position value / leverage)
+        if "margin" in position:
+            margin = position.get("margin", 0.0)
+        else:
+            # Calculate margin from position size and entry price
+            notional_value = size * entry_price
+            margin = notional_value / leverage
         
+        # Calculate price change percentage
         if direction == "long":
-            entry_value = position_size
-            current_value = position_size * (current_price / entry_price)
+            price_change_pct = (current_price / entry_price) - 1
         else:  # short
-            entry_value = position_size
-            current_value = position_size * (entry_price / current_price)
+            price_change_pct = (entry_price / current_price) - 1
             
-        total_entry_value += entry_value
-        total_position_value += current_value
+        # Calculate unrealized PnL
+        pnl_pct = price_change_pct * leverage
+        position_pnl = margin * pnl_pct
+        
+        # Update position with calculated values if not present
+        if "unrealized_pnl" not in position:
+            position["unrealized_pnl"] = position_pnl
+            position["unrealized_pnl_pct"] = pnl_pct * 100
+        
+        # Add to total unrealized PnL
+        total_unrealized_pnl += position_pnl
     
-    # Calculate unrealized PnL percentage
-    unrealized_pnl_pct = 0
-    if total_entry_value > 0:
-        unrealized_pnl_pct = (total_position_value / total_entry_value - 1) * 100
+    # Calculate portfolio equity (balance + unrealized PnL)
+    current_balance = portfolio.get("balance", starting_capital)
+    current_equity = current_balance + total_unrealized_pnl
+    
+    # Calculate unrealized PnL percentage of starting capital
+    unrealized_pnl_pct = (total_unrealized_pnl / starting_capital) * 100
     
     # Add to portfolio
-    portfolio["unrealized_pnl_usd"] = unrealized_pnl_usd
+    portfolio["unrealized_pnl_usd"] = total_unrealized_pnl
     portfolio["unrealized_pnl_pct"] = unrealized_pnl_pct
-    portfolio["total_position_value"] = total_position_value
+    portfolio["equity"] = current_equity
+    portfolio["total_return_percentage"] = ((current_equity / starting_capital) - 1) * 100
     
     return portfolio, positions, portfolio_history
 
@@ -334,16 +346,33 @@ def format_positions(positions):
     for position in positions:
         # Calculate unrealized PnL if not set
         if "unrealized_pnl" not in position:
+            # Get position data
+            size = position.get("size", 0.0)
+            leverage = position.get("leverage", 1.0)
             entry_price = position.get("entry_price", 0.0)
             current_price = position.get("current_price", entry_price)
-            leverage = position.get("leverage", 1.0)
+            direction = position.get("direction", "").lower()
             
-            if position.get("direction", "").lower() == "long":
-                price_change_pct = (current_price / entry_price) - 1 if entry_price > 0 else 0
+            # Calculate margin (position value / leverage)
+            if "margin" in position:
+                margin = position.get("margin", 0.0)
             else:
-                price_change_pct = (entry_price / current_price) - 1 if current_price > 0 else 0
+                # Calculate margin from position size and entry price
+                notional_value = size * entry_price
+                margin = notional_value / leverage
             
-            position["unrealized_pnl"] = price_change_pct * leverage
+            # Calculate price change percentage
+            if direction == "long":
+                price_change_pct = (current_price / entry_price) - 1
+            else:  # short
+                price_change_pct = (entry_price / current_price) - 1
+                
+            # Calculate unrealized PnL
+            pnl_pct = price_change_pct * leverage
+            position_pnl = margin * pnl_pct
+            
+            position["unrealized_pnl"] = pnl_pct  # Store as percentage for display
+            position["unrealized_pnl_amount"] = position_pnl  # Store amount in USD
         
         # Calculate duration if not set
         if "duration" not in position:
