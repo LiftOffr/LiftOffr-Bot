@@ -7,7 +7,7 @@
     },
     "trading_bot": {
       "name": "trading_bot",
-      "command": "python start_sandbox_trader_all_pairs.py",
+      "command": "python run_trading_with_realtime_data.py",
       "terminal": true
     }
   }

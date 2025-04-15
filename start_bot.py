@@ -20,10 +20,13 @@ def main():
         ]
     )
     
-    # Create arguments class
+    # Create arguments class with all required parameters
     class Args:
         pairs = "BTC/USD,ETH/USD,SOL/USD,ADA/USD,DOT/USD,LINK/USD,AVAX/USD,MATIC/USD,UNI/USD,ATOM/USD"
         sandbox = True
+        strategies = "Adaptive,ARIMA"
+        interval = 5
+        verbose = False
     
     # Run trading bot
     run_trading_bot(Args())
