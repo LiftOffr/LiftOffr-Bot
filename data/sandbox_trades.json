@@ -1,78 +1,38 @@
 [
   {
     "type": "OPEN",
-    "pair": "ATOM/USD",
-    "direction": "SHORT",
-    "price": 4.0728,
-    "size": 3225.5789134609745,
-    "leverage": 14,
-    "confidence": 0.6328070226885848,
-    "timestamp": "2025-04-15T17:19:40.181860"
-  },
-  {
-    "type": "CLOSE",
-    "pair": "BTC/USD",
-    "direction": "LONG",
-    "entry_price": 62055.93564889696,
-    "exit_price": 84923.0,
-    "size": 0.5,
-    "leverage": 6,
-    "pnl": 1.105473510889341,
-    "pnl_pct": 221.0947021778682,
-    "timestamp": "2025-04-15T17:19:40.188380"
-  },
-  {
-    "type": "CLOSE",
     "pair": "ADA/USD",
     "direction": "LONG",
-    "entry_price": 0.449576087397704,
-    "exit_price": 0.621018,
-    "size": 0.5,
-    "leverage": 17,
-    "pnl": 3.2414007283051904,
-    "pnl_pct": 648.2801456610381,
-    "timestamp": "2025-04-15T17:19:40.188621"
-  },
-  {
-    "type": "OPEN",
-    "pair": "AVAX/USD",
-    "direction": "LONG",
-    "price": 19.45,
-    "size": 1864.0041648906306,
-    "leverage": 19,
-    "confidence": 0.9098759313042256,
-    "timestamp": "2025-04-15T17:19:42.485809"
-  },
-  {
-    "type": "OPEN",
-    "pair": "BTC/USD",
-    "direction": "LONG",
-    "price": 84923.0,
-    "size": 0.39981751493746315,
-    "leverage": 19,
-    "confidence": 0.9374174317896304,
-    "timestamp": "2025-04-15T17:19:44.558271"
+    "price": 0.618113,
+    "size": 3371.6417585322956,
+    "leverage": 15,
+    "confidence": 0.694685200763891,
+    "allocated_capital": 2084.055602291673,
+    "timestamp": "2025-04-15T17:26:20.500159"
   },
   {
     "type": "OPEN",
     "pair": "UNI/USD",
-    "direction": "LONG",
-    "price": 5.307,
-    "size": 4467.729528838012,
-    "leverage": 17,
-    "confidence": 0.8072992450875072,
-    "timestamp": "2025-04-15T17:19:46.981605"
+    "direction": "SHORT",
+    "price": 5.296,
+    "size": 312.0000661441495,
+    "leverage": 14,
+    "confidence": 0.6148535679056071,
+    "allocated_capital": 1652.3523502994158,
+    "timestamp": "2025-04-15T17:26:25.967419"
   },
   {
     "type": "CLOSE",
-    "pair": "ATOM/USD",
+    "pair": "UNI/USD",
     "direction": "SHORT",
-    "entry_price": 4.0728,
-    "exit_price": 4.0728,
-    "size": 3225.5789134609745,
+    "entry_price": 5.296,
+    "exit_price": 5.296,
+    "size": 312.0000661441495,
     "leverage": 14,
     "pnl": 0.0,
     "pnl_pct": 0.0,
-    "timestamp": "2025-04-15T17:19:46.982618"
+    "allocated_capital": 1652.3523502994158,
+    "returned_capital": 1652.3523502994158,
+    "timestamp": "2025-04-15T17:26:25.967802"
   }
 ]
