@@ -1,11 +1,11 @@
 {
   "balance": 20000.0,
   "equity": 20000.0,
-  "unrealized_pnl_usd": 0.0,
+  "unrealized_pnl_usd": 0,
   "unrealized_pnl_pct": 0.0,
   "total_return_percentage": 0.0,
   "trades": [],
-  "last_updated": "2025-04-15T15:00:00",
+  "last_updated": "2025-04-15T14:56:51.326994",
   "total_trades": 0,
   "winning_trades": 0,
   "total_value": 20000.0,

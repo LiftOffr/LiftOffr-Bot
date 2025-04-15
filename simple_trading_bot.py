@@ -54,8 +54,7 @@ def save_json(filepath, data):
 def update_prices():
     """Update positions with current prices"""
     positions = load_json(POSITIONS_FILE, [])
-    if not positions:
-        return
+    portfolio = load_json(PORTFOLIO_FILE, {"balance": 20000.0, "equity": 20000.0})
     
     # Get current time
     now = datetime.now()
@@ -122,7 +121,6 @@ def update_prices():
     save_json(POSITIONS_FILE, positions)
     
     # Update portfolio
-    portfolio = load_json(PORTFOLIO_FILE, {"balance": 20000.0, "equity": 20000.0})
     portfolio["unrealized_pnl_usd"] = total_pnl
     portfolio["unrealized_pnl_pct"] = (total_pnl / 20000.0) * 100
     portfolio["total_value"] = portfolio.get("balance", 20000.0) + total_pnl

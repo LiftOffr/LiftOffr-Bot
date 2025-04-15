@@ -6,5 +6,17 @@
   {
     "timestamp": "2025-04-15T15:00:00",
     "portfolio_value": 20000.0
+  },
+  {
+    "timestamp": "2025-04-15T14:56:41.325140",
+    "portfolio_value": 20000.0
+  },
+  {
+    "timestamp": "2025-04-15T14:56:46.326194",
+    "portfolio_value": 20000.0
+  },
+  {
+    "timestamp": "2025-04-15T14:56:51.327297",
+    "portfolio_value": 20000.0
   }
 ]

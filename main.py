@@ -163,7 +163,10 @@ def index():
         logger.error(f"Error rendering dashboard: {str(e)}")
         return f"<h1>Error loading dashboard</h1><p>{str(e)}</p>"
 
-if __name__ == "__main__":
+import sys
+
+# Only start the server if this file is run directly, not when imported
+if __name__ == "__main__" and not hasattr(sys, '_called_from_test'):
     # Make sure to bind to 0.0.0.0 so it's accessible externally
     print("Starting Flask application on port 5000...")
     app.run(host="0.0.0.0", port=5000, debug=True)
