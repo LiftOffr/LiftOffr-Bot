@@ -1,1 +1,26 @@
-[]
+[
+  {
+    "pair": "BTC/USD",
+    "direction": "LONG",
+    "entry_price": 62055.93564889696,
+    "current_price": 62203.481332193085,
+    "size": 0.5,
+    "leverage": 6,
+    "entry_time": "2025-04-15T17:01:23.133440",
+    "last_update_time": "2025-04-15T17:02:49.745800",
+    "unrealized_pnl": 0.007132872065498416,
+    "unrealized_pnl_pct": 1.4265744130996831
+  },
+  {
+    "pair": "ADA/USD",
+    "direction": "LONG",
+    "entry_price": 0.449576087397704,
+    "current_price": 0.449576087397704,
+    "size": 0.5,
+    "leverage": 17,
+    "entry_time": "2025-04-15T17:02:49.745840",
+    "last_update_time": "2025-04-15T17:02:49.745844",
+    "unrealized_pnl": 0.0,
+    "unrealized_pnl_pct": 0.0
+  }
+]

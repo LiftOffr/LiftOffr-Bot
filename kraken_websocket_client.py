@@ -12,15 +12,20 @@ import logging
 import threading
 from typing import Dict, List, Callable, Any, Optional
 
-# Use standard websockets library
-import websockets
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
 )
 logger = logging.getLogger("kraken_websocket")
+
+# Try to import websockets library, but provide fallback if not available
+try:
+    import websockets
+    WEBSOCKETS_AVAILABLE = True
+except ImportError:
+    WEBSOCKETS_AVAILABLE = False
+    logger.warning("websockets library not available - will use REST API fallback")
 
 # WebSocket API endpoint
 WEBSOCKET_URI = "wss://ws.kraken.com"
@@ -53,6 +58,11 @@ class KrakenWebSocketClient:
         Returns:
             True if connected successfully, False otherwise
         """
+        # Check if websockets is available
+        if not WEBSOCKETS_AVAILABLE:
+            logger.warning("WebSocket connection not possible - websockets library not available")
+            return False
+            
         try:
             self.ws = await websockets.connect(WEBSOCKET_URI)
             self.running = True
@@ -139,9 +149,13 @@ class KrakenWebSocketClient:
                 try:
                     message = await self.ws.recv()
                     await self.process_message(message)
-                except websockets.exceptions.ConnectionClosed:
-                    logger.warning("WebSocket connection closed")
-                    break
+                except Exception as e:
+                    if WEBSOCKETS_AVAILABLE and "ConnectionClosed" in str(e.__class__):
+                        logger.warning("WebSocket connection closed")
+                        break
+                    else:
+                        logger.error(f"WebSocket receive error: {e}")
+                        break
         except Exception as e:
             logger.error(f"WebSocket listen error: {e}")
         

@@ -2,7 +2,7 @@
   "workflows": [
     {
       "name": "trading_bot",
-      "entrypoint": "./run_realtime_bot.sh"
+      "entrypoint": "python -B main_override.py"
     }
   ]
 }
