@@ -42,7 +42,7 @@ def parse_arguments():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(description='Run enhanced Kraken trading bot')
     parser.add_argument('--sandbox', action='store_true', help='Run in sandbox mode')
-    parser.add_argument('--pairs', type=str, default='SOL/USD,BTC/USD,ETH/USD,ADA/USD,DOT/USD,LINK/USD',
+    parser.add_argument('--pairs', type=str, default='SOL/USD,BTC/USD,ETH/USD,ADA/USD,DOT/USD,LINK/USD,AVAX/USD,MATIC/USD,UNI/USD,ATOM/USD',
                         help='Comma-separated list of trading pairs')
     parser.add_argument('--strategies', type=str, default='Adaptive,ARIMA',
                         help='Comma-separated list of strategies to use')
@@ -229,7 +229,11 @@ def run_trading_bot(args: argparse.Namespace):
         "ETH/USD": 3500.0,
         "ADA/USD": 0.45,
         "DOT/USD": 7.0,
-        "LINK/USD": 18.0
+        "LINK/USD": 18.0,
+        "AVAX/USD": 35.0,
+        "MATIC/USD": 0.70,
+        "UNI/USD": 8.0,
+        "ATOM/USD": 6.5
     }
     
     # Initialize prices for any missing pairs
