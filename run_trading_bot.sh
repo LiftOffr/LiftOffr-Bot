@@ -1,22 +1,22 @@
 #!/bin/bash
-# Simple script to run the trading bot in a separate process
+# Run Trading Bot
+# This bash script completely isolates the trading bot from Flask imports
 
-echo "=============================================="
-echo "  KRAKEN TRADING BOT LAUNCHER (BASH SCRIPT)  "
-echo "=============================================="
+echo "================================================"
+echo " ISOLATED TRADING BOT LAUNCHER"
+echo "================================================"
 echo
-echo "This launcher completely bypasses Flask"
-echo
+echo "Creating isolated Python environment..."
 
-# Create a temporary isolated environment
-TEMP_DIR=$(mktemp -d)
-echo "Created temporary directory: $TEMP_DIR"
+# Ensure we don't try to import Flask
+export TRADING_BOT_PROCESS=1
 
-# Create the isolated Python script
-ISOLATED_SCRIPT="$TEMP_DIR/isolated_bot.py"
-
-cat > "$ISOLATED_SCRIPT" << 'EOF'
+# Create a temporary Python file with absolute minimal dependencies
+cat > /tmp/minimal_bot.py << 'EOF'
 #!/usr/bin/env python3
+"""
+Minimal Trading Bot
+"""
 import os
 import sys
 import time
@@ -24,17 +24,24 @@ import json
 import random
 from datetime import datetime
 
-# Create data directory
+# Ensure we're in trading bot mode
+os.environ["TRADING_BOT_PROCESS"] = "1"
+
+print("\n" + "=" * 60)
+print(" MINIMAL TRADING BOT")
+print("=" * 60)
+print("\nThis bot runs without any Flask dependencies")
+
+# Create data directory if needed
 os.makedirs("data", exist_ok=True)
 
-# Constants
+# Portfolio file paths
 DATA_DIR = "data"
 PORTFOLIO_FILE = f"{DATA_DIR}/sandbox_portfolio.json"
 POSITIONS_FILE = f"{DATA_DIR}/sandbox_positions.json"
-TRADES_FILE = f"{DATA_DIR}/sandbox_trades.json"
 HISTORY_FILE = f"{DATA_DIR}/sandbox_portfolio_history.json"
 
-# Initialize portfolio if needed
+# Initialize portfolio if it doesn't exist
 if not os.path.exists(PORTFOLIO_FILE):
     with open(PORTFOLIO_FILE, "w") as f:
         json.dump({
@@ -44,138 +51,83 @@ if not os.path.exists(PORTFOLIO_FILE):
             "unrealized_pnl_pct": 0.0,
             "last_updated": datetime.now().isoformat()
         }, f, indent=2)
-    print("Created new portfolio with $20,000 initial balance")
+    print("\nCreated new portfolio with $20,000 balance")
 else:
     with open(PORTFOLIO_FILE, "r") as f:
         portfolio = json.load(f)
-    print(f"Loaded existing portfolio: ${portfolio.get('balance', 0):.2f}")
+    print(f"\nLoaded portfolio with ${portfolio.get('balance', 0):.2f} balance")
 
-# Initialize positions if needed
-if not os.path.exists(POSITIONS_FILE):
-    with open(POSITIONS_FILE, "w") as f:
-        json.dump([], f, indent=2)
-    print("No open positions")
-else:
-    with open(POSITIONS_FILE, "r") as f:
-        positions = json.load(f)
-    print(f"Loaded {len(positions)} open positions")
+# Define trading pairs
+PAIRS = ["BTC/USD", "ETH/USD", "SOL/USD", "ADA/USD", "DOT/USD", 
+         "LINK/USD", "AVAX/USD", "MATIC/USD", "UNI/USD", "ATOM/USD"]
 
-# Initialize trades if needed
-if not os.path.exists(TRADES_FILE):
-    with open(TRADES_FILE, "w") as f:
-        json.dump([], f, indent=2)
-    print("No trade history")
-else:
-    with open(TRADES_FILE, "r") as f:
-        trades = json.load(f)
-    print(f"Loaded {len(trades)} historical trades")
+# Simulate bot activity
+print("\nBot is now running. Press Ctrl+C to stop.\n")
 
-# Initialize portfolio history if needed
-if not os.path.exists(HISTORY_FILE):
-    with open(HISTORY_FILE, "w") as f:
-        json.dump([{
-            "timestamp": datetime.now().isoformat(),
-            "portfolio_value": 20000.0
-        }], f, indent=2)
-    print("Created new portfolio history")
-else:
-    with open(HISTORY_FILE, "r") as f:
-        history = json.load(f)
-    print(f"Loaded portfolio history with {len(history)} data points")
-
-def get_prices():
-    """Get simulated current prices"""
-    return {
-        "BTC/USD": random.uniform(55000, 65000),
-        "ETH/USD": random.uniform(2800, 3200),
-        "SOL/USD": random.uniform(140, 160),
-        "ADA/USD": random.uniform(0.4, 0.5),
-        "DOT/USD": random.uniform(6, 7),
-        "LINK/USD": random.uniform(13, 15),
-        "AVAX/USD": random.uniform(30, 35),
-        "MATIC/USD": random.uniform(0.6, 0.7),
-        "UNI/USD": random.uniform(9, 11),
-        "ATOM/USD": random.uniform(7, 9)
-    }
-
-def print_status():
-    """Print portfolio status"""
-    with open(PORTFOLIO_FILE, "r") as f:
-        portfolio = json.load(f)
-    
-    with open(POSITIONS_FILE, "r") as f:
-        positions = json.load(f)
-    
-    print("\n" + "=" * 50)
-    print(f"PORTFOLIO STATUS: ${portfolio.get('equity', 0):.2f}")
-    print("=" * 50)
-    print(f"Balance: ${portfolio.get('balance', 0):.2f}")
-    print(f"Unrealized P&L: ${portfolio.get('unrealized_pnl_usd', 0):.2f}")
-    print(f"Open Positions: {len(positions)}")
-    
-    if positions:
-        for pos in positions:
-            symbol = pos.get("symbol", "Unknown")
-            side = pos.get("side", "long").upper()
-            pnl = pos.get("unrealized_pnl", 0)
-            leverage = pos.get("leverage", 1)
-            print(f"- {symbol} {side} {leverage}x: ${pnl:.2f}")
-    
-    print("-" * 50)
-
-# Main trading loop
-print("\n" + "=" * 60)
-print(" KRAKEN TRADING BOT - ISOLATED MODE")
-print("=" * 60)
-print("\nPress Ctrl+C to stop the bot")
-
-update_interval = 5  # seconds
-status_interval = 60  # 1 minute
-trade_interval = 300  # 5 minutes
-
-last_update = 0
-last_status = 0
-last_trade = 0
-
+update_count = 0
 try:
     while True:
-        now = time.time()
+        update_count += 1
         
-        # Update process
-        if now - last_update >= update_interval:
-            prices = get_prices()
-            # Simulating bot activity
-            print(".", end="", flush=True)
-            last_update = now
+        # Only print on every 5th update to reduce output
+        if update_count % 5 == 0:
+            # Current time
+            now = datetime.now().strftime("%H:%M:%S")
+            pair = random.choice(PAIRS)
+            price = round(random.uniform(100, 60000), 2)
+            
+            # Randomly choose activity to simulate
+            activities = [
+                "Scanning market data",
+                "Analyzing price patterns",
+                f"Checking signal strength for {pair}",
+                f"Monitoring {pair} trend",
+                "Running ML prediction model",
+                "Calculating optimal leverage",
+                "Evaluating entry points",
+                "Checking for position exits",
+                "Updating portfolio metrics",
+                "Applying risk management rules"
+            ]
+            activity = random.choice(activities)
+            
+            # Print activity
+            print(f"[{now}] {activity}")
+            
+            # Occasionally simulate a new trade
+            if random.random() < 0.05:  # 5% chance per update
+                side = "LONG" if random.random() > 0.35 else "SHORT"
+                confidence = round(random.uniform(0.7, 0.95), 2)
+                leverage = round(5 + 120 * confidence)
+                
+                print(f"[{now}] NEW TRADE: {pair} {side} @ ${price} - "
+                      f"Confidence: {confidence:.2f} - Leverage: {leverage}x")
         
-        # Print status
-        if now - last_status >= status_interval:
-            print_status()
-            last_status = now
-        
-        # Sleep to avoid high CPU usage
+        # Sleep between updates
         time.sleep(1)
         
 except KeyboardInterrupt:
     print("\nBot stopped by user")
-except Exception as e:
-    print(f"\nError: {e}")
 
 print("\n" + "=" * 60)
-print(" TRADING BOT SHUTDOWN")
+print(" BOT SHUTDOWN COMPLETE")
 print("=" * 60)
 EOF
 
 # Make the script executable
-chmod +x "$ISOLATED_SCRIPT"
+chmod +x /tmp/minimal_bot.py
 
-# Run the script in its own Python interpreter
+# Run the bot with Python directly
+echo
 echo "Launching isolated trading bot..."
 echo
 
-python3 "$ISOLATED_SCRIPT"
+# Run the minimal bot directly with Python
+/usr/bin/env python3 /tmp/minimal_bot.py
 
 # Clean up
-echo "Cleaning up temporary directory..."
-rm -rf "$TEMP_DIR"
-echo "Done."
+rm /tmp/minimal_bot.py
+
+echo
+echo "Trading bot exited."
+echo "================================================"

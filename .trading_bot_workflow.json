@@ -2,7 +2,7 @@
   "workflows": [
     {
       "name": "trading_bot",
-      "entrypoint": "TRADING_BOT_PROCESS=1 python -B run_standalone.py"
+      "entrypoint": "TRADING_BOT_PROCESS=1 python -u standalone_runner.py"
     }
   ]
 }

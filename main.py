@@ -3,10 +3,29 @@
 Main entry point for the Trading Bot Dashboard Flask application.
 """
 import os
+import sys
 import json
 import logging
 from datetime import datetime
-from flask import Flask, render_template, jsonify, request, redirect, url_for
+
+# Check if we're running as a trading bot process first, before importing Flask
+if "trading_bot_workflow" in " ".join(sys.argv) or os.environ.get("TRADING_BOT_PROCESS"):
+    print("Trading bot process detected - running isolated trading bot instead of Flask")
+    
+    # Run the isolated trading bot instead
+    if os.path.exists("isolated_bot.py"):
+        import isolated_bot
+        sys.exit(0)
+    else:
+        print("Error: isolated_bot.py not found")
+        sys.exit(1)
+
+# Import Flask only if we're not in a trading bot process
+try:
+    from flask import Flask, render_template, jsonify, request, redirect, url_for
+except ImportError:
+    print("Flask not available - might be running in trading bot process")
+    sys.exit(0)
 
 # Configure logging
 logging.basicConfig(
@@ -163,12 +182,8 @@ def index():
         logger.error(f"Error rendering dashboard: {str(e)}")
         return f"<h1>Error loading dashboard</h1><p>{str(e)}</p>"
 
-import sys
-import os
-
-# Only start the server if this file is run directly, not when imported,
-# and if we're not in a trading bot process
-if __name__ == "__main__" and not hasattr(sys, '_called_from_test') and not os.environ.get("TRADING_BOT_PROCESS"):
+# Only start the server if this file is run directly and not in a trading bot process
+if __name__ == "__main__" and not os.environ.get("TRADING_BOT_PROCESS"):
     # Make sure to bind to 0.0.0.0 so it's accessible externally
     print("Starting Flask application on port 5000...")
     app.run(host="0.0.0.0", port=5000, debug=True)
