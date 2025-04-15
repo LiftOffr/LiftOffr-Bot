@@ -658,14 +658,14 @@
         const portfolioData = {
             labels: [
                 {% for point in portfolio_history %}
-                    "{{ point.timestamp.split('T')[0] }}",
+                    "{{ point.timestamp.split('T')[0] if point.timestamp and 'T' in point.timestamp else point.timestamp }}",
                 {% endfor %}
             ],
             datasets: [{
                 label: 'Portfolio Value',
                 data: [
                     {% for point in portfolio_history %}
-                        {{ point.portfolio_value }},
+                        {{ point.portfolio_value if point.portfolio_value is defined else 20000.0 }},
                     {% endfor %}
                 ],
                 borderColor: '#2a9df4',
