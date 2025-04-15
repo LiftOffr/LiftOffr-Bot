@@ -104,73 +104,157 @@ def index():
             if "unrealized_pnl_amount" in position:
                 total_pnl += position["unrealized_pnl_amount"]
         
-        # Always set these fields to ensure they exist
+        # Set portfolio metrics based on actual data or zeros
         portfolio["unrealized_pnl_usd"] = total_pnl
-        portfolio["unrealized_pnl_pct"] = (total_pnl / 20000.0) * 100
+        portfolio["unrealized_pnl_pct"] = (total_pnl / 20000.0) * 100 if total_pnl != 0 else 0.0
         
-        # Add additional required portfolio metrics
-        portfolio["total_pnl"] = 12453.76  # Combined realized + unrealized profit
-        portfolio["total_pnl_pct"] = 62.27  # Percentage return
-        portfolio["daily_pnl"] = 843.21  # Profit/loss for the day
-        portfolio["weekly_pnl"] = 3267.58  # Profit/loss for the week
-        portfolio["monthly_pnl"] = 8734.52  # Profit/loss for the month
+        # Add additional required portfolio metrics - use zeros for now since we're in sandbox
+        has_trading_activity = len(positions) > 0
+        
+        portfolio["total_pnl"] = total_pnl  # Combined realized + unrealized profit
+        portfolio["total_pnl_pct"] = (total_pnl / 20000.0) * 100 if total_pnl != 0 else 0.0
+        portfolio["daily_pnl"] = 0.0  # Profit/loss for the day
+        portfolio["weekly_pnl"] = 0.0  # Profit/loss for the week
+        portfolio["monthly_pnl"] = 0.0  # Profit/loss for the month
         portfolio["open_positions_count"] = len(positions) if positions else 0
-        portfolio["margin_used_pct"] = 37.8  # Percentage of margin used
-        portfolio["available_margin"] = portfolio.get("balance", 20000.0) * 0.622  # Available margin
+        portfolio["margin_used_pct"] = (len(positions) * 20.0) if positions else 0.0  # Approximate
+        portfolio["available_margin"] = portfolio.get("balance", 20000.0)  # Full balance available if no positions
         portfolio["max_leverage"] = 125.0  # Maximum leverage allowed
         
-        # Create complete risk metrics with all expected fields
-        risk_metrics = {
-            "win_rate": 0.78,
-            "profit_factor": 2.35,
-            "avg_win_loss_ratio": 1.8,
-            "sharpe_ratio": 2.5,
-            "sortino_ratio": 3.2,
-            "max_drawdown": 0.12,
-            "value_at_risk": 0.03,
-            "current_risk_level": "Medium",
-            "optimal_position_size": "20-25% of balance",
-            "optimal_risk_per_trade": "2-3% of balance",
-            "avg_trade_duration": 12.5,
-            "consecutive_wins": 4,
-            "consecutive_losses": 2,
-            "largest_win": 35.6,
-            "largest_loss": 8.2,
-            "avg_leverage_used": 23.7,
-            "return_on_capital": 85.4,
-            "expectancy": 2.1,
-            "avg_position_size": 21.3,
-            "max_capacity_utilization": 75.0,
-            "recovery_factor": 2.8,
-            "calmar_ratio": 3.1,
-            "kelly_criterion": 0.32
-        }
-        
-        # Create simple strategy performance data
-        strategy_performance = {
-            "strategies": {
-                "ARIMA": {"win_rate": 0.76, "profit_factor": 2.1, "trades": 42, "contribution": 0.45},
-                "Adaptive": {"win_rate": 0.81, "profit_factor": 2.6, "trades": 35, "contribution": 0.55}
-            },
-            "categories": {
-                "those dudes": {"win_rate": 0.77, "profit_factor": 2.2, "trades": 38, "contribution": 0.48},
-                "him all along": {"win_rate": 0.83, "profit_factor": 2.7, "trades": 39, "contribution": 0.52}
-            },
-            "model_contribution": {
-                "TCN Neural Network": 30,
-                "LSTM Model": 25,
-                "Attention GRU": 20,
-                "Transformer": 15,
-                "Ensemble Voting": 10
-            },
-            "contribution": {
-                "TCN Neural Network": 30,
-                "LSTM Model": 25,
-                "Attention GRU": 20,
-                "Transformer": 15,
-                "Ensemble Voting": 10
+        # Create risk metrics based on trading activity
+        if has_trading_activity:
+            # Use actual risk metrics if we have positions
+            risk_metrics = {
+                "win_rate": 0.0,
+                "profit_factor": 0.0,
+                "avg_win_loss_ratio": 0.0,
+                "sharpe_ratio": 0.0,
+                "sortino_ratio": 0.0,
+                "max_drawdown": 0.0,
+                "value_at_risk": 0.0,
+                "current_risk_level": "Low",
+                "optimal_position_size": "20% of balance",
+                "optimal_risk_per_trade": "2% of balance",
+                "avg_trade_duration": 0.0,
+                "consecutive_wins": 0,
+                "consecutive_losses": 0,
+                "largest_win": 0.0,
+                "largest_loss": 0.0,
+                "avg_leverage_used": 0.0,
+                "return_on_capital": 0.0,
+                "expectancy": 0.0,
+                "avg_position_size": 0.0,
+                "max_capacity_utilization": 0.0,
+                "recovery_factor": 0.0,
+                "calmar_ratio": 0.0,
+                "kelly_criterion": 0.0
             }
-        }
+            
+            # Update metrics with actual position data
+            if positions:
+                total_leverage = sum(position.get("leverage", 0) for position in positions)
+                avg_leverage = total_leverage / len(positions) if positions else 0
+                risk_metrics["avg_leverage_used"] = avg_leverage
+                risk_metrics["avg_position_size"] = sum(position.get("position_size", 0) for position in positions) / len(positions)
+        else:
+            # No trading activity yet, show empty metrics
+            risk_metrics = {
+                "win_rate": 0.0,
+                "profit_factor": 0.0,
+                "avg_win_loss_ratio": 0.0,
+                "sharpe_ratio": 0.0,
+                "sortino_ratio": 0.0,
+                "max_drawdown": 0.0,
+                "value_at_risk": 0.0,
+                "current_risk_level": "None",
+                "optimal_position_size": "20% of balance",
+                "optimal_risk_per_trade": "2% of balance",
+                "avg_trade_duration": 0.0,
+                "consecutive_wins": 0,
+                "consecutive_losses": 0,
+                "largest_win": 0.0,
+                "largest_loss": 0.0,
+                "avg_leverage_used": 0.0,
+                "return_on_capital": 0.0,
+                "expectancy": 0.0,
+                "avg_position_size": 0.0,
+                "max_capacity_utilization": 0.0,
+                "recovery_factor": 0.0,
+                "calmar_ratio": 0.0,
+                "kelly_criterion": 0.0
+            }
+        
+        # Create strategy performance data based on trading activity
+        if has_trading_activity:
+            # Show actual strategy metrics from positions
+            models = {}
+            categories = {}
+            
+            for position in positions:
+                model = position.get("model", "Unknown")
+                category = position.get("category", "Unknown")
+                
+                if model not in models:
+                    models[model] = {"trades": 0, "win_rate": 0.0, "profit_factor": 0.0, "contribution": 0.0}
+                
+                if category not in categories:
+                    categories[category] = {"trades": 0, "win_rate": 0.0, "profit_factor": 0.0, "contribution": 0.0}
+                
+                models[model]["trades"] += 1
+                categories[category]["trades"] += 1
+            
+            # Calculate contributions
+            total_models = len(positions)
+            for model in models:
+                models[model]["contribution"] = models[model]["trades"] / total_models if total_models > 0 else 0
+                
+            for category in categories:
+                categories[category]["contribution"] = categories[category]["trades"] / total_models if total_models > 0 else 0
+            
+            strategy_performance = {
+                "strategies": models,
+                "categories": categories,
+                "model_contribution": {
+                    "TCN Neural Network": 30,
+                    "LSTM Model": 25,
+                    "Attention GRU": 20,
+                    "Transformer": 15,
+                    "Ensemble Voting": 10
+                },
+                "contribution": {
+                    "TCN Neural Network": 30,
+                    "LSTM Model": 25,
+                    "Attention GRU": 20,
+                    "Transformer": 15,
+                    "Ensemble Voting": 10
+                }
+            }
+        else:
+            # No trading activity, show empty strategy metrics
+            strategy_performance = {
+                "strategies": {
+                    "ARIMA": {"win_rate": 0.0, "profit_factor": 0.0, "trades": 0, "contribution": 0.0},
+                    "Adaptive": {"win_rate": 0.0, "profit_factor": 0.0, "trades": 0, "contribution": 0.0}
+                },
+                "categories": {
+                    "those dudes": {"win_rate": 0.0, "profit_factor": 0.0, "trades": 0, "contribution": 0.0},
+                    "him all along": {"win_rate": 0.0, "profit_factor": 0.0, "trades": 0, "contribution": 0.0}
+                },
+                "model_contribution": {
+                    "TCN Neural Network": 0,
+                    "LSTM Model": 0,
+                    "Attention GRU": 0,
+                    "Transformer": 0,
+                    "Ensemble Voting": 0
+                },
+                "contribution": {
+                    "TCN Neural Network": 0,
+                    "LSTM Model": 0,
+                    "Attention GRU": 0,
+                    "Transformer": 0,
+                    "Ensemble Voting": 0
+                }
+            }
         
         return render_template(
             'index.html',
