@@ -1,6 +1,6 @@
 {
-  "last_updated": "2025-04-14T23:45:00",
-  "current_risk_level": "Medium",
+  "last_updated": "2025-04-15T00:03:03.477034",
+  "current_risk_level": "High",
   "max_drawdown": 0.024,
   "value_at_risk": 0.035,
   "kelly_criterion": 0.42,
@@ -52,7 +52,7 @@
       "win_rate": 0.69
     },
     "LINK/USD": {
-      "volatility": 0.020,
+      "volatility": 0.02,
       "optimal_leverage": 35.0,
       "optimal_risk_percentage": 0.15,
       "sharpe_ratio": 1.7,
@@ -75,8 +75,12 @@
   },
   "risk_recommendations": {
     "current_leverage_cap": 50.0,
-    "current_position_size_cap": 0.15,
-    "recommended_pairs": ["SOL/USD", "DOT/USD", "BTC/USD"],
+    "current_position_size_cap": 0.2,
+    "recommended_pairs": [
+      "SOL/USD",
+      "DOT/USD",
+      "BTC/USD"
+    ],
     "reduce_exposure_pairs": []
   }
 }

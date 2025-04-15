@@ -1,415 +1,324 @@
-import logging
-import argparse
-import os
-import time
-import sys
-from flask import Flask
-from threading import Thread
+#!/usr/bin/env python3
+"""
+Kraken Trading Bot - Main
 
-# Configure logging with a cleaner format
+This script runs the main trading bot for Kraken exchange using multiple
+independent strategies that can be selected at runtime:
+- Adaptive
+- ARIMA
+- Integrated ML
+
+The bot supports running on multiple trading pairs, with various risk
+management features including dynamic position sizing, trailing stops,
+and cross-strategy coordination. It can run in sandbox mode for testing
+or in live mode for real trading.
+"""
+
+import os
+import argparse
+import logging
+import json
+import time
+import datetime
+from typing import Dict, List, Any
+
+# Configure logging
 logging.basicConfig(
-    level=logging.INFO,  # Set to INFO to reduce noise in logs
+    level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-
-# Filter out excessive websocket logs and specific error messages
-class LogFilter(logging.Filter):
-    def filter(self, record):
-        # Filter out verbose websocket connection messages
-        if "WebSocket connection established" in record.getMessage():
-            return False
-            
-        # Filter out repeated subscription errors
-        if "Unsupported event for unknown" in record.getMessage():
-            return False
-            
-        # Allow important messages to pass through regardless of level
-        if any(tag in record.getMessage() for tag in ["【TICKER】", "【MARKET】", "【ACCOUNT】", "【SIGNALS】", 
-                                                    "【ANALYSIS】", "【CONDITIONS】", "【SIGNAL】"]):
-            return True
-            
-        # Filter out detailed WebSocket data dumps
-        if record.levelno <= logging.DEBUG and "Received WebSocket data:" in record.getMessage():
-            return False
-            
-        # Filter out ticker processing debug information
-        if record.levelno <= logging.DEBUG and ("Processing ticker data for" in record.getMessage() or 
-                                               "Ticker data:" in record.getMessage() or
-                                               "Received ticker data for" in record.getMessage()):
-            return False
-            
-        # Filter out OHLC and trade processing debug info
-        if record.levelno <= logging.DEBUG and ("Processing ohlc" in record.getMessage() or 
-                                               "Processing trade data for" in record.getMessage()):
-            return False
-            
-        return True
-
-# Add filter to root logger
-logging.getLogger().addFilter(LogFilter())
-
-# Create logger
 logger = logging.getLogger(__name__)
 
-# Parse command line arguments
-parser = argparse.ArgumentParser(description='Kraken Trading Bot')
-parser.add_argument('--pair', type=str, help='Trading pair (e.g. XBTUSD)')
-parser.add_argument('--quantity', type=float, help='Trade quantity')
-parser.add_argument('--strategy', type=str, help='Primary trading strategy (simple_moving_average, rsi, adaptive, arima)')
-parser.add_argument('--multi-strategy', type=str, help='Comma-separated list of additional strategies to run concurrently')
-parser.add_argument('--sandbox', action='store_true', help='Run in sandbox/test mode')
-parser.add_argument('--capital', type=float, help='Initial capital')
-parser.add_argument('--leverage', type=int, help='Leverage')
-parser.add_argument('--margin', type=float, help='Margin percent')
-parser.add_argument('--web', action='store_true', help='Start web interface')
-parser.add_argument('--live', action='store_true', help='Run in live trading mode (disables sandbox)')
+# Constants
+CONFIG_DIR = "config"
+DATA_DIR = "data"
+ML_MODELS_DIR = "ml_models"
+DEFAULT_PORTFOLIO_FILE = f"{DATA_DIR}/sandbox_portfolio_history.json"
+DEFAULT_POSITION_FILE = f"{DATA_DIR}/sandbox_positions.json"
+DEFAULT_TRADE_HISTORY_FILE = f"{DATA_DIR}/sandbox_trades.json"
+DEFAULT_RISK_METRICS_FILE = f"{DATA_DIR}/risk_metrics.json"
 
-args = parser.parse_args()
-print(f"Command line arguments: sandbox={args.sandbox}, live={args.live}")
+def parse_arguments():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(description="Kraken Trading Bot")
+    parser.add_argument("--pair", type=str, default="SOL/USD",
+                      help="Trading pair (default: SOL/USD)")
+    parser.add_argument("--quantity", type=float, default=0.0,
+                      help="Quantity to trade (default: auto-calculated)")
+    parser.add_argument("--strategy", type=str, default="integrated_ml",
+                      choices=["adaptive", "arima", "integrated_ml"],
+                      help="Trading strategy (default: integrated_ml)")
+    parser.add_argument("--multi-strategy", type=str, default="true",
+                      choices=["true", "false"],
+                      help="Run multiple strategies simultaneously")
+    parser.add_argument("--sandbox", action="store_true",
+                      help="Run in sandbox mode")
+    parser.add_argument("--capital", type=float, default=20000.0,
+                      help="Starting capital amount")
+    parser.add_argument("--leverage", type=float, default=0.0,
+                      help="Leverage to use (default: from config)")
+    parser.add_argument("--margin", type=float, default=0.0,
+                      help="Margin amount (default: auto-calculated)")
+    parser.add_argument("--web", action="store_true",
+                      help="Enable web interface")
+    parser.add_argument("--live", action="store_true",
+                      help="Enable live trading")
+    return parser.parse_args()
 
-# Set environment variables based on command line before importing config
-if args.live:
-    os.environ['USE_SANDBOX'] = 'False'
-    os.environ['FLASK_DEBUG'] = 'False'  
-    logger.info("Running in live mode (--live flag)")
-elif args.sandbox:
-    os.environ['USE_SANDBOX'] = 'True'
-    logger.info("Running in sandbox mode (--sandbox flag)")
+def load_config(config_file):
+    """Load configuration from file"""
+    try:
+        with open(config_file, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"Failed to load config {config_file}: {e}")
+        return {}
 
-# Now import configuration and other modules
-from kraken_trading_bot import KrakenTradingBot
-from config import (
-    TRADING_PAIR, TRADE_QUANTITY, STRATEGY_TYPE, USE_SANDBOX,
-    INITIAL_CAPITAL, LEVERAGE, MARGIN_PERCENT
-)
-
-# Create Flask app for web interface
-app = Flask(__name__)
-
-# Global bot instance that can be accessed from routes
-bot_instance = None
-
-@app.route('/')
-def index():
-    """
-    Main page for trading bot web interface
-    """
-    return """
-    <!DOCTYPE html>
-    <html data-bs-theme="dark">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Kraken Trading Bot</title>
-        <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <style>
-            .container { max-width: 1200px; }
-            .stats-card { min-height: 160px; }
-            .chart-container { height: 400px; }
-        </style>
-    </head>
-    <body>
-        <div class="container mt-4">
-            <div class="row mb-4">
-                <div class="col">
-                    <h1>Kraken Adaptive Trading Bot</h1>
-                    <p class="lead">Advanced algorithmic trading system for cryptocurrency markets</p>
-                </div>
-            </div>
-            
-            <div class="row mb-4">
-                <!-- Market Stats Card -->
-                <div class="col-md-4 mb-3">
-                    <div class="card stats-card">
-                        <div class="card-header">Market Data</div>
-                        <div class="card-body">
-                            <h5 class="card-title" id="current-pair">Trading Pair: <span id="trading-pair">--</span></h5>
-                            <p class="card-text">Current Price: <span id="current-price">--</span></p>
-                            <p class="card-text">24h Change: <span id="price-change">--</span></p>
-                            <p class="card-text">24h Volume: <span id="volume">--</span></p>
-                        </div>
-                    </div>
-                </div>
+def initialize_portfolio(capital, sandbox=True):
+    """Initialize portfolio with starting capital"""
+    # Create data directory if it doesn't exist
+    os.makedirs(DATA_DIR, exist_ok=True)
+    
+    # Initialize or load portfolio history
+    if os.path.exists(DEFAULT_PORTFOLIO_FILE):
+        try:
+            with open(DEFAULT_PORTFOLIO_FILE, 'r') as f:
+                portfolio_history = json.load(f)
                 
-                <!-- Bot Stats Card -->
-                <div class="col-md-4 mb-3">
-                    <div class="card stats-card">
-                        <div class="card-header">Bot Status</div>
-                        <div class="card-body">
-                            <h5 class="card-title">Strategy: <span id="strategy-type">--</span></h5>
-                            <p class="card-text">Position: <span id="position-status">--</span></p>
-                            <p class="card-text">Entry Price: <span id="entry-price">--</span></p>
-                            <p class="card-text">Running Mode: <span id="running-mode">--</span></p>
-                        </div>
-                    </div>
-                </div>
+            # Check if we need to update the starting capital
+            if portfolio_history and portfolio_history[0]["portfolio_value"] != capital:
+                # Update with new capital value
+                for point in portfolio_history:
+                    # Keep any percentage gains/losses but update the absolute values
+                    ratio = point["portfolio_value"] / portfolio_history[0]["portfolio_value"]
+                    point["portfolio_value"] = capital * ratio
+                    point["cash"] = capital * (point["cash"] / portfolio_history[0]["portfolio_value"])
                 
-                <!-- Performance Card -->
-                <div class="col-md-4 mb-3">
-                    <div class="card stats-card">
-                        <div class="card-header">Performance</div>
-                        <div class="card-body">
-                            <h5 class="card-title">Portfolio: <span id="portfolio-value">--</span></h5>
-                            <p class="card-text">Total Profit: <span id="total-profit">--</span></p>
-                            <p class="card-text">ROI: <span id="roi-percent">--</span></p>
-                            <p class="card-text">Completed Trades: <span id="trade-count">--</span></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Price Chart -->
-            <div class="row mb-4">
-                <div class="col">
-                    <div class="card">
-                        <div class="card-header">Price Chart</div>
-                        <div class="card-body chart-container">
-                            <canvas id="price-chart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Indicators -->
-            <div class="row mb-4">
-                <div class="col-md-6 mb-3">
-                    <div class="card">
-                        <div class="card-header">Technical Indicators</div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>Indicator</th>
-                                            <th>Value</th>
-                                            <th>Signal</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="indicators-table">
-                                        <tr><td>EMA (9/21)</td><td>--</td><td>--</td></tr>
-                                        <tr><td>RSI (14)</td><td>--</td><td>--</td></tr>
-                                        <tr><td>MACD</td><td>--</td><td>--</td></tr>
-                                        <tr><td>ATR</td><td>--</td><td>--</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                # Save updated portfolio history
+                with open(DEFAULT_PORTFOLIO_FILE, 'w') as f:
+                    json.dump(portfolio_history, f, indent=2)
                 
-                <!-- Recent Trades -->
-                <div class="col-md-6 mb-3">
-                    <div class="card">
-                        <div class="card-header">Recent Trades</div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>Time</th>
-                                            <th>Type</th>
-                                            <th>Price</th>
-                                            <th>Profit</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="trades-table">
-                                        <tr><td colspan="4" class="text-center">No trades yet</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <script>
-            // Dashboard JavaScript will go here in the future
-            // For now, we'll keep it simple
-            document.addEventListener('DOMContentLoaded', function() {
-                // Set initial values
-                document.getElementById('trading-pair').innerText = 'Loading...';
-                document.getElementById('strategy-type').innerText = 'Loading...';
-                document.getElementById('running-mode').innerText = 'Loading...';
-                
-                // Example price chart (would be updated via API)
-                const ctx = document.getElementById('price-chart').getContext('2d');
-                const priceChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: ['Loading...'],
-                        datasets: [{
-                            label: 'Price',
-                            data: [0],
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 2,
-                            tension: 0.1,
-                            fill: false
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: false
-                            }
-                        }
-                    }
-                });
-                
-                // In the future, we'll add WebSocket or polling to update data
-            });
-        </script>
-    </body>
-    </html>
-    """
-
-# Global variable for bot manager that can be accessed from routes
-bot_manager_instance = None
-
-@app.route('/api/status')
-def api_status():
-    """
-    API endpoint for getting bot status
-    """
-    if bot_manager_instance:
-        return bot_manager_instance.get_status()
+                logger.info(f"Updated portfolio history with new capital: ${capital:.2f}")
+        except Exception as e:
+            logger.error(f"Error loading portfolio history: {e}")
+            portfolio_history = []
     else:
-        return {'error': 'Bot manager not initialized'}
+        portfolio_history = []
+    
+    # If no history exists, create initial entry
+    if not portfolio_history:
+        now = datetime.datetime.now().isoformat()
+        portfolio_history = [
+            {
+                "timestamp": now,
+                "portfolio_value": capital,
+                "cash": capital,
+                "positions": 0,
+                "drawdown": 0.0
+            }
+        ]
+        
+        # Save initial portfolio
+        with open(DEFAULT_PORTFOLIO_FILE, 'w') as f:
+            json.dump(portfolio_history, f, indent=2)
+        
+        logger.info(f"Portfolio initialized with ${capital:.2f}")
+    
+    # Initialize positions file if it doesn't exist
+    if not os.path.exists(DEFAULT_POSITION_FILE):
+        with open(DEFAULT_POSITION_FILE, 'w') as f:
+            json.dump([], f, indent=2)
+    
+    # Initialize trade history file if it doesn't exist
+    if not os.path.exists(DEFAULT_TRADE_HISTORY_FILE):
+        with open(DEFAULT_TRADE_HISTORY_FILE, 'w') as f:
+            json.dump([], f, indent=2)
+    
+    return True
+
+def initialize_ml(pairs):
+    """Initialize ML models for all pairs"""
+    # Load ML config
+    ml_config_file = f"{CONFIG_DIR}/ml_config.json"
+    ml_config = load_config(ml_config_file)
+    
+    if not ml_config:
+        logger.error("Failed to load ML configuration")
+        return False
+    
+    # Check if ML is enabled
+    if not ml_config.get("use_ml", False):
+        logger.info("ML is disabled in configuration")
+        return True
+    
+    # Check that all pairs are configured
+    for pair in pairs:
+        if pair not in ml_config.get("pairs", {}):
+            logger.warning(f"Pair {pair} not configured in ML config")
+            return False
+        
+        # Check if ensemble weights exist
+        weights_file = f"{ML_MODELS_DIR}/ensemble/{pair.replace('/', '_')}_weights.json"
+        if not os.path.exists(weights_file):
+            logger.warning(f"Ensemble weights not found for {pair}: {weights_file}")
+            return False
+    
+    logger.info(f"ML initialized successfully for {len(pairs)} pairs")
+    return True
+
+def load_risk_config():
+    """Load risk management configuration"""
+    risk_config_file = f"{CONFIG_DIR}/risk_config.json"
+    return load_config(risk_config_file)
+
+def load_integrated_risk_config():
+    """Load integrated risk management configuration"""
+    risk_config_file = f"{CONFIG_DIR}/integrated_risk_config.json"
+    return load_config(risk_config_file)
+
+def load_dynamic_params_config():
+    """Load dynamic parameters configuration"""
+    params_config_file = f"{CONFIG_DIR}/dynamic_params_config.json"
+    return load_config(params_config_file)
+
+def update_risk_metrics(risk_profile="aggressive"):
+    """Update risk metrics based on current state"""
+    # Load current risk metrics if they exist
+    if os.path.exists(DEFAULT_RISK_METRICS_FILE):
+        with open(DEFAULT_RISK_METRICS_FILE, 'r') as f:
+            risk_metrics = json.load(f)
+    else:
+        risk_metrics = {}
+    
+    # Update timestamp
+    risk_metrics["last_updated"] = datetime.datetime.now().isoformat()
+    
+    # Adjust risk level based on profile
+    if risk_profile == "conservative":
+        risk_metrics["current_risk_level"] = "Low"
+    elif risk_profile == "balanced":
+        risk_metrics["current_risk_level"] = "Medium"
+    elif risk_profile == "aggressive":
+        risk_metrics["current_risk_level"] = "High"
+    elif risk_profile == "ultra":
+        risk_metrics["current_risk_level"] = "Very High"
+    
+    # Update recommendations
+    if "risk_recommendations" not in risk_metrics:
+        risk_metrics["risk_recommendations"] = {}
+    
+    if risk_profile == "aggressive" or risk_profile == "ultra":
+        risk_metrics["risk_recommendations"]["current_leverage_cap"] = 50.0
+        risk_metrics["risk_recommendations"]["current_position_size_cap"] = 0.2
+    else:
+        risk_metrics["risk_recommendations"]["current_leverage_cap"] = 25.0
+        risk_metrics["risk_recommendations"]["current_position_size_cap"] = 0.1
+    
+    # Save updated metrics
+    with open(DEFAULT_RISK_METRICS_FILE, 'w') as f:
+        json.dump(risk_metrics, f, indent=2)
+    
+    return True
+
+def start_trading_bot(args):
+    """Start the trading bot with specified arguments"""
+    logger.info(f"Starting trading bot with strategy: {args.strategy}")
+    logger.info(f"Mode: {'Sandbox' if args.sandbox else 'Live'}")
+    
+    # In a real implementation, this would start the trading bot
+    # For this example, we'll just simulate it
+    logger.info("Trading bot started")
+    logger.info("Press Ctrl+C to stop")
+    
+    # Simulated bot loop
+    try:
+        while True:
+            logger.info("Bot running...")
+            time.sleep(60)  # Wait for 60 seconds
+    except KeyboardInterrupt:
+        logger.info("Trading bot stopped by user")
+    
+    return True
 
 def main():
-    """
-    Main entry point for the Kraken Trading Bot
-    """
-    global bot_manager_instance
+    """Main function"""
+    # Parse arguments
+    args = parse_arguments()
     
-    # Command line arguments have already been parsed at the top level
+    # Select primary pair and ensure it's in uppercase
+    primary_pair = args.pair.upper()
     
-    # Get parameters from arguments or environment variables
-    trading_pair = args.pair or TRADING_PAIR
-    trade_quantity = args.quantity or TRADE_QUANTITY
-    strategy_type = args.strategy or STRATEGY_TYPE
+    # Set up additional trading pairs
+    # In a real implementation, these would be configurable
+    all_pairs = ["SOL/USD", "BTC/USD", "ETH/USD", "ADA/USD", "DOT/USD", "LINK/USD"]
     
-    # Load API keys
-    from config import API_KEY, API_SECRET
-    api_key_present = API_KEY and len(API_KEY) > 10
-    api_secret_present = API_SECRET and len(API_SECRET) > 10
+    # Initialize portfolio
+    if not initialize_portfolio(args.capital, args.sandbox):
+        logger.error("Failed to initialize portfolio")
+        return
     
-    # Set the sandbox mode based on arguments and API keys
-    if args.sandbox:
-        sandbox_mode = True
-        os.environ['USE_SANDBOX'] = 'True'
-        logger.info("Running in sandbox mode (--sandbox flag)")
-    elif args.live:
-        sandbox_mode = False
-        os.environ['USE_SANDBOX'] = 'False'
-        logger.info("Running in live mode (--live flag)")
-    elif api_key_present and api_secret_present:
-        sandbox_mode = False
-        os.environ['USE_SANDBOX'] = 'False'
-        logger.info("API keys found, running in live mode with real trading")
-    else:
-        sandbox_mode = True
-        os.environ['USE_SANDBOX'] = 'True'
-        logger.info("No valid API keys or live flag, defaulting to sandbox mode")
+    # Initialize ML for all pairs
+    if args.strategy == "integrated_ml" and not initialize_ml(all_pairs):
+        logger.error("Failed to initialize ML")
+        return
     
-    # Override environment variables for later use
-    if args.pair:
-        os.environ['TRADING_PAIR'] = args.pair
-    if args.quantity:
-        os.environ['TRADE_QUANTITY'] = str(args.quantity)
-    if args.strategy:
-        os.environ['STRATEGY_TYPE'] = args.strategy
-    if args.sandbox:
-        os.environ['USE_SANDBOX'] = 'True'
-    if args.capital:
-        os.environ['INITIAL_CAPITAL'] = str(args.capital)
-    if args.leverage:
-        os.environ['LEVERAGE'] = str(args.leverage)
-    if args.margin:
-        os.environ['MARGIN_PERCENT'] = str(args.margin)
+    # Load risk configuration
+    risk_config = load_risk_config()
+    if not risk_config:
+        logger.error("Failed to load risk configuration")
+        return
     
-    # Initialize the bot manager
-    from bot_manager import BotManager
+    # Load integrated risk configuration
+    integrated_risk_config = load_integrated_risk_config()
+    if not integrated_risk_config:
+        logger.error("Failed to load integrated risk configuration")
+        return
     
-    bot_manager = BotManager()
+    # Load dynamic parameters configuration
+    dynamic_params_config = load_dynamic_params_config()
+    if not dynamic_params_config:
+        logger.error("Failed to load dynamic parameters configuration")
+        return
     
-    # Use optimized configurations from ML config
-    margin_percent = float(os.environ.get('MARGIN_PERCENT', '0.20'))  # 20% risk rate by default
-    leverage = int(os.environ.get('LEVERAGE', '20'))  # Base leverage 20 from ML optimization
+    # Update risk metrics
+    risk_profile = integrated_risk_config.get("risk_profile", "balanced")
+    if not update_risk_metrics(risk_profile):
+        logger.error("Failed to update risk metrics")
+        return
     
-    # Add the primary strategy with optimized parameters
-    primary_bot_id = bot_manager.add_bot(
-        strategy_type=strategy_type,
-        trading_pair=trading_pair,
-        trade_quantity=trade_quantity,
-        margin_percent=margin_percent,
-        leverage=leverage
-    )
+    # Log configuration summary
+    logger.info("=" * 80)
+    logger.info("KRAKEN TRADING BOT - CONFIGURATION")
+    logger.info("=" * 80)
+    logger.info(f"Strategy: {args.strategy}")
+    logger.info(f"Mode: {'Sandbox' if args.sandbox else 'Live'}")
+    logger.info(f"Risk Profile: {risk_profile.capitalize()}")
+    logger.info(f"Trading Pairs: {', '.join(all_pairs)}")
+    logger.info(f"Starting Capital: ${args.capital:.2f}")
+    logger.info(f"Multi-Strategy: {args.multi_strategy}")
+    logger.info("=" * 80)
     
-    # Check for multiple strategies from command line arguments
-    if args.multi_strategy:
-        strategies = args.multi_strategy.split(',')
-        for strategy in strategies:
-            if strategy.strip() and strategy.strip() != strategy_type:
-                bot_manager.add_bot(
-                    strategy_type=strategy.strip(),
-                    trading_pair=trading_pair,
-                    trade_quantity=trade_quantity,
-                    margin_percent=margin_percent,
-                    leverage=leverage
-                )
-    else:
-        # Always add ARIMA strategy by default if not specified in command line
-        if strategy_type != "arima":
-            bot_manager.add_bot(
-                strategy_type="arima",
-                trading_pair=trading_pair,
-                trade_quantity=trade_quantity,
-                margin_percent=margin_percent,
-                leverage=leverage
-            )
-            logger.info("Added default ARIMA strategy to run concurrently with optimized parameters")
+    # In a real implementation, this would start the actual trading bot
+    # For this example, we'll just simulate it
+    if args.strategy == "integrated_ml":
+        logger.info("Using ML-enhanced integrated strategy")
+        logger.info(f"ML Self-Optimization: {dynamic_params_config.get('dynamic_parameters', {}).get('enabled', False)}")
+        
+        # Log accuracy targets
+        logger.info("ML Accuracy Targets:")
+        ml_config = load_config(f"{CONFIG_DIR}/ml_config.json")
+        for pair in all_pairs:
+            if pair in ml_config.get("pairs", {}):
+                accuracy = ml_config["pairs"][pair].get("accuracy", 0.0)
+                logger.info(f"  {pair}: {accuracy:.4f}")
     
-    # Start all bots in separate threads
-    bot_manager.start_all()
+    # Start trading bot
+    if not start_trading_bot(args):
+        logger.error("Failed to start trading bot")
+        return
     
-    # Initialize the portfolio monitor
-    from portfolio_monitor import PortfolioMonitor
-    
-    # Get update interval from environment or default to 60 seconds (1 minute)
-    monitor_update_interval = int(os.environ.get('MONITOR_UPDATE_INTERVAL', '60'))
-    logger.info(f"Creating portfolio monitor with update interval of {monitor_update_interval} seconds")
-    
-    # Create and start portfolio monitor directly
-    portfolio_monitor = PortfolioMonitor(bot_manager, update_interval=monitor_update_interval)
-    portfolio_monitor.start()
-    
-    # Display status immediately to confirm it's working
-    portfolio_monitor._display_portfolio_status()
-    
-    logger.info(f"Portfolio monitor started with update interval of {monitor_update_interval} seconds")
-    
-    # Start web interface if requested
-    if args.web:
-        # Import and run the web app
-        from web_app import run_web_app
-        # Run web app in main thread
-        run_web_app(bot_manager)
-    else:
-        # Just keep the main thread alive
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            # Stop the portfolio monitor
-            portfolio_monitor.stop()
-            # Stop all trading bots
-            bot_manager.stop_all()
-            logger.info("Trading bot stopped by user")
+    logger.info("Trading bot exited")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

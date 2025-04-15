@@ -1,0 +1,52 @@
+/* Custom styles for Kraken Trading Bot */
+
+body {
+  min-height: 100vh;
+}
+
+.navbar-brand {
+  font-weight: 500;
+}
+
+.card {
+  margin-bottom: 1.5rem;
+  border: none;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+  font-weight: 500;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fw-light {
+  color: var(--bs-secondary-color);
+}
+
+.table {
+  margin-bottom: 0;
+}
+
+.text-success {
+  color: var(--bs-success) !important;
+}
+
+.text-danger {
+  color: var(--bs-danger) !important;
+}
+
+canvas {
+  max-width: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  
+  .card-body {
+    padding: 1rem;
+  }
+}
