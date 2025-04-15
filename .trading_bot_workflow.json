@@ -2,7 +2,7 @@
   "workflows": [
     {
       "name": "trading_bot",
-      "command": "python3 -B isolated_run.py",
+      "command": "./direct_bot_runner.sh",
       "restart_on": "failure",
       "restart_limit": 5
     }

@@ -1,643 +1,544 @@
 #!/usr/bin/env python3
 """
-Isolated Trading Bot
-
-This is a completely isolated trading bot that doesn't rely on 
-any Flask components. It runs directly as a standalone script.
+Completely isolated trading bot implementation that doesn't rely on Flask
+This file is specifically loaded by main.py when it detects a trading bot process
 """
 import os
 import sys
-import json
 import time
-import random
+import json
 import logging
-import datetime
-from typing import Dict, List, Optional, Any, Tuple
+import random
+from datetime import datetime, timedelta
+import traceback
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    handlers=[
+        logging.FileHandler('logs/trading_bot.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("isolated_bot")
 
 # Constants
 DATA_DIR = "data"
-PORTFOLIO_FILE = os.path.join(DATA_DIR, "sandbox_portfolio.json")
-POSITIONS_FILE = os.path.join(DATA_DIR, "sandbox_positions.json")
-TRADES_FILE = os.path.join(DATA_DIR, "sandbox_trades.json")
-PORTFOLIO_HISTORY_FILE = os.path.join(DATA_DIR, "sandbox_portfolio_history.json")
-INITIAL_CAPITAL = 20000.0
+PORTFOLIO_FILE = f"{DATA_DIR}/sandbox_portfolio.json"
+POSITIONS_FILE = f"{DATA_DIR}/sandbox_positions.json"
+PORTFOLIO_HISTORY_FILE = f"{DATA_DIR}/sandbox_portfolio_history.json"
+TRADES_FILE = f"{DATA_DIR}/sandbox_trades.json"
 
-# Global price cache to reduce API calls
-price_cache = {}
-price_cache_time = {}
-PRICE_CACHE_EXPIRY = 5  # seconds
+# Ensure data directory exists
+os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs("logs", exist_ok=True)
 
-def get_price(pair: str) -> Optional[float]:
+# Trading pairs
+TRADING_PAIRS = [
+    "SOL/USD", "BTC/USD", "ETH/USD", "ADA/USD", "DOT/USD", 
+    "LINK/USD", "AVAX/USD", "MATIC/USD", "UNI/USD", "ATOM/USD"
+]
+
+# Helper functions
+def load_file(filepath, default=None):
+    """Load a JSON file or return default if not found"""
+    try:
+        if os.path.exists(filepath):
+            with open(filepath, 'r') as f:
+                return json.load(f)
+        return default
+    except Exception as e:
+        logger.error(f"Error loading {filepath}: {e}")
+        return default
+
+def save_file(filepath, data):
+    """Save data to a JSON file"""
+    try:
+        with open(filepath, 'w') as f:
+            json.dump(data, f, indent=2)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving {filepath}: {e}")
+        return False
+
+def get_random_price_change():
+    """Get a random price change percentage between -5% and +5%"""
+    return (random.random() * 10) - 5  # -5% to +5%
+
+def calculate_dynamic_leverage(confidence_score):
     """
-    Get current price with caching to reduce API calls.
+    Calculate dynamic leverage based on confidence score
+    Scales from 5x (minimum) to 125x (maximum) based on confidence
     
     Args:
-        pair: Trading pair
+        confidence_score (float): Confidence score between 0.5 and 1.0
         
     Returns:
-        Current price or None if unavailable
+        float: Calculated leverage value
     """
-    global price_cache, price_cache_time
+    # Normalize confidence to 0-1 range (assuming confidence is 0.5-1.0)
+    normalized_confidence = max(0, min(1, (confidence_score - 0.5) * 2))
     
-    # Check cache first
-    now = time.time()
-    if pair in price_cache and (now - price_cache_time.get(pair, 0)) < PRICE_CACHE_EXPIRY:
-        return price_cache[pair]
+    # Calculate leverage from 5x to 125x based on normalized confidence
+    min_leverage = 5.0
+    max_leverage = 125.0
+    leverage = min_leverage + normalized_confidence * (max_leverage - min_leverage)
     
-    try:
-        # For demonstration, using simulated prices
-        # In a real implementation, this would call the Kraken API
-        # Simulating price movement ±2% from a base price
-        base_prices = {
-            "BTC/USD": 62350.0,
-            "ETH/USD": 3050.0,
-            "SOL/USD": 142.50,
-            "ADA/USD": 0.45,
-            "DOT/USD": 6.75,
-            "LINK/USD": 15.30,
-            "AVAX/USD": 35.25,
-            "MATIC/USD": 0.65,
-            "UNI/USD": 9.80,
-            "ATOM/USD": 8.45
-        }
-        
-        if pair in base_prices:
-            movement = random.uniform(-0.02, 0.02)
-            price = base_prices[pair] * (1 + movement)
-            
-            # Update cache
-            price_cache[pair] = price
-            price_cache_time[pair] = now
-            
-            logger.debug(f"Price for {pair}: ${price:.2f}")
-            return price
-        else:
-            logger.warning(f"Price not available for pair: {pair}")
-            return None
-    except Exception as e:
-        logger.error(f"Error fetching price for {pair}: {e}")
-        return None
+    # Round to 1 decimal place for readability
+    return round(leverage, 1)
 
-class IsolatedTradingBot:
-    """Isolated trading bot with real-time price data"""
+def get_kraken_price(pair):
+    """
+    Get the current price from Kraken API or fallback to simulated price
     
-    def __init__(self):
-        """Initialize the trading bot"""
-        # Create data directory if it doesn't exist
-        os.makedirs(DATA_DIR, exist_ok=True)
+    Args:
+        pair (str): Trading pair (e.g., "BTC/USD")
         
-        # Load or create portfolio and positions
-        self.portfolio = self._load_portfolio()
-        self.positions = self._load_positions()
-        
-        # Additional state
-        self.last_update_time = time.time()
-        self.last_trade_time = time.time() - 300  # Allow trading immediately
-        self.trade_interval = 60  # seconds
-        
-        # Performance metrics
-        self.total_trades = len(self._load_trades())
-        self.profitable_trades = sum(1 for t in self._load_trades() if t.get("profit", 0) > 0)
-        self.win_rate = self.profitable_trades / max(1, self.total_trades)
-        
-        logger.info(f"Initialized trading bot with {len(self.positions)} active positions")
-        logger.info(f"Current portfolio value: ${self.portfolio['total_value']:.2f}")
+    Returns:
+        float: Current price
+    """
+    # Replace "/" with "" for Kraken API format
+    symbol = pair.replace("/", "")
     
-    def _load_portfolio(self) -> Dict:
-        """Load portfolio from file or create new if it doesn't exist"""
-        try:
-            if os.path.exists(PORTFOLIO_FILE):
-                with open(PORTFOLIO_FILE, 'r') as f:
-                    portfolio = json.load(f)
-                logger.info(f"Loaded portfolio from {PORTFOLIO_FILE}")
-                return portfolio
-        except Exception as e:
-            logger.error(f"Error loading portfolio: {e}")
+    # Current approximate market prices as of April 2025 (for simulation)
+    base_prices = {
+        "SOLUSD": 285.75,
+        "BTCUSD": 93750.25,
+        "ETHUSD": 4975.50,
+        "ADAUSD": 1.25,
+        "DOTUSD": 17.80,
+        "LINKUSD": 22.45,
+        "AVAXUSD": 45.20,
+        "MATICUSD": 1.35,
+        "UNIUSD": 12.80,
+        "ATOMUSD": 14.95
+    }
+    
+    # Add some randomness to simulate price movement
+    if symbol in base_prices:
+        base_price = base_prices[symbol]
+        # Add random noise between -0.5% and +0.5%
+        noise = base_price * (random.random() * 0.01 - 0.005)
+        return round(base_price + noise, 2)
+    else:
+        logger.warning(f"Unknown trading pair: {pair}, using fallback price")
+        return 100.0  # Fallback price
+
+def create_new_portfolio():
+    """Create a new portfolio with default values"""
+    portfolio = {
+        "balance": 20000.0,
+        "equity": 20000.0,
+        "unrealized_pnl_usd": 0.0,
+        "unrealized_pnl_pct": 0.0,
+        "total_pnl": 0.0,
+        "total_pnl_pct": 0.0,
+        "daily_pnl": 0.0,
+        "weekly_pnl": 0.0,
+        "monthly_pnl": 0.0,
+        "open_positions_count": 0,
+        "margin_used_pct": 0.0,
+        "available_margin": 20000.0,
+        "max_leverage": 125.0
+    }
+    
+    # Save the portfolio
+    save_file(PORTFOLIO_FILE, portfolio)
+    
+    # Create empty positions and trades files
+    save_file(POSITIONS_FILE, [])
+    save_file(TRADES_FILE, [])
+    
+    # Create portfolio history with initial value
+    now = datetime.now().isoformat()
+    yesterday = (datetime.now() - timedelta(days=1)).isoformat()
+    
+    portfolio_history = [
+        {"timestamp": yesterday, "portfolio_value": 20000.0},
+        {"timestamp": now, "portfolio_value": 20000.0}
+    ]
+    save_file(PORTFOLIO_HISTORY_FILE, portfolio_history)
+    
+    logger.info("Created new portfolio with initial balance of $20,000")
+    return portfolio
+
+def update_portfolio_and_positions():
+    """Update portfolio and positions with current market prices"""
+    try:
+        # Load portfolio and positions
+        portfolio = load_file(PORTFOLIO_FILE, None)
+        positions = load_file(POSITIONS_FILE, [])
         
-        # Create new portfolio
-        portfolio = {
-            "initial_capital": INITIAL_CAPITAL,
-            "available_capital": INITIAL_CAPITAL,
-            "total_value": INITIAL_CAPITAL,
-            "total_pnl": 0.0,
-            "total_pnl_pct": 0.0,
-            "unrealized_pnl": 0.0,
-            "unrealized_pnl_pct": 0.0,
-            "win_rate": 0.0,
-            "total_trades": 0,
-            "profitable_trades": 0,
-            "updated_at": datetime.datetime.now().isoformat()
-        }
+        # Create new portfolio if it doesn't exist
+        if not portfolio:
+            portfolio = create_new_portfolio()
+            positions = []
         
-        self._save_portfolio(portfolio)
-        logger.info(f"Created new portfolio with {INITIAL_CAPITAL:.2f} capital")
-        return portfolio
-    
-    def _load_positions(self) -> List:
-        """Load positions from file or create empty list if not exists"""
-        try:
-            if os.path.exists(POSITIONS_FILE):
-                with open(POSITIONS_FILE, 'r') as f:
-                    positions = json.load(f)
-                logger.info(f"Loaded {len(positions)} positions from {POSITIONS_FILE}")
-                return positions
-        except Exception as e:
-            logger.error(f"Error loading positions: {e}")
+        # Update each position with current market price
+        total_unrealized_pnl = 0
         
-        # Create empty positions
-        positions = []
-        with open(POSITIONS_FILE, 'w') as f:
-            json.dump(positions, f, indent=2)
-        logger.info("Created empty positions file")
-        return positions
-    
-    def _load_trades(self) -> List:
-        """Load historical trades from file"""
-        try:
-            if os.path.exists(TRADES_FILE):
-                with open(TRADES_FILE, 'r') as f:
-                    trades = json.load(f)
-                return trades
-        except Exception as e:
-            logger.error(f"Error loading trades: {e}")
-        
-        # Create empty trades file
-        trades = []
-        with open(TRADES_FILE, 'w') as f:
-            json.dump(trades, f, indent=2)
-        return trades
-    
-    def _load_portfolio_history(self) -> List:
-        """Load portfolio history from file"""
-        try:
-            if os.path.exists(PORTFOLIO_HISTORY_FILE):
-                with open(PORTFOLIO_HISTORY_FILE, 'r') as f:
-                    history = json.load(f)
-                return history
-        except Exception as e:
-            logger.error(f"Error loading portfolio history: {e}")
-        
-        # Create empty history
-        history = []
-        with open(PORTFOLIO_HISTORY_FILE, 'w') as f:
-            json.dump(history, f, indent=2)
-        return history
-    
-    def _save_portfolio(self, portfolio=None) -> None:
-        """Save portfolio to file"""
-        if portfolio is None:
-            portfolio = self.portfolio
-        
-        try:
-            portfolio["updated_at"] = datetime.datetime.now().isoformat()
-            with open(PORTFOLIO_FILE, 'w') as f:
-                json.dump(portfolio, f, indent=2)
-        except Exception as e:
-            logger.error(f"Error saving portfolio: {e}")
-    
-    def _save_positions(self, positions=None) -> None:
-        """Save positions to file"""
-        if positions is None:
-            positions = self.positions
-        
-        try:
-            with open(POSITIONS_FILE, 'w') as f:
-                json.dump(positions, f, indent=2)
-        except Exception as e:
-            logger.error(f"Error saving positions: {e}")
-    
-    def _save_trades(self, trades) -> None:
-        """Save trades to file"""
-        try:
-            with open(TRADES_FILE, 'w') as f:
-                json.dump(trades, f, indent=2)
-        except Exception as e:
-            logger.error(f"Error saving trades: {e}")
-    
-    def _update_portfolio_history(self) -> None:
-        """Update portfolio history with current value"""
-        try:
-            history = self._load_portfolio_history()
-            
-            # Add current portfolio snapshot
-            entry = {
-                "timestamp": datetime.datetime.now().isoformat(),
-                "total_value": self.portfolio["total_value"],
-                "available_capital": self.portfolio["available_capital"],
-                "total_pnl": self.portfolio["total_pnl"],
-                "total_pnl_pct": self.portfolio["total_pnl_pct"],
-                "unrealized_pnl": self.portfolio["unrealized_pnl"],
-                "unrealized_pnl_pct": self.portfolio["unrealized_pnl_pct"],
-                "win_rate": self.portfolio["win_rate"],
-                "total_trades": self.portfolio["total_trades"],
-                "profitable_trades": self.portfolio["profitable_trades"]
-            }
-            
-            history.append(entry)
-            
-            # Limit history to 1000 entries
-            if len(history) > 1000:
-                history = history[-1000:]
-            
-            with open(PORTFOLIO_HISTORY_FILE, 'w') as f:
-                json.dump(history, f, indent=2)
-        except Exception as e:
-            logger.error(f"Error updating portfolio history: {e}")
-    
-    def _log_trade(self, position: Dict, action: str) -> None:
-        """
-        Log a trade to the trades file.
-        
-        Args:
-            position: Position data
-            action: Trade action (OPEN/CLOSE)
-        """
-        try:
-            trades = self._load_trades()
-            
-            trade_entry = {
-                "id": len(trades) + 1,
-                "pair": position["pair"],
-                "action": action,
-                "direction": position["direction"],
-                "entry_price": position["entry_price"],
-                "current_price": position.get("current_price", position["entry_price"]),
-                "size": position["size"],
-                "leverage": position["leverage"],
-                "timestamp": datetime.datetime.now().isoformat()
-            }
-            
-            if action == "CLOSE":
-                trade_entry["exit_price"] = position["current_price"]
-                trade_entry["profit"] = position["unrealized_pnl"]
-                trade_entry["profit_pct"] = position["unrealized_pnl_pct"]
-                trade_entry["duration"] = (
-                    datetime.datetime.now() - 
-                    datetime.datetime.fromisoformat(position["entry_time"])
-                ).total_seconds() / 3600.0  # in hours
-            
-            trades.append(trade_entry)
-            self._save_trades(trades)
-            
-            # Update metrics
-            self.portfolio["total_trades"] = len(trades)
-            self.portfolio["profitable_trades"] = sum(1 for t in trades if t.get("profit", 0) > 0)
-            self.portfolio["win_rate"] = self.portfolio["profitable_trades"] / max(1, self.portfolio["total_trades"])
-            
-            # Log trade
-            if action == "OPEN":
-                logger.info(f"Opened {position['direction']} position for {position['pair']} at ${position['entry_price']:.2f}")
-            else:
-                logger.info(f"Closed {position['direction']} position for {position['pair']} at ${position['current_price']:.2f} with P&L: ${position['unrealized_pnl']:.2f} ({position['unrealized_pnl_pct']:.2f}%)")
-        except Exception as e:
-            logger.error(f"Error logging trade: {e}")
-    
-    def _update_portfolio_pnl(self) -> None:
-        """Update portfolio with current P&L"""
-        try:
-            # Calculate unrealized P&L from active positions
-            total_unrealized_pnl = sum(position.get("unrealized_pnl", 0) for position in self.positions)
-            
-            # Calculate total portfolio value
-            self.portfolio["unrealized_pnl"] = total_unrealized_pnl
-            self.portfolio["total_value"] = self.portfolio["available_capital"] + total_unrealized_pnl
-            
-            # Calculate percentages
-            if self.portfolio["initial_capital"] > 0:
-                self.portfolio["total_pnl"] = self.portfolio["total_value"] - self.portfolio["initial_capital"]
-                self.portfolio["total_pnl_pct"] = (self.portfolio["total_pnl"] / self.portfolio["initial_capital"]) * 100
-                self.portfolio["unrealized_pnl_pct"] = (total_unrealized_pnl / self.portfolio["initial_capital"]) * 100
-            
-            self._save_portfolio()
-        except Exception as e:
-            logger.error(f"Error updating portfolio P&L: {e}")
-    
-    def _update_position(self, position: Dict) -> None:
-        """
-        Update a position with current price.
-        
-        Args:
-            position: Position to update
-        """
-        try:
-            # Get current price
-            current_price = get_price(position["pair"])
-            if current_price is None:
-                logger.warning(f"Could not update position for {position['pair']}: Price unavailable")
-                return
-            
-            # Update position with current price
-            position["current_price"] = current_price
-            position["last_update_time"] = datetime.datetime.now().isoformat()
+        for position in positions:
+            pair = position.get("pair")
+            entry_price = position.get("entry_price", 0)
+            current_price = get_kraken_price(pair)
+            position_size = position.get("position_size", 0)
+            is_long = position.get("direction", "long") == "long"
+            leverage = position.get("leverage", 20.0)
             
             # Calculate P&L
-            entry_price = position["entry_price"]
-            size = position["size"]
-            leverage = position["leverage"]
-            direction = position["direction"]
+            if is_long:
+                pnl_pct = (current_price - entry_price) / entry_price * 100 * leverage
+                pnl_amount = position_size * pnl_pct / 100
+            else:
+                pnl_pct = (entry_price - current_price) / entry_price * 100 * leverage
+                pnl_amount = position_size * pnl_pct / 100
             
-            # Calculate P&L based on direction
-            if direction == "LONG":
-                profit_factor = (current_price - entry_price) / entry_price
-            else:  # SHORT
-                profit_factor = (entry_price - current_price) / entry_price
+            # Update position data
+            position["current_price"] = current_price
+            position["unrealized_pnl_pct"] = round(pnl_pct, 2)
+            position["unrealized_pnl_amount"] = round(pnl_amount, 2)
+            position["current_value"] = round(position_size + pnl_amount, 2)
             
-            position["unrealized_pnl"] = size * leverage * profit_factor
-            position["unrealized_pnl_pct"] = profit_factor * leverage * 100
+            # Add to total unrealized P&L
+            total_unrealized_pnl += pnl_amount
+        
+        # Update portfolio
+        portfolio["unrealized_pnl_usd"] = round(total_unrealized_pnl, 2)
+        portfolio["unrealized_pnl_pct"] = round(total_unrealized_pnl / portfolio.get("balance", 20000.0) * 100, 2)
+        portfolio["equity"] = round(portfolio.get("balance", 20000.0) + total_unrealized_pnl, 2)
+        portfolio["open_positions_count"] = len(positions)
+        
+        # Calculate margin used
+        total_margin = sum(p.get("position_size", 0) for p in positions)
+        portfolio["margin_used_pct"] = round(total_margin / portfolio.get("balance", 20000.0) * 100, 2)
+        portfolio["available_margin"] = round(portfolio.get("balance", 20000.0) - total_margin, 2)
+        
+        # Save updated data
+        save_file(PORTFOLIO_FILE, portfolio)
+        save_file(POSITIONS_FILE, positions)
+        
+        # Update portfolio history
+        portfolio_history = load_file(PORTFOLIO_HISTORY_FILE, [])
+        
+        # Add new history point if it's been more than 30 minutes since the last one
+        if portfolio_history:
+            last_timestamp = portfolio_history[-1].get("timestamp", "")
+            last_time = datetime.fromisoformat(last_timestamp) if last_timestamp else datetime.now() - timedelta(hours=1)
             
-            # Check for liquidation
-            max_loss_pct = 100 / leverage
-            if position["unrealized_pnl_pct"] <= -max_loss_pct * 0.95:  # Close at 95% of liquidation price
-                logger.warning(f"Position {position['pair']} {direction} approaching liquidation threshold!")
-                
-                # In real implementation, this would force close the position
-                # For now, we'll just make note of it
-                position["liquidation_warning"] = True
+            if (datetime.now() - last_time) > timedelta(minutes=30):
+                portfolio_history.append({
+                    "timestamp": datetime.now().isoformat(),
+                    "portfolio_value": portfolio.get("equity", 20000.0)
+                })
+                save_file(PORTFOLIO_HISTORY_FILE, portfolio_history)
+        else:
+            # Create new history if none exists
+            now = datetime.now().isoformat()
+            yesterday = (datetime.now() - timedelta(days=1)).isoformat()
             
-            # Log significant price moves
-            if abs(position["unrealized_pnl_pct"]) > 5:
-                logger.info(f"Position {position['pair']} {direction} has {position['unrealized_pnl_pct']:.2f}% P&L")
-        except Exception as e:
-            logger.error(f"Error updating position: {e}")
+            portfolio_history = [
+                {"timestamp": yesterday, "portfolio_value": 20000.0},
+                {"timestamp": now, "portfolio_value": portfolio.get("equity", 20000.0)}
+            ]
+            save_file(PORTFOLIO_HISTORY_FILE, portfolio_history)
+        
+        return True
+    except Exception as e:
+        logger.error(f"Error updating portfolio: {e}")
+        traceback.print_exc()
+        return False
+
+def generate_ml_signal(pair):
+    """
+    Generate a simulated ML trading signal for the given pair
     
-    def _try_open_position(self) -> Optional[Dict]:
-        """
-        Try to open a new position based on market conditions and ML predictions.
+    Args:
+        pair (str): Trading pair (e.g., "BTC/USD")
         
-        Returns:
-            New position data or None if no position was opened
-        """
-        try:
-            # Check if we should make a new trade
-            if time.time() - self.last_trade_time < self.trade_interval:
-                return None
-            
-            # Get tradable pairs
-            tradable_pairs = ["BTC/USD", "ETH/USD", "SOL/USD", "ADA/USD", "DOT/USD", 
-                              "LINK/USD", "AVAX/USD", "MATIC/USD", "UNI/USD", "ATOM/USD"]
-            
-            # Check if we already have positions for any pairs
-            current_pairs = [p["pair"] for p in self.positions]
-            available_pairs = [p for p in tradable_pairs if p not in current_pairs]
-            
-            if not available_pairs:
-                logger.debug("No available pairs to trade")
-                return None
-            
-            # Randomly choose a pair for demonstration
-            pair = random.choice(available_pairs)
-            
-            # Get current price
-            price = get_price(pair)
-            if price is None:
-                logger.warning(f"Could not get price for {pair}")
-                return None
-            
-            # In a real implementation, ML models would be used here
-            # For demonstration, we'll simulate ML predictions
-            confidence = random.uniform(0.5, 0.95)
-            direction = random.choice(["LONG", "SHORT"])
-            
-            # Calculate dynamic leverage based on confidence
-            # Higher confidence = higher leverage, between 5x and 125x
-            base_leverage = 5
-            max_leverage = 125
-            leverage = base_leverage + (max_leverage - base_leverage) * confidence
-            
-            # Calculate position size
-            # Risk 0.2-2% of available capital based on confidence
-            risk_pct = 0.2 + (2.0 - 0.2) * confidence
-            max_capital_per_trade = self.portfolio["available_capital"] * (risk_pct / 100)
-            
-            # Ensure it's at least $10
-            max_capital_per_trade = max(10, max_capital_per_trade)
-            
-            # Calculate size based on price and leverage
-            size = max_capital_per_trade / price
-            
-            # Ensure we have enough capital
-            required_capital = (size * price) / leverage
-            if required_capital > self.portfolio["available_capital"]:
-                logger.warning(f"Insufficient capital for {pair} trade: Need ${required_capital:.2f}, have ${self.portfolio['available_capital']:.2f}")
-                return None
-            
-            # Create position
-            position = {
-                "pair": pair,
-                "direction": direction,
-                "entry_price": price,
-                "current_price": price,
-                "size": size,
-                "leverage": leverage,
-                "entry_time": datetime.datetime.now().isoformat(),
-                "last_update_time": datetime.datetime.now().isoformat(),
-                "unrealized_pnl": 0.0,
-                "unrealized_pnl_pct": 0.0,
-                "confidence": confidence
-            }
-            
-            # Update portfolio
-            self.portfolio["available_capital"] -= required_capital
-            self._save_portfolio()
-            
-            # Update last trade time
-            self.last_trade_time = time.time()
-            
-            # Log the new position
-            self._log_trade(position, "OPEN")
-            
-            logger.info(f"Opened {direction} position for {pair} with leverage {leverage:.1f}x and confidence {confidence:.2f}")
-            return position
-        except Exception as e:
-            logger.error(f"Error opening position: {e}")
-            return None
+    Returns:
+        dict: Signal details
+    """
+    # Simulate an ML model prediction
+    confidence = random.uniform(0.65, 0.98)
+    direction = random.choice(["long", "short"]) if confidence > 0.8 else None
     
-    def _try_close_positions(self) -> List[Dict]:
-        """
-        Try to close positions based on market conditions and ML predictions.
+    # Dynamically calculate leverage based on confidence
+    leverage = calculate_dynamic_leverage(confidence) if direction else 0
+    
+    return {
+        "pair": pair,
+        "direction": direction,
+        "confidence": round(confidence, 2),
+        "leverage": leverage,
+        "timestamp": datetime.now().isoformat(),
+        "signal_strength": round(confidence * 100, 1),
+        "model": random.choice(["ARIMA", "Adaptive"]),
+        "category": random.choice(["those dudes", "him all along"]),
+        "reason": f"ML model prediction with {round(confidence * 100, 1)}% confidence"
+    }
+
+def execute_trade(signal):
+    """
+    Execute a trade based on the given signal
+    
+    Args:
+        signal (dict): Trading signal
         
-        Returns:
-            List of closed positions
-        """
-        closed_positions = []
+    Returns:
+        bool: Success or failure
+    """
+    try:
+        # Skip if no direction
+        if not signal.get("direction"):
+            return False
         
-        try:
-            for i, position in enumerate(self.positions):
-                # In a real implementation, close decisions would be based on ML predictions
-                # For demonstration, we'll close positions with 10% chance or if they hit profit/loss thresholds
+        # Load portfolio and positions
+        portfolio = load_file(PORTFOLIO_FILE, None)
+        positions = load_file(POSITIONS_FILE, [])
+        trades = load_file(TRADES_FILE, [])
+        
+        # Create portfolio if it doesn't exist
+        if not portfolio:
+            portfolio = create_new_portfolio()
+            positions = []
+            trades = []
+        
+        # Check if we already have a position for this pair
+        for position in positions:
+            if position.get("pair") == signal.get("pair"):
+                logger.info(f"Already have a position for {signal.get('pair')}, skipping trade")
+                return False
+        
+        # Calculate position size (20% of portfolio balance)
+        risk_percentage = 0.20  # 20% risk per trade
+        balance = portfolio.get("balance", 20000.0)
+        position_size = round(balance * risk_percentage, 2)
+        
+        # Get current price
+        pair = signal.get("pair")
+        current_price = get_kraken_price(pair)
+        direction = signal.get("direction")
+        leverage = signal.get("leverage", 20.0)
+        confidence = signal.get("confidence", 0.75)
+        
+        # Create new position
+        new_position = {
+            "pair": pair,
+            "entry_price": current_price,
+            "current_price": current_price,
+            "position_size": position_size,
+            "direction": direction,
+            "leverage": leverage,
+            "entry_time": datetime.now().isoformat(),
+            "unrealized_pnl_pct": 0.0,
+            "unrealized_pnl_amount": 0.0,
+            "current_value": position_size,
+            "confidence": confidence,
+            "model": signal.get("model", "Ensemble"),
+            "category": signal.get("category", "those dudes"),
+            "stop_loss_pct": 4.0,  # 4% maximum loss as per requirements
+            "take_profit_pct": round(8.0 + confidence * 10, 1),  # Dynamic take profit based on confidence
+            "open_trade_id": f"trade_{len(trades) + 1}"
+        }
+        
+        # Add to positions list
+        positions.append(new_position)
+        
+        # Create trade record
+        new_trade = {
+            "trade_id": f"trade_{len(trades) + 1}",
+            "pair": pair,
+            "entry_price": current_price,
+            "direction": direction,
+            "position_size": position_size,
+            "leverage": leverage,
+            "entry_time": datetime.now().isoformat(),
+            "exit_price": None,
+            "exit_time": None,
+            "pnl_amount": None,
+            "pnl_pct": None,
+            "status": "open",
+            "reason_entry": signal.get("reason", "ML signal"),
+            "reason_exit": None,
+            "confidence": confidence,
+            "model": signal.get("model", "Ensemble"),
+            "category": signal.get("category", "those dudes")
+        }
+        
+        # Add to trades list
+        trades.append(new_trade)
+        
+        # Update portfolio available margin
+        portfolio["open_positions_count"] = len(positions)
+        
+        # Save updated data
+        save_file(POSITIONS_FILE, positions)
+        save_file(TRADES_FILE, trades)
+        save_file(PORTFOLIO_FILE, portfolio)
+        
+        logger.info(f"Opened {direction} position for {pair} at {current_price} with {leverage}x leverage and {position_size:.2f} USD")
+        return True
+    except Exception as e:
+        logger.error(f"Error executing trade: {e}")
+        traceback.print_exc()
+        return False
+
+def check_and_close_positions():
+    """Check positions for take profit, stop loss, or other exit conditions"""
+    try:
+        # Load portfolio and positions
+        portfolio = load_file(PORTFOLIO_FILE, None)
+        positions = load_file(POSITIONS_FILE, [])
+        trades = load_file(TRADES_FILE, [])
+        
+        if not portfolio or not positions:
+            return False
+        
+        positions_to_remove = []
+        
+        # Check each position
+        for position in positions:
+            pair = position.get("pair")
+            entry_price = position.get("entry_price", 0)
+            current_price = get_kraken_price(pair)
+            position_size = position.get("position_size", 0)
+            is_long = position.get("direction", "long") == "long"
+            leverage = position.get("leverage", 20.0)
+            stop_loss_pct = position.get("stop_loss_pct", 4.0)
+            take_profit_pct = position.get("take_profit_pct", 12.0)
+            
+            # Calculate P&L
+            if is_long:
+                pnl_pct = (current_price - entry_price) / entry_price * 100 * leverage
+            else:
+                pnl_pct = (entry_price - current_price) / entry_price * 100 * leverage
+            
+            pnl_amount = position_size * pnl_pct / 100
+            
+            # Check for exit conditions
+            exit_reason = None
+            
+            # Take profit condition
+            if pnl_pct >= take_profit_pct:
+                exit_reason = f"Take profit at {take_profit_pct}%"
+            
+            # Stop loss condition
+            elif pnl_pct <= -stop_loss_pct:
+                exit_reason = f"Stop loss at {stop_loss_pct}%"
+            
+            # Exit the position if we have a reason
+            if exit_reason:
+                positions_to_remove.append(position)
                 
-                # Update position first
-                self._update_position(position)
+                # Update the trade record
+                for trade in trades:
+                    if trade.get("trade_id") == position.get("open_trade_id"):
+                        trade["exit_price"] = current_price
+                        trade["exit_time"] = datetime.now().isoformat()
+                        trade["pnl_amount"] = round(pnl_amount, 2)
+                        trade["pnl_pct"] = round(pnl_pct, 2)
+                        trade["status"] = "closed"
+                        trade["reason_exit"] = exit_reason
+                        break
                 
-                # Decision to close:
-                # 1. Random chance (10%)
-                # 2. Profit > 10%
-                # 3. Loss > 20%
-                close_random = random.random() < 0.1
-                close_profit = position["unrealized_pnl_pct"] > 10
-                close_loss = position["unrealized_pnl_pct"] < -20
-                liquidation_warning = position.get("liquidation_warning", False)
+                # Update portfolio balance
+                portfolio["balance"] = round(portfolio.get("balance", 20000.0) + pnl_amount, 2)
                 
-                should_close = close_random or close_profit or close_loss or liquidation_warning
-                
-                if should_close:
-                    # Get updated price
-                    current_price = get_price(position["pair"])
-                    if current_price is None:
-                        logger.warning(f"Could not close position for {position['pair']}: Price unavailable")
-                        continue
-                    
-                    # Update final price
-                    position["current_price"] = current_price
-                    
-                    # Log reason for closing
-                    close_reason = "random" if close_random else (
-                        "profit target" if close_profit else (
-                        "stop loss" if close_loss else "liquidation risk"
-                        )
-                    )
-                    logger.info(f"Closing {position['pair']} position due to {close_reason}")
-                    
-                    # Close the position and update portfolio
-                    self.portfolio["available_capital"] += (
-                        (position["size"] * position["current_price"]) / position["leverage"] +
-                        position["unrealized_pnl"]
-                    )
-                    
-                    # Log the closed trade
-                    self._log_trade(position, "CLOSE")
-                    
-                    # Add to closed positions
-                    closed_positions.append(position)
-        except Exception as e:
-            logger.error(f"Error closing positions: {e}")
+                logger.info(f"Closed {position.get('direction')} position for {pair} at {current_price} with P&L: {pnl_amount:.2f} USD ({pnl_pct:.2f}%)")
         
         # Remove closed positions
-        self.positions = [p for p in self.positions if p not in closed_positions]
-        self._save_positions()
-        
-        return closed_positions
-    
-    def _update_all_positions(self) -> None:
-        """Update all positions with current prices"""
-        for position in self.positions:
-            self._update_position(position)
-        
-        # Save updated positions
-        self._save_positions()
-        
-        # Update portfolio with new P&L values
-        self._update_portfolio_pnl()
-    
-    def run(self) -> None:
-        """Run the trading bot"""
-        logger.info("Starting isolated trading bot...")
-        
-        try:
-            # Main trading loop
-            while True:
-                # Update all positions
-                self._update_all_positions()
-                
-                # Try to close positions
-                closed_positions = self._try_close_positions()
-                if closed_positions:
-                    logger.info(f"Closed {len(closed_positions)} positions")
-                
-                # Try to open new positions
-                new_position = self._try_open_position()
-                if new_position:
-                    self.positions.append(new_position)
-                    self._save_positions()
-                
-                # Update portfolio history
-                if time.time() - self.last_update_time > 60:  # Once per minute
-                    self._update_portfolio_history()
-                    self.last_update_time = time.time()
-                
-                # Display status
-                if random.random() < 0.05:  # ~5% chance each iteration
-                    self.get_status()
-                
-                # Sleep to prevent excessive CPU usage
-                time.sleep(2)
-        except KeyboardInterrupt:
-            logger.info("Shutting down trading bot...")
-        except Exception as e:
-            logger.error(f"Error in trading bot: {e}")
-        finally:
-            # Final portfolio update
-            self._update_all_positions()
-            self._update_portfolio_history()
-            logger.info("Trading bot shutdown complete")
-    
-    def get_status(self) -> Dict:
-        """
-        Get current bot status.
-        
-        Returns:
-            Dictionary with current status information
-        """
-        try:
-            # Update all positions first
-            self._update_all_positions()
+        if positions_to_remove:
+            positions = [p for p in positions if p not in positions_to_remove]
             
-            # Prepare status info
-            status = {
-                "timestamp": datetime.datetime.now().isoformat(),
-                "portfolio": {
-                    "total_value": self.portfolio["total_value"],
-                    "available_capital": self.portfolio["available_capital"],
-                    "total_pnl": self.portfolio["total_pnl"],
-                    "total_pnl_pct": self.portfolio["total_pnl_pct"],
-                    "unrealized_pnl": self.portfolio["unrealized_pnl"],
-                    "unrealized_pnl_pct": self.portfolio["unrealized_pnl_pct"],
-                    "win_rate": self.portfolio["win_rate"]
-                },
-                "active_positions": len(self.positions),
-                "trades_today": sum(1 for t in self._load_trades() if 
-                                  datetime.datetime.fromisoformat(t["timestamp"]).date() == 
-                                  datetime.datetime.now().date())
-            }
+            # Update portfolio
+            portfolio["open_positions_count"] = len(positions)
+            total_pnl = sum(t.get("pnl_amount", 0) for t in trades if t.get("status") == "closed")
+            initial_balance = 20000.0
+            portfolio["total_pnl"] = round(total_pnl, 2)
+            portfolio["total_pnl_pct"] = round(total_pnl / initial_balance * 100, 2)
             
-            # Log status
-            logger.info(f"Portfolio: ${status['portfolio']['total_value']:.2f} | " +
-                      f"P&L: ${status['portfolio']['total_pnl']:.2f} ({status['portfolio']['total_pnl_pct']:.2f}%) | " +
-                      f"Win Rate: {status['portfolio']['win_rate']*100:.1f}% | " +
-                      f"Active Positions: {status['active_positions']}")
+            # Save updated data
+            save_file(POSITIONS_FILE, positions)
+            save_file(TRADES_FILE, trades)
+            save_file(PORTFOLIO_FILE, portfolio)
             
-            return status
-        except Exception as e:
-            logger.error(f"Error getting status: {e}")
-            return {}
-
-def main():
-    """Main function"""
-    try:
-        # Print startup banner
-        print("\n" + "=" * 60)
-        print(" ISOLATED TRADING BOT STARTING")
-        print("=" * 60 + "\n")
+            return True
         
-        # Create and run the bot
-        bot = IsolatedTradingBot()
-        bot.run()
-    except KeyboardInterrupt:
-        print("\nTrading bot stopped by user")
+        return False
     except Exception as e:
-        print(f"Error running trading bot: {e}")
-    finally:
-        print("\n" + "=" * 60)
-        print(" ISOLATED TRADING BOT SHUTDOWN")
-        print("=" * 60)
+        logger.error(f"Error checking positions: {e}")
+        traceback.print_exc()
+        return False
+
+def main_loop():
+    """Main trading bot loop"""
+    logger.info("Starting trading bot in sandbox mode")
+    
+    # Make sure we have a portfolio
+    portfolio = load_file(PORTFOLIO_FILE, None)
+    if not portfolio:
+        create_new_portfolio()
+    
+    last_signal_time = {}
+    for pair in TRADING_PAIRS:
+        last_signal_time[pair] = datetime.now() - timedelta(hours=1)
+    
+    # Run until interrupted
+    try:
+        while True:
+            # Update portfolio and positions with current prices
+            update_portfolio_and_positions()
+            
+            # Check and close positions if needed
+            check_and_close_positions()
+            
+            # Generate trading signals for each pair
+            current_time = datetime.now()
+            
+            for pair in TRADING_PAIRS:
+                # Only generate signals every 15-60 minutes for each pair
+                time_since_last = (current_time - last_signal_time[pair]).total_seconds() / 60
+                
+                # Random interval between 15-60 minutes
+                interval = random.randint(15, 60)
+                
+                if time_since_last >= interval:
+                    signal = generate_ml_signal(pair)
+                    
+                    # Only execute trades with high confidence
+                    if signal.get("confidence", 0) > 0.75 and signal.get("direction"):
+                        if execute_trade(signal):
+                            last_signal_time[pair] = current_time
+                            
+                            # Log the leverage and confidence details
+                            logger.info(f"Trade executed for {pair} with {signal.get('leverage')}x leverage based on {signal.get('confidence') * 100}% confidence")
+            
+            # Sleep for a while
+            time.sleep(15)  # Update every 15 seconds
+            
+    except KeyboardInterrupt:
+        logger.info("Trading bot stopped by user")
+    except Exception as e:
+        logger.error(f"Error in main loop: {e}")
+        traceback.print_exc()
 
 if __name__ == "__main__":
-    main()
+    # Run the main loop
+    main_loop()
+else:
+    # If imported, just run once
+    logger.info("Isolated bot imported - running once")
+    
+    # Update portfolio and positions
+    update_portfolio_and_positions()
+    
+    # Check for position exits
+    check_and_close_positions()
+    
+    # Generate a few trading signals
+    for pair in random.sample(TRADING_PAIRS, 3):
+        signal = generate_ml_signal(pair)
+        if signal.get("confidence", 0) > 0.75 and signal.get("direction"):
+            execute_trade(signal)
+            logger.info(f"Trade executed for {pair} with {signal.get('leverage')}x leverage based on {signal.get('confidence') * 100}% confidence")
