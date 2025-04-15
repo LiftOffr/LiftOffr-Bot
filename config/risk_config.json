@@ -1,155 +1,116 @@
 {
-  "base_leverage": 20.0,
-  "max_leverage": 125.0,
-  "confidence_threshold": 0.65,
-  "risk_percentage": 0.2,
-  "max_risk_percentage": 0.3,
-  "max_drawdown_threshold": 0.25,
-  "max_positions": 6,
-  "stop_loss_percentage": 0.04,
-  "take_profit_percentage": 0.1,
-  "trailing_stop_enabled": true,
-  "trailing_stop_activation": 0.03,
-  "trailing_stop_distance": 0.02,
-  "max_total_leverage": 500.0,
-  "max_leverage_per_pair": {
-    "SOL/USD": 125.0,
-    "BTC/USD": 100.0,
-    "ETH/USD": 90.0,
-    "ADA/USD": 75.0,
-    "DOT/USD": 70.0,
-    "LINK/USD": 85.0
-  },
-  "volatile_market_adjustment": 0.7,
-  "trending_market_adjustment": 1.2,
-  "flat_market_adjustment": 0.9,
-  "strategy_priority": {
-    "Adaptive": 1,
-    "ARIMA": 2
-  },
-  "auto_risk_adjustment": true,
-  "max_positions_per_pair": 1,
-  "max_exposure_per_asset_class": 0.4,
-  "market_regime_adjustments": {
-    "volatile": {
-      "leverage_adjustment": 0.7,
-      "risk_adjustment": 0.8,
-      "stop_loss_adjustment": 1.2,
-      "take_profit_adjustment": 1.2
-    },
-    "trending_up": {
-      "leverage_adjustment": 1.2,
-      "risk_adjustment": 1.1,
-      "long_bias": 0.2,
-      "short_bias": -0.2
-    },
-    "trending_down": {
-      "leverage_adjustment": 1.0,
-      "risk_adjustment": 0.9,
-      "long_bias": -0.2,
-      "short_bias": 0.2
-    },
-    "ranging": {
-      "leverage_adjustment": 0.9,
-      "risk_adjustment": 0.9,
-      "stop_loss_adjustment": 0.8
-    }
-  },
-  "correlation_limits": {
-    "max_correlation": 0.8,
-    "risk_scaling": true
-  },
-  "downside_protection": {
-    "enabled": true,
-    "drawdown_threshold": 0.15,
-    "reduction_factor": 0.5,
-    "recovery_threshold": 0.05
-  },
-  "market_conditions": {
-    "high_volatility_threshold": 0.04,
-    "low_liquidity_threshold": 100000
-  },
   "global": {
-    "max_acceptable_drawdown": 0.027271661236423765,
-    "daily_var_95": 0.004545276872737294,
-    "position_correlation_limit": 0.7,
-    "max_open_positions": 12,
-    "max_leverage_total": 100.0,
-    "margin_reserve_percentage": 0.2,
-    "last_updated": "2025-04-15T02:38:05.752740"
-  },
-  "flash_crash": {
-    "enabled": true,
-    "trigger_threshold": -0.05,
-    "max_acceptable_loss": -0.15,
-    "recovery_threshold": 0.03,
-    "cooldown_period": 6,
-    "protection_levels": [
-      {
-        "threshold": -0.05,
-        "action": "reduce_leverage",
-        "factor": 0.5
-      },
-      {
-        "threshold": -0.1,
-        "action": "hedge",
-        "factor": 0.25
-      },
-      {
-        "threshold": -0.15,
-        "action": "close_all",
-        "factor": 1.0
-      }
-    ]
+    "max_drawdown_percentage": 0.10,
+    "max_leverage": 125.0,
+    "base_leverage": 39.0,
+    "max_risk_per_trade": 0.20,
+    "min_confidence_threshold": 0.65,
+    "position_entry_timeout": 300,
+    "stop_loss_percentage": 0.04,
+    "take_profit_percentage": 0.15,
+    "trailing_stop_activation": 0.05,
+    "trailing_stop_distance": 0.02,
+    "max_open_positions": 6,
+    "min_position_distance": 0.05,
+    "trend_confirmation_required": true,
+    "volatility_adjustment": true,
+    "liquidation_protection": true,
+    "flash_crash_protection": true,
+    "max_loss_per_day_percentage": 0.05,
+    "capital_allocation_percentage": 0.90,
+    "leverage_scaling_factor": 1.25,
+    "dynamic_risk_parameters": true
   },
   "pairs": {
     "SOL/USD": {
-      "risk_level": "Medium",
-      "max_drawdown_historical": 0.009919292937207235,
-      "max_leverage": 100.0,
-      "position_size_limit": 0.25,
-      "stop_loss_multiplier": 1.2,
-      "last_updated": "2025-04-15T02:38:05.752748"
+      "max_leverage": 125.0,
+      "base_leverage": 38.84,
+      "risk_percentage": 0.20,
+      "confidence_threshold": 0.75,
+      "stop_loss_percentage": 0.04,
+      "take_profit_percentage": 0.15,
+      "stop_loss_atr_multiplier": 2.5,
+      "take_profit_atr_multiplier": 6.0,
+      "trailing_stop_activation": 0.05,
+      "trailing_stop_distance": 0.02,
+      "max_adverse_excursion": 0.05,
+      "volatility_filter_threshold": 0.3,
+      "min_trend_strength": 0.4
     },
     "BTC/USD": {
-      "risk_level": "Low",
-      "max_drawdown_historical": 0.00472281058542422,
       "max_leverage": 125.0,
-      "position_size_limit": 0.3,
-      "stop_loss_multiplier": 1.5,
-      "last_updated": "2025-04-15T02:38:05.752754"
+      "base_leverage": 39.43,
+      "risk_percentage": 0.20,
+      "confidence_threshold": 0.78,
+      "stop_loss_percentage": 0.04,
+      "take_profit_percentage": 0.15,
+      "stop_loss_atr_multiplier": 2.5,
+      "take_profit_atr_multiplier": 6.0,
+      "trailing_stop_activation": 0.05,
+      "trailing_stop_distance": 0.02,
+      "max_adverse_excursion": 0.05,
+      "volatility_filter_threshold": 0.25,
+      "min_trend_strength": 0.35
     },
     "ETH/USD": {
-      "risk_level": "Medium",
-      "max_drawdown_historical": 0.008898430422416259,
-      "max_leverage": 100.0,
-      "position_size_limit": 0.25,
-      "stop_loss_multiplier": 1.2,
-      "last_updated": "2025-04-15T02:38:05.752756"
+      "max_leverage": 125.0,
+      "base_leverage": 39.18,
+      "risk_percentage": 0.20,
+      "confidence_threshold": 0.77,
+      "stop_loss_percentage": 0.04,
+      "take_profit_percentage": 0.15,
+      "stop_loss_atr_multiplier": 2.5,
+      "take_profit_atr_multiplier": 6.0,
+      "trailing_stop_activation": 0.05,
+      "trailing_stop_distance": 0.02,
+      "max_adverse_excursion": 0.05,
+      "volatility_filter_threshold": 0.25,
+      "min_trend_strength": 0.35
     },
     "ADA/USD": {
-      "risk_level": "Medium",
-      "max_drawdown_historical": 0.010479824185539641,
-      "max_leverage": 100.0,
-      "position_size_limit": 0.25,
-      "stop_loss_multiplier": 1.2,
-      "last_updated": "2025-04-15T02:38:05.752758"
+      "max_leverage": 125.0,
+      "base_leverage": 38.96,
+      "risk_percentage": 0.20,
+      "confidence_threshold": 0.76,
+      "stop_loss_percentage": 0.04,
+      "take_profit_percentage": 0.15,
+      "stop_loss_atr_multiplier": 2.5,
+      "take_profit_atr_multiplier": 6.0,
+      "trailing_stop_activation": 0.05,
+      "trailing_stop_distance": 0.02,
+      "max_adverse_excursion": 0.05,
+      "volatility_filter_threshold": 0.35,
+      "min_trend_strength": 0.45
     },
     "DOT/USD": {
-      "risk_level": "Medium",
-      "max_drawdown_historical": 0.010799586171604427,
-      "max_leverage": 100.0,
-      "position_size_limit": 0.25,
-      "stop_loss_multiplier": 1.2,
-      "last_updated": "2025-04-15T02:38:05.752760"
+      "max_leverage": 125.0,
+      "base_leverage": 38.85,
+      "risk_percentage": 0.20,
+      "confidence_threshold": 0.75,
+      "stop_loss_percentage": 0.04,
+      "take_profit_percentage": 0.15,
+      "stop_loss_atr_multiplier": 2.5,
+      "take_profit_atr_multiplier": 6.0,
+      "trailing_stop_activation": 0.05,
+      "trailing_stop_distance": 0.02,
+      "max_adverse_excursion": 0.05,
+      "volatility_filter_threshold": 0.35,
+      "min_trend_strength": 0.45
     },
     "LINK/USD": {
-      "risk_level": "Medium",
-      "max_drawdown_historical": 0.009723378170655748,
-      "max_leverage": 100.0,
-      "position_size_limit": 0.25,
-      "stop_loss_multiplier": 1.2,
-      "last_updated": "2025-04-15T02:38:05.752762"
+      "max_leverage": 125.0,
+      "base_leverage": 38.80,
+      "risk_percentage": 0.20,
+      "confidence_threshold": 0.74,
+      "stop_loss_percentage": 0.04,
+      "take_profit_percentage": 0.15,
+      "stop_loss_atr_multiplier": 2.5,
+      "take_profit_atr_multiplier": 6.0,
+      "trailing_stop_activation": 0.05,
+      "trailing_stop_distance": 0.02,
+      "max_adverse_excursion": 0.05,
+      "volatility_filter_threshold": 0.35,
+      "min_trend_strength": 0.45
     }
   }
 }

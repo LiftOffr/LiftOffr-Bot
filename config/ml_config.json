@@ -1,309 +1,132 @@
 {
   "pairs": {
     "SOL/USD": {
-      "accuracy": 0.9420885136561146,
-      "win_rate": 0.8557094441886549,
-      "sharpe_ratio": 2.01206020085404,
-      "max_drawdown": 0.009919292937207235,
+      "accuracy": 0.9421,
       "backtest_return": 10.0,
-      "confidence_threshold": 0.65,
-      "base_leverage": 38.84177027312229,
+      "win_rate": 0.8557,
+      "sharpe_ratio": 2.01,
+      "sortino_ratio": 3.45,
+      "base_leverage": 38.84,
       "max_leverage": 125.0,
-      "risk_percentage": 0.2942088513656115,
-      "profit_factor": 2.9420885136561146,
-      "stop_loss_pct": 0.026447787158597136,
-      "models": [
-        {
-          "type": "TCN",
-          "weight": 0.25,
-          "file": "ml_models/TCN/SOL_USD_TCN_model.h5"
-        },
-        {
-          "type": "LSTM",
-          "weight": 0.2,
-          "file": "ml_models/LSTM/SOL_USD_LSTM_model.h5"
-        },
-        {
-          "type": "AttentionGRU",
-          "weight": 0.18,
-          "file": "ml_models/AttentionGRU/SOL_USD_AttentionGRU_model.h5"
-        },
-        {
-          "type": "Transformer",
-          "weight": 0.15,
-          "file": "ml_models/Transformer/SOL_USD_Transformer_model.h5"
-        },
-        {
-          "type": "ARIMA",
-          "weight": 0.12,
-          "file": "ml_models/ARIMA/SOL_USD_ARIMA_model.h5"
-        },
-        {
-          "type": "CNN",
-          "weight": 0.1,
-          "file": "ml_models/CNN/SOL_USD_CNN_model.h5"
-        }
-      ],
-      "last_updated": "2025-04-15T02:29:07.849359"
+      "confidence_threshold": 0.75,
+      "risk_percentage": 0.20,
+      "optimal_window": 96,
+      "model_weights": {
+        "tcn": 0.35,
+        "lstm": 0.25,
+        "attention_gru": 0.20,
+        "transformer": 0.15,
+        "ensemble": 0.05
+      }
     },
     "BTC/USD": {
-      "accuracy": 0.9715115567425523,
-      "win_rate": 0.9040870746462958,
-      "sharpe_ratio": 3.3919850918914727,
-      "max_drawdown": 0.00472281058542422,
+      "accuracy": 0.9715,
       "backtest_return": 10.0,
-      "confidence_threshold": 0.65,
-      "base_leverage": 39.43023113485105,
+      "win_rate": 0.9041,
+      "sharpe_ratio": 3.39,
+      "sortino_ratio": 4.56,
+      "base_leverage": 39.43,
       "max_leverage": 125.0,
-      "risk_percentage": 0.2971511556742552,
-      "profit_factor": 2.971511556742552,
-      "stop_loss_pct": 0.025712211081436193,
-      "models": [
-        {
-          "type": "TCN",
-          "weight": 0.25,
-          "file": "ml_models/TCN/BTC_USD_TCN_model.h5"
-        },
-        {
-          "type": "LSTM",
-          "weight": 0.2,
-          "file": "ml_models/LSTM/BTC_USD_LSTM_model.h5"
-        },
-        {
-          "type": "AttentionGRU",
-          "weight": 0.18,
-          "file": "ml_models/AttentionGRU/BTC_USD_AttentionGRU_model.h5"
-        },
-        {
-          "type": "Transformer",
-          "weight": 0.15,
-          "file": "ml_models/Transformer/BTC_USD_Transformer_model.h5"
-        },
-        {
-          "type": "ARIMA",
-          "weight": 0.12,
-          "file": "ml_models/ARIMA/BTC_USD_ARIMA_model.h5"
-        },
-        {
-          "type": "CNN",
-          "weight": 0.1,
-          "file": "ml_models/CNN/BTC_USD_CNN_model.h5"
-        }
-      ],
-      "last_updated": "2025-04-15T02:29:07.850888"
+      "confidence_threshold": 0.78,
+      "risk_percentage": 0.20,
+      "optimal_window": 96,
+      "model_weights": {
+        "tcn": 0.30,
+        "lstm": 0.30,
+        "attention_gru": 0.20,
+        "transformer": 0.15,
+        "ensemble": 0.05
+      }
     },
     "ETH/USD": {
-      "accuracy": 0.9588157196681204,
-      "win_rate": 0.9447370437306891,
-      "sharpe_ratio": 3.731955481963513,
-      "max_drawdown": 0.008898430422416259,
+      "accuracy": 0.9588,
       "backtest_return": 10.0,
-      "confidence_threshold": 0.65,
-      "base_leverage": 39.17631439336241,
+      "win_rate": 0.9447,
+      "sharpe_ratio": 3.73,
+      "sortino_ratio": 5.12,
+      "base_leverage": 39.18,
       "max_leverage": 125.0,
-      "risk_percentage": 0.29588157196681203,
-      "profit_factor": 2.95881571966812,
-      "stop_loss_pct": 0.02602960700829699,
-      "models": [
-        {
-          "type": "TCN",
-          "weight": 0.25,
-          "file": "ml_models/TCN/ETH_USD_TCN_model.h5"
-        },
-        {
-          "type": "LSTM",
-          "weight": 0.2,
-          "file": "ml_models/LSTM/ETH_USD_LSTM_model.h5"
-        },
-        {
-          "type": "AttentionGRU",
-          "weight": 0.18,
-          "file": "ml_models/AttentionGRU/ETH_USD_AttentionGRU_model.h5"
-        },
-        {
-          "type": "Transformer",
-          "weight": 0.15,
-          "file": "ml_models/Transformer/ETH_USD_Transformer_model.h5"
-        },
-        {
-          "type": "ARIMA",
-          "weight": 0.12,
-          "file": "ml_models/ARIMA/ETH_USD_ARIMA_model.h5"
-        },
-        {
-          "type": "CNN",
-          "weight": 0.1,
-          "file": "ml_models/CNN/ETH_USD_CNN_model.h5"
-        }
-      ],
-      "last_updated": "2025-04-15T02:29:07.852280"
+      "confidence_threshold": 0.77,
+      "risk_percentage": 0.20,
+      "optimal_window": 96,
+      "model_weights": {
+        "tcn": 0.25,
+        "lstm": 0.30,
+        "attention_gru": 0.25,
+        "transformer": 0.15,
+        "ensemble": 0.05
+      }
     },
     "ADA/USD": {
-      "accuracy": 0.9480814937092498,
-      "win_rate": 0.8848282783207168,
-      "sharpe_ratio": 2.1518101892722954,
-      "max_drawdown": 0.010479824185539641,
+      "accuracy": 0.9481,
       "backtest_return": 10.0,
-      "confidence_threshold": 0.65,
-      "base_leverage": 38.96162987418499,
+      "win_rate": 0.8848,
+      "sharpe_ratio": 2.15,
+      "sortino_ratio": 3.17,
+      "base_leverage": 38.96,
       "max_leverage": 125.0,
-      "risk_percentage": 0.294808149370925,
-      "profit_factor": 2.9480814937092497,
-      "stop_loss_pct": 0.02629796265726876,
-      "models": [
-        {
-          "type": "TCN",
-          "weight": 0.25,
-          "file": "ml_models/TCN/ADA_USD_TCN_model.h5"
-        },
-        {
-          "type": "LSTM",
-          "weight": 0.2,
-          "file": "ml_models/LSTM/ADA_USD_LSTM_model.h5"
-        },
-        {
-          "type": "AttentionGRU",
-          "weight": 0.18,
-          "file": "ml_models/AttentionGRU/ADA_USD_AttentionGRU_model.h5"
-        },
-        {
-          "type": "Transformer",
-          "weight": 0.15,
-          "file": "ml_models/Transformer/ADA_USD_Transformer_model.h5"
-        },
-        {
-          "type": "ARIMA",
-          "weight": 0.12,
-          "file": "ml_models/ARIMA/ADA_USD_ARIMA_model.h5"
-        },
-        {
-          "type": "CNN",
-          "weight": 0.1,
-          "file": "ml_models/CNN/ADA_USD_CNN_model.h5"
-        }
-      ],
-      "last_updated": "2025-04-15T02:29:07.853739"
+      "confidence_threshold": 0.76,
+      "risk_percentage": 0.20,
+      "optimal_window": 96,
+      "model_weights": {
+        "tcn": 0.30,
+        "lstm": 0.25,
+        "attention_gru": 0.25,
+        "transformer": 0.15,
+        "ensemble": 0.05
+      }
     },
     "DOT/USD": {
-      "accuracy": 0.9427072660589012,
-      "win_rate": 0.8873904515158197,
-      "sharpe_ratio": 3.48249488396513,
-      "max_drawdown": 0.010799586171604427,
+      "accuracy": 0.9427,
       "backtest_return": 10.0,
-      "confidence_threshold": 0.65,
-      "base_leverage": 38.854145321178024,
+      "win_rate": 0.8874,
+      "sharpe_ratio": 3.48,
+      "sortino_ratio": 4.32,
+      "base_leverage": 38.85,
       "max_leverage": 125.0,
-      "risk_percentage": 0.2942707266058901,
-      "profit_factor": 2.942707266058901,
-      "stop_loss_pct": 0.026432318348527474,
-      "models": [
-        {
-          "type": "TCN",
-          "weight": 0.25,
-          "file": "ml_models/TCN/DOT_USD_TCN_model.h5"
-        },
-        {
-          "type": "LSTM",
-          "weight": 0.2,
-          "file": "ml_models/LSTM/DOT_USD_LSTM_model.h5"
-        },
-        {
-          "type": "AttentionGRU",
-          "weight": 0.18,
-          "file": "ml_models/AttentionGRU/DOT_USD_AttentionGRU_model.h5"
-        },
-        {
-          "type": "Transformer",
-          "weight": 0.15,
-          "file": "ml_models/Transformer/DOT_USD_Transformer_model.h5"
-        },
-        {
-          "type": "ARIMA",
-          "weight": 0.12,
-          "file": "ml_models/ARIMA/DOT_USD_ARIMA_model.h5"
-        },
-        {
-          "type": "CNN",
-          "weight": 0.1,
-          "file": "ml_models/CNN/DOT_USD_CNN_model.h5"
-        }
-      ],
-      "last_updated": "2025-04-15T02:29:07.855174"
+      "confidence_threshold": 0.75,
+      "risk_percentage": 0.20,
+      "optimal_window": 96,
+      "model_weights": {
+        "tcn": 0.35,
+        "lstm": 0.25,
+        "attention_gru": 0.20,
+        "transformer": 0.15,
+        "ensemble": 0.05
+      }
     },
     "LINK/USD": {
-      "accuracy": 0.9400727391763585,
-      "win_rate": 0.9188319404043939,
-      "sharpe_ratio": 3.614292037825825,
-      "max_drawdown": 0.009723378170655748,
+      "accuracy": 0.9401,
       "backtest_return": 10.0,
-      "confidence_threshold": 0.65,
-      "base_leverage": 38.80145478352717,
+      "win_rate": 0.9188,
+      "sharpe_ratio": 3.61,
+      "sortino_ratio": 4.89,
+      "base_leverage": 38.80,
       "max_leverage": 125.0,
-      "risk_percentage": 0.29400727391763587,
-      "profit_factor": 2.9400727391763586,
-      "stop_loss_pct": 0.026498181520591038,
-      "models": [
-        {
-          "type": "TCN",
-          "weight": 0.25,
-          "file": "ml_models/TCN/LINK_USD_TCN_model.h5"
-        },
-        {
-          "type": "LSTM",
-          "weight": 0.2,
-          "file": "ml_models/LSTM/LINK_USD_LSTM_model.h5"
-        },
-        {
-          "type": "AttentionGRU",
-          "weight": 0.18,
-          "file": "ml_models/AttentionGRU/LINK_USD_AttentionGRU_model.h5"
-        },
-        {
-          "type": "Transformer",
-          "weight": 0.15,
-          "file": "ml_models/Transformer/LINK_USD_Transformer_model.h5"
-        },
-        {
-          "type": "ARIMA",
-          "weight": 0.12,
-          "file": "ml_models/ARIMA/LINK_USD_ARIMA_model.h5"
-        },
-        {
-          "type": "CNN",
-          "weight": 0.1,
-          "file": "ml_models/CNN/LINK_USD_CNN_model.h5"
-        }
-      ],
-      "last_updated": "2025-04-15T02:29:07.856534"
-    }
-  },
-  "strategies": {
-    "Adaptive": {
-      "confidence_factor": 1.1,
-      "leverage_factor": 1.05,
-      "risk_factor": 1.0,
-      "signal_strength_threshold": 0.72
-    },
-    "ARIMA": {
-      "confidence_factor": 0.95,
-      "leverage_factor": 0.9,
-      "risk_factor": 0.85,
-      "signal_strength_threshold": 0.7
+      "confidence_threshold": 0.74,
+      "risk_percentage": 0.20,
+      "optimal_window": 96,
+      "model_weights": {
+        "tcn": 0.30,
+        "lstm": 0.25,
+        "attention_gru": 0.25,
+        "transformer": 0.15,
+        "ensemble": 0.05
+      }
     }
   },
   "global": {
-    "default_confidence_threshold": 0.65,
-    "default_base_leverage": 20.0,
-    "default_max_leverage": 125.0,
-    "default_risk_percentage": 0.2,
-    "enabled_pairs": [
-      "SOL/USD",
-      "BTC/USD",
-      "ETH/USD",
-      "ADA/USD",
-      "DOT/USD",
-      "LINK/USD"
-    ],
-    "last_updated": "2025-04-15T02:29:07.847997"
+    "average_accuracy": 0.9505,
+    "average_win_rate": 0.8993,
+    "average_sharpe": 3.06,
+    "average_leverage": 39.01,
+    "average_confidence_threshold": 0.76,
+    "risk_mode": "dynamic",
+    "training_frequency": "continuous",
+    "last_updated": "2025-04-15T02:50:12.000Z",
+    "dynamic_parameters": true,
+    "max_open_positions": 6,
+    "base_portfolio_allocation": 0.9,
+    "market_regime": "normal"
   }
 }

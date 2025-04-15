@@ -1,224 +1,109 @@
 {
-  "correlation_matrix": {
-    "SOL/USD": {
-      "SOL/USD": 1.0,
-      "BTC/USD": 0.5,
-      "ETH/USD": 0.5,
-      "ADA/USD": 0.75,
-      "DOT/USD": 0.75,
-      "LINK/USD": 0.5
+  "categories": {
+    "those_dudes": {
+      "max_concurrent_trades": 3,
+      "arbitration_weight": 0.60,
+      "strategies": ["ARIMA", "MACD"],
+      "max_adverse_excursion": 0.05,
+      "signal_strength_threshold": 0.60,
+      "override_threshold": 0.85,
+      "trend_filter_weight": 0.40,
+      "exit_coordination": true,
+      "prioritize_stronger_signal": true
     },
-    "BTC/USD": {
-      "SOL/USD": 0.5,
-      "BTC/USD": 1.0,
-      "ETH/USD": 0.5,
-      "ADA/USD": 0.5,
-      "DOT/USD": 0.5,
-      "LINK/USD": 0.5
-    },
-    "ETH/USD": {
-      "SOL/USD": 0.5,
-      "BTC/USD": 0.5,
-      "ETH/USD": 1.0,
-      "ADA/USD": 0.5,
-      "DOT/USD": 0.5,
-      "LINK/USD": 0.5
-    },
-    "ADA/USD": {
-      "SOL/USD": 0.75,
-      "BTC/USD": 0.5,
-      "ETH/USD": 0.5,
-      "ADA/USD": 1.0,
-      "DOT/USD": 0.75,
-      "LINK/USD": 0.5
-    },
-    "DOT/USD": {
-      "SOL/USD": 0.75,
-      "BTC/USD": 0.5,
-      "ETH/USD": 0.5,
-      "ADA/USD": 0.75,
-      "DOT/USD": 1.0,
-      "LINK/USD": 0.5
-    },
-    "LINK/USD": {
-      "SOL/USD": 0.5,
-      "BTC/USD": 0.5,
-      "ETH/USD": 0.5,
-      "ADA/USD": 0.5,
-      "DOT/USD": 0.5,
-      "LINK/USD": 1.0
+    "him_all_along": {
+      "max_concurrent_trades": 3,
+      "arbitration_weight": 0.40,
+      "strategies": ["Adaptive", "ML-Enhanced"],
+      "max_adverse_excursion": 0.04,
+      "signal_strength_threshold": 0.65,
+      "override_threshold": 0.90,
+      "trend_filter_weight": 0.60,
+      "exit_coordination": true,
+      "prioritize_stronger_signal": true
     }
   },
-  "pair_risks": {
-    "SOL/USD": -2.8181731803566588,
-    "BTC/USD": -4.272458113610647,
-    "ETH/USD": -4.632200373582121,
-    "ADA/USD": -2.984239346665314,
-    "DOT/USD": -4.315887404622927,
-    "LINK/USD": -4.48450708737694
-  },
-  "diversification_rules": {
-    "max_exposure_per_pair": 0.3,
-    "max_correlation_weight": 0.6,
-    "min_uncorrelated_allocation": 0.2,
-    "correlation_threshold": 0.7
-  },
-  "stress_scenarios": [
-    {
-      "name": "Market Crash",
-      "description": "Sudden market-wide crash of 15-25%",
-      "impacts": {
-        "SOL/USD": {
-          "price_change": -0.2,
-          "volatility_multiplier": 3.0
-        },
-        "BTC/USD": {
-          "price_change": -0.2,
-          "volatility_multiplier": 3.0
-        },
-        "ETH/USD": {
-          "price_change": -0.2,
-          "volatility_multiplier": 3.0
-        },
-        "ADA/USD": {
-          "price_change": -0.2,
-          "volatility_multiplier": 3.0
-        },
-        "DOT/USD": {
-          "price_change": -0.2,
-          "volatility_multiplier": 3.0
-        },
-        "LINK/USD": {
-          "price_change": -0.2,
-          "volatility_multiplier": 3.0
-        }
-      },
-      "duration": 48,
-      "recovery_pattern": "V-shaped",
-      "probability": 0.05
+  "strategies": {
+    "ARIMA": {
+      "enabled": true,
+      "max_open_trades": 1,
+      "risk_percentage": 0.20,
+      "stop_loss_percentage": 0.04,
+      "take_profit_percentage": 0.15,
+      "required_trend_strength": 0.40,
+      "min_atr_multiple": 2.0,
+      "max_atr_multiple": 8.0,
+      "priority_level": 2,
+      "category": "those_dudes"
     },
-    {
-      "name": "Prolonged Bear Market",
-      "description": "Extended downtrend with 30-50% decline over weeks",
-      "impacts": {
-        "SOL/USD": {
-          "price_change": -0.4,
-          "volatility_multiplier": 1.5
-        },
-        "BTC/USD": {
-          "price_change": -0.4,
-          "volatility_multiplier": 1.5
-        },
-        "ETH/USD": {
-          "price_change": -0.4,
-          "volatility_multiplier": 1.5
-        },
-        "ADA/USD": {
-          "price_change": -0.4,
-          "volatility_multiplier": 1.5
-        },
-        "DOT/USD": {
-          "price_change": -0.4,
-          "volatility_multiplier": 1.5
-        },
-        "LINK/USD": {
-          "price_change": -0.4,
-          "volatility_multiplier": 1.5
-        }
-      },
-      "duration": 720,
-      "recovery_pattern": "U-shaped",
-      "probability": 0.15
+    "MACD": {
+      "enabled": true,
+      "max_open_trades": 1,
+      "risk_percentage": 0.20,
+      "stop_loss_percentage": 0.04,
+      "take_profit_percentage": 0.15,
+      "required_trend_strength": 0.45,
+      "min_atr_multiple": 2.0,
+      "max_atr_multiple": 8.0,
+      "priority_level": 3,
+      "category": "those_dudes"
     },
-    {
-      "name": "Liquidity Crisis",
-      "description": "Sudden drop in liquidity causing slippage and execution issues",
-      "impacts": {
-        "SOL/USD": {
-          "price_change": -0.1,
-          "slippage_multiplier": 5.0,
-          "execution_delay": 10
-        },
-        "BTC/USD": {
-          "price_change": -0.1,
-          "slippage_multiplier": 5.0,
-          "execution_delay": 10
-        },
-        "ETH/USD": {
-          "price_change": -0.1,
-          "slippage_multiplier": 5.0,
-          "execution_delay": 10
-        },
-        "ADA/USD": {
-          "price_change": -0.1,
-          "slippage_multiplier": 5.0,
-          "execution_delay": 10
-        },
-        "DOT/USD": {
-          "price_change": -0.1,
-          "slippage_multiplier": 5.0,
-          "execution_delay": 10
-        },
-        "LINK/USD": {
-          "price_change": -0.1,
-          "slippage_multiplier": 5.0,
-          "execution_delay": 10
-        }
-      },
-      "duration": 24,
-      "recovery_pattern": "Volatile",
-      "probability": 0.1
-    }
-  ],
-  "risk_policies": {
-    "portfolio_protection": {
-      "max_drawdown_trigger": 0.027271661236423765,
-      "actions": [
-        {
-          "trigger": 0.027271661236423765,
-          "action": "reduce_leverage",
-          "target": 0.5
-        },
-        {
-          "trigger": 0.07727166123642376,
-          "action": "reduce_positions",
-          "target": 0.5
-        },
-        {
-          "trigger": 0.12727166123642378,
-          "action": "close_all",
-          "target": 1.0
-        }
-      ]
+    "Adaptive": {
+      "enabled": true,
+      "max_open_trades": 1,
+      "risk_percentage": 0.20,
+      "stop_loss_percentage": 0.04,
+      "take_profit_percentage": 0.15,
+      "required_trend_strength": 0.35,
+      "min_atr_multiple": 2.0,
+      "max_atr_multiple": 8.0,
+      "priority_level": 1,
+      "category": "him_all_along"
     },
-    "volatility_adjustment": {
-      "low_volatility": {
-        "leverage_multiplier": 1.2,
-        "position_size_multiplier": 1.1
-      },
-      "medium_volatility": {
-        "leverage_multiplier": 1.0,
-        "position_size_multiplier": 1.0
-      },
-      "high_volatility": {
-        "leverage_multiplier": 0.8,
-        "position_size_multiplier": 0.8
-      }
-    },
-    "trend_following": {
-      "uptrend": {
-        "long_bias": 0.7,
-        "short_bias": 0.3
-      },
-      "downtrend": {
-        "long_bias": 0.3,
-        "short_bias": 0.7
-      },
-      "sideways": {
-        "long_bias": 0.5,
-        "short_bias": 0.5
-      }
+    "ML-Enhanced": {
+      "enabled": true,
+      "max_open_trades": 1,
+      "risk_percentage": 0.20,
+      "stop_loss_percentage": 0.04,
+      "take_profit_percentage": 0.15,
+      "required_trend_strength": 0.30,
+      "min_atr_multiple": 2.0,
+      "max_atr_multiple": 8.0,
+      "priority_level": 0,
+      "category": "him_all_along"
     }
   },
-  "last_updated": "2025-04-15T02:38:05.753991"
+  "global": {
+    "trend_detection": {
+      "enable_ema_filter": true,
+      "ema_short_period": 50,
+      "ema_long_period": 100,
+      "no_shorts_in_uptrend": true,
+      "trend_check_timeframes": ["1h", "4h", "1d"]
+    },
+    "dual_limit_orders": {
+      "enable": true,
+      "entry_price_distance": 0.001,
+      "exit_price_distance": 0.001,
+      "max_entry_attempts": 3,
+      "max_exit_attempts": 3
+    },
+    "cross_strategy_exits": {
+      "enable": true,
+      "threshold_multiplier": 1.0,
+      "dynamic_threshold": true
+    },
+    "signal_strength_arbitration": {
+      "enable": true,
+      "minimum_difference": 0.15,
+      "required_confidence": 0.70,
+      "confidence_scaling": true
+    },
+    "portfolio_allocation": {
+      "max_total_risk": 0.90,
+      "diversification_requirement": true,
+      "max_per_pair_allocation": 0.35,
+      "dynamic_sizing": true
+    }
+  }
 }

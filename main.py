@@ -1,4 +1,4 @@
-from app import app
+from app import app  # noqa: F401
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+# This file is required to run the Flask app on Replit
+# The import above makes the Flask app instance available to Replit's server
