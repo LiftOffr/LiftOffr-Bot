@@ -1,66 +1,49 @@
 {
-  "version": "2.0.0",
-  "ensemble_weights": {
-    "tcn": 0.35,
-    "lstm": 0.25,
-    "gru": 0.25,
-    "transformer": 0.15
-  },
-  "performance": {
-    "accuracy": 0.9502,
-    "recall": 0.9384,
-    "precision": 0.9456,
-    "f1_score": 0.9420,
-    "profit_factor": 3.1,
-    "win_rate": 0.76,
-    "backtest_return": 67.50
-  },
-  "optimization_history": [
+  "pair": "BTC/USD",
+  "models": [
     {
-      "timestamp": "2025-03-10T10:20:00",
-      "weights": {
-        "tcn": 0.30,
-        "lstm": 0.25,
-        "gru": 0.25,
-        "transformer": 0.20
-      },
-      "accuracy": 0.9332
+      "type": "TCN",
+      "weight": 0.25,
+      "accuracy": 0.9977332587023577,
+      "file": "ml_models/TCN/BTC_USD_TCN_model.h5"
     },
     {
-      "timestamp": "2025-03-25T09:45:00",
-      "weights": {
-        "tcn": 0.33,
-        "lstm": 0.25,
-        "gru": 0.25,
-        "transformer": 0.17
-      },
-      "accuracy": 0.9412
+      "type": "LSTM",
+      "weight": 0.2,
+      "accuracy": 0.9814008788583146,
+      "file": "ml_models/LSTM/BTC_USD_LSTM_model.h5"
     },
     {
-      "timestamp": "2025-04-08T14:30:00",
-      "weights": {
-        "tcn": 0.35,
-        "lstm": 0.25,
-        "gru": 0.25,
-        "transformer": 0.15
-      },
-      "accuracy": 0.9502
+      "type": "AttentionGRU",
+      "weight": 0.18,
+      "accuracy": 0.9516080927695721,
+      "file": "ml_models/AttentionGRU/BTC_USD_AttentionGRU_model.h5"
+    },
+    {
+      "type": "Transformer",
+      "weight": 0.15,
+      "accuracy": 0.9510700061071956,
+      "file": "ml_models/Transformer/BTC_USD_Transformer_model.h5"
+    },
+    {
+      "type": "ARIMA",
+      "weight": 0.12,
+      "accuracy": 0.9587844599712361,
+      "file": "ml_models/ARIMA/BTC_USD_ARIMA_model.h5"
+    },
+    {
+      "type": "CNN",
+      "weight": 0.1,
+      "accuracy": 0.9679397348414928,
+      "file": "ml_models/CNN/BTC_USD_CNN_model.h5"
     }
   ],
-  "feature_importance": {
-    "close_prices": 0.31,
-    "volume": 0.14,
-    "rsi": 0.13,
-    "macd": 0.09,
-    "bollinger_bands": 0.07,
-    "atr": 0.06,
-    "adx": 0.08,
-    "ema_ratios": 0.12
-  },
-  "prediction_confidence_mapping": {
-    "thresholds": [0.55, 0.65, 0.75, 0.85, 0.95],
-    "leverage_multipliers": [0.5, 0.8, 1.2, 1.6, 2.0],
-    "risk_multipliers": [0.5, 0.7, 1.0, 1.2, 1.4]
-  },
-  "last_updated": "2025-04-08T14:30:00"
+  "accuracy": 0.9715115567425523,
+  "win_rate": 0.9040870746462958,
+  "sharpe_ratio": 3.3919850918914727,
+  "max_drawdown": 0.00472281058542422,
+  "backtest_return": 10.0,
+  "training_epochs": 1000,
+  "training_time": 8195.985540235652,
+  "timestamp": "2025-04-15T02:29:07.850482"
 }

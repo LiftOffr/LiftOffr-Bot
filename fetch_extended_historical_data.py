@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""
-Extended Historical Data Fetcher for Kraken Trading Bot
 
-This script fetches an extended history (365 days) of data for all trading pairs
-to significantly increase the sample size for ML model training.
+"""
+Fetch Extended Historical Data
+
+This script fetches extended historical data for cryptocurrency trading pairs
+from Kraken's API. It saves the data in CSV format for use in training and
+backtesting ML models.
+
+Usage:
+    python fetch_extended_historical_data.py --pair SOL/USD [--interval 1h] [--days 365]
 """
 
 import os
@@ -13,324 +18,251 @@ import json
 import logging
 import argparse
 import requests
-import pandas as pd
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Any
+import pandas as pd
+from typing import Dict, List, Any, Optional, Tuple
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('fetch_historical_data.log')
-    ]
+    datefmt='%Y-%m-%d %H:%M:%S'
 )
 logger = logging.getLogger(__name__)
 
 # Constants
-DEFAULT_TIMEFRAMES = ["1h", "4h", "1d"]
-DEFAULT_PAIRS = ["SOLUSD", "BTCUSD", "ETHUSD", "ADAUSD", "DOTUSD", "LINKUSD", "MATICUSD"]
-DEFAULT_DAYS_BACK = 365  # Fetch a full year of data
-HISTORICAL_DATA_DIR = "historical_data"
-
-# Timeframe intervals in seconds
-TIMEFRAME_SECONDS = {
-    "1m": 60,
-    "5m": 300,
-    "15m": 900,
-    "30m": 1800,
-    "1h": 3600,
-    "4h": 14400,
-    "1d": 86400,
-    "1w": 604800
+TRAINING_DATA_DIR = "training_data"
+DEFAULT_PAIRS = ["SOL/USD", "BTC/USD", "ETH/USD", "ADA/USD", "DOT/USD", "LINK/USD"]
+KRAKEN_REST_URL = "https://api.kraken.com/0/public"
+INTERVALS = {
+    "1m": 1,
+    "5m": 5,
+    "15m": 15,
+    "30m": 30,
+    "1h": 60,
+    "4h": 240,
+    "1d": 1440,
+    "1w": 10080,
+    "2w": 21600
 }
-
-class ExtendedHistoricalDataFetcher:
-    """
-    Fetches extended historical data from Kraken API
-    """
-    
-    def __init__(self, pair: str, timeframe: str = "1h", days_back: int = DEFAULT_DAYS_BACK):
-        """
-        Initialize the fetcher
-        
-        Args:
-            pair: Trading pair (e.g., "SOL/USD")
-            timeframe: Timeframe (e.g., "1h", "4h", "1d")
-            days_back: Number of days of historical data to fetch
-        """
-        self.pair = pair
-        self.timeframe = timeframe
-        self.days_back = days_back
-        
-        # Create filename versions of the pair
-        self.pair_filename = pair.replace("/", "")
-        
-        # Create necessary directories
-        self._ensure_directories()
-    
-    def _ensure_directories(self):
-        """Ensure necessary directories exist"""
-        os.makedirs(HISTORICAL_DATA_DIR, exist_ok=True)
-        # Also create pair-specific directory
-        pair_dir = os.path.join(HISTORICAL_DATA_DIR, self.pair_filename)
-        os.makedirs(pair_dir, exist_ok=True)
-    
-    def fetch_historical_data(self) -> Optional[pd.DataFrame]:
-        """
-        Fetch historical data from Kraken API
-        
-        Returns:
-            DataFrame with historical data or None if error
-        """
-        logger.info(f"Fetching {self.days_back} days of historical data for {self.pair} ({self.timeframe})")
-        
-        try:
-            # Calculate time interval
-            end_time = int(time.time())
-            start_time = end_time - (self.days_back * 24 * 60 * 60)
-            
-            # Get interval in seconds
-            interval_seconds = TIMEFRAME_SECONDS.get(self.timeframe, 3600)  # Default to 1h if not found
-            
-            # Adjust pair format for Kraken API
-            kraken_pair = self.pair.replace("/", "")
-            
-            # Construct API URL
-            url = f"https://api.kraken.com/0/public/OHLC"
-            params = {
-                "pair": kraken_pair,
-                "interval": interval_seconds // 60,  # Kraken API uses minutes
-                "since": start_time
-            }
-            
-            # Fetch data
-            response = requests.get(url, params=params)
-            data = response.json()
-            
-            if "error" in data and data["error"]:
-                logger.error(f"Kraken API error: {data['error']}")
-                return None
-            
-            if "result" not in data:
-                logger.error(f"Unexpected API response: {data}")
-                return None
-            
-            # Extract result
-            result = data["result"]
-            if kraken_pair not in result:
-                available_pairs = list(result.keys())
-                if available_pairs:
-                    # If the pair name is not exact, try to find a match
-                    kraken_pair = available_pairs[0]
-                else:
-                    logger.error(f"Pair {self.pair} not found in API response")
-                    return None
-            
-            # Get OHLC data
-            ohlc_data = result[kraken_pair]
-            
-            # Convert to DataFrame
-            df = pd.DataFrame(ohlc_data, columns=[
-                "timestamp", "open", "high", "low", "close", "vwap", "volume", "count"
-            ])
-            
-            # Convert types
-            df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
-            for col in ["open", "high", "low", "close", "vwap", "volume"]:
-                df[col] = pd.to_numeric(df[col])
-            
-            logger.info(f"Fetched {len(df)} candles for {self.pair} ({self.timeframe})")
-            
-            return df
-        
-        except Exception as e:
-            logger.error(f"Error fetching historical data for {self.pair}: {e}")
-            return None
-    
-    def save_to_csv(self, df: pd.DataFrame) -> bool:
-        """
-        Save historical data to CSV file
-        
-        Args:
-            df: DataFrame with historical data
-            
-        Returns:
-            True if saved successfully, False otherwise
-        """
-        try:
-            # Create pair directory if it doesn't exist
-            pair_dir = os.path.join(HISTORICAL_DATA_DIR, self.pair_filename)
-            os.makedirs(pair_dir, exist_ok=True)
-            
-            # Define output path
-            output_path = os.path.join(pair_dir, f"{self.pair_filename}_{self.timeframe}.csv")
-            
-            # Save to CSV
-            df.to_csv(output_path, index=False)
-            
-            logger.info(f"Saved {len(df)} candles to {output_path}")
-            return True
-        
-        except Exception as e:
-            logger.error(f"Error saving data for {self.pair}: {e}")
-            return False
-    
-    def merge_timeframes(self, dfs: Dict[str, pd.DataFrame]) -> bool:
-        """
-        Merge dataframes from different timeframes into a single file
-        
-        Args:
-            dfs: Dictionary of timeframes to dataframes
-            
-        Returns:
-            True if merged successfully, False otherwise
-        """
-        try:
-            # Merge all timeframes into a single dataframe
-            merged_data = {}
-            
-            for timeframe, df in dfs.items():
-                # Skip if dataframe is empty
-                if df is None or df.empty:
-                    continue
-                
-                # Process each row
-                for _, row in df.iterrows():
-                    timestamp = row["timestamp"]
-                    
-                    # Initialize if needed
-                    if timestamp not in merged_data:
-                        merged_data[timestamp] = {
-                            "timestamp": timestamp,
-                            "open": {},
-                            "high": {},
-                            "low": {},
-                            "close": {},
-                            "volume": {}
-                        }
-                    
-                    # Add data for this timeframe
-                    merged_data[timestamp]["open"][timeframe] = row["open"]
-                    merged_data[timestamp]["high"][timeframe] = row["high"]
-                    merged_data[timestamp]["low"][timeframe] = row["low"]
-                    merged_data[timestamp]["close"][timeframe] = row["close"]
-                    merged_data[timestamp]["volume"][timeframe] = row["volume"]
-            
-            # Sort by timestamp
-            sorted_data = sorted(merged_data.values(), key=lambda x: x["timestamp"])
-            
-            # Convert to dataframe format
-            rows = []
-            for item in sorted_data:
-                row = {
-                    "timestamp": item["timestamp"]
-                }
-                
-                # Add data for each timeframe
-                for timeframe in dfs.keys():
-                    for metric in ["open", "high", "low", "close", "volume"]:
-                        if timeframe in item[metric]:
-                            row[f"{metric}_{timeframe}"] = item[metric][timeframe]
-                
-                rows.append(row)
-            
-            # Create dataframe
-            merged_df = pd.DataFrame(rows)
-            
-            # Save to CSV
-            output_path = os.path.join(HISTORICAL_DATA_DIR, f"{self.pair_filename}_merged.csv")
-            merged_df.to_csv(output_path, index=False)
-            
-            logger.info(f"Merged {len(merged_df)} timestamps to {output_path}")
-            return True
-        
-        except Exception as e:
-            logger.error(f"Error merging timeframes for {self.pair}: {e}")
-            return False
-
-def fetch_data_for_pair(pair: str, timeframes: List[str], days_back: int = DEFAULT_DAYS_BACK) -> Dict[str, pd.DataFrame]:
-    """
-    Fetch historical data for a single pair across multiple timeframes
-    
-    Args:
-        pair: Trading pair (e.g., "SOL/USD")
-        timeframes: List of timeframes to fetch
-        days_back: Number of days of historical data to fetch
-        
-    Returns:
-        Dictionary of timeframes to dataframes
-    """
-    results = {}
-    
-    for timeframe in timeframes:
-        # Initialize fetcher
-        fetcher = ExtendedHistoricalDataFetcher(pair, timeframe, days_back)
-        
-        # Fetch data
-        df = fetcher.fetch_historical_data()
-        
-        if df is not None and not df.empty:
-            # Save to CSV
-            fetcher.save_to_csv(df)
-            results[timeframe] = df
-        else:
-            logger.warning(f"No data fetched for {pair} ({timeframe})")
-    
-    # Merge timeframes if requested
-    if len(results) > 1:
-        fetcher = ExtendedHistoricalDataFetcher(pair, list(results.keys())[0], days_back)
-        fetcher.merge_timeframes(results)
-    
-    return results
-
-def fetch_data_for_all_pairs(pairs: List[str], timeframes: List[str], days_back: int = DEFAULT_DAYS_BACK, merge: bool = True) -> Dict[str, Dict[str, pd.DataFrame]]:
-    """
-    Fetch historical data for all specified pairs and timeframes
-    
-    Args:
-        pairs: List of trading pairs
-        timeframes: List of timeframe names
-        days_back: Number of days of historical data to fetch
-        merge: Whether to merge timeframes for each pair
-        
-    Returns:
-        Dictionary of pairs to timeframes to dataframes
-    """
-    results = {}
-    
-    for pair in pairs:
-        logger.info(f"Fetching data for {pair}")
-        pair_results = fetch_data_for_pair(pair, timeframes, days_back)
-        results[pair] = pair_results
-    
-    return results
 
 def parse_arguments():
     """Parse command line arguments"""
-    parser = argparse.ArgumentParser(description="Fetch extended historical data for ML model training")
-    parser.add_argument("--days", type=int, default=DEFAULT_DAYS_BACK,
-                        help=f"Number of days of historical data to fetch (default: {DEFAULT_DAYS_BACK})")
-    parser.add_argument("--pairs", nargs="+", default=DEFAULT_PAIRS,
-                        help=f"Trading pairs to fetch (default: {', '.join(DEFAULT_PAIRS)})")
-    parser.add_argument("--timeframes", nargs="+", default=DEFAULT_TIMEFRAMES,
-                        help=f"Timeframes to fetch (default: {', '.join(DEFAULT_TIMEFRAMES)})")
-    parser.add_argument("--no-merge", action="store_true",
-                        help="Don't merge timeframes for each pair")
+    parser = argparse.ArgumentParser(description="Fetch Extended Historical Data")
+    parser.add_argument("--pair", type=str, required=True,
+                        help="Trading pair (e.g., 'SOL/USD')")
+    parser.add_argument("--interval", type=str, default="1h",
+                        choices=list(INTERVALS.keys()),
+                        help="Time interval (1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w, 2w)")
+    parser.add_argument("--days", type=int, default=365,
+                        help="Number of days of historical data to fetch")
+    parser.add_argument("--start", type=str,
+                        help="Start date (YYYY-MM-DD)")
+    parser.add_argument("--end", type=str,
+                        help="End date (YYYY-MM-DD)")
+    parser.add_argument("--force", action="store_true",
+                        help="Force overwrite existing file")
     return parser.parse_args()
+
+def get_kraken_symbol(pair: str) -> str:
+    """Convert trading pair to Kraken symbol format"""
+    base, quote = pair.split("/")
+    
+    # Kraken uses X as prefix for most crypto and Z for fiat currencies
+    base_prefix = "X" if base not in ["DOT", "ADA", "SOL", "LINK"] else ""
+    quote_prefix = "Z" if quote == "USD" else ""
+    
+    return f"{base_prefix}{base}{quote_prefix}{quote}"
+
+def fetch_ohlc_data(pair: str, interval: str, since=None) -> Tuple[List[List[float]], int]:
+    """
+    Fetch OHLC data from Kraken API
+    
+    Args:
+        pair (str): Trading pair in Kraken format
+        interval (str): Time interval
+        since (int): Unix timestamp to fetch data after
+        
+    Returns:
+        Tuple[List[List[float]], int]: OHLC data and last timestamp
+    """
+    # Convert interval to minutes
+    interval_minutes = INTERVALS[interval]
+    
+    # Construct URL
+    url = f"{KRAKEN_REST_URL}/OHLC"
+    
+    # Construct payload
+    payload = {
+        "pair": pair,
+        "interval": interval_minutes
+    }
+    
+    if since:
+        payload["since"] = since
+    
+    # Send request
+    try:
+        response = requests.get(url, params=payload)
+        data = response.json()
+        
+        if "error" in data and data["error"]:
+            logger.error(f"Error fetching OHLC data: {data['error']}")
+            return [], None
+        
+        # Extract results
+        result = data["result"]
+        ohlc_data = result[pair]
+        last = result["last"]
+        
+        return ohlc_data, last
+    except Exception as e:
+        logger.error(f"Error fetching OHLC data: {e}")
+        return [], None
+
+def process_ohlc_data(ohlc_data: List[List[float]]) -> pd.DataFrame:
+    """
+    Process OHLC data into a pandas DataFrame
+    
+    Args:
+        ohlc_data (List[List[float]]): OHLC data from Kraken API
+        
+    Returns:
+        pd.DataFrame: Processed data
+    """
+    # Create DataFrame
+    columns = ["timestamp", "open", "high", "low", "close", "vwap", "volume", "count"]
+    df = pd.DataFrame(ohlc_data, columns=columns)
+    
+    # Convert timestamp to datetime
+    df["datetime"] = pd.to_datetime(df["timestamp"], unit="s")
+    
+    # Convert price columns to float
+    for col in ["open", "high", "low", "close", "vwap"]:
+        df[col] = df[col].astype(float)
+    
+    # Convert volume to float
+    df["volume"] = df["volume"].astype(float)
+    
+    # Calculate additional features
+    df["price_range"] = df["high"] - df["low"]
+    df["price_range_pct"] = df["price_range"] / df["low"]
+    
+    # Add percentage change
+    df["pct_change"] = df["close"].pct_change()
+    
+    # Sort by datetime
+    df = df.sort_values("datetime")
+    
+    # Drop duplicates if any
+    df = df.drop_duplicates(subset=["datetime"])
+    
+    return df
+
+def fetch_all_historical_data(pair: str, interval: str, days: int = 365, start_date=None, end_date=None) -> pd.DataFrame:
+    """
+    Fetch all historical data for a pair within the given date range
+    
+    Args:
+        pair (str): Trading pair
+        interval (str): Time interval
+        days (int): Number of days (used if start/end not provided)
+        start_date (datetime): Start date
+        end_date (datetime): End date
+        
+    Returns:
+        pd.DataFrame: Historical data
+    """
+    # Convert pair to Kraken format
+    kraken_pair = get_kraken_symbol(pair)
+    
+    # Calculate start and end timestamps
+    if not end_date:
+        end_date = datetime.now()
+    
+    if not start_date:
+        start_date = end_date - timedelta(days=days)
+    
+    start_timestamp = int(start_date.timestamp())
+    
+    # Fetch data in chunks
+    all_data = []
+    last_timestamp = start_timestamp
+    chunk_days = 30  # Fetch in chunks of 30 days
+    
+    while True:
+        logger.info(f"Fetching data for {pair} from {datetime.fromtimestamp(last_timestamp)}")
+        
+        chunk_data, last = fetch_ohlc_data(kraken_pair, interval, last_timestamp)
+        
+        if not chunk_data or not last:
+            logger.warning(f"No more data available or error occurred")
+            break
+        
+        all_data.extend(chunk_data)
+        
+        # Break if we've reached the end date or there's no more data
+        if last <= last_timestamp or datetime.fromtimestamp(last) >= end_date:
+            break
+        
+        last_timestamp = last
+        
+        # Sleep to avoid rate limits
+        time.sleep(1)
+    
+    # Process data
+    if all_data:
+        df = process_ohlc_data(all_data)
+        
+        # Filter to the requested date range
+        df = df[(df["datetime"] >= pd.Timestamp(start_date)) & 
+                (df["datetime"] <= pd.Timestamp(end_date))]
+        
+        return df
+    else:
+        return pd.DataFrame()
 
 def main():
     """Main function"""
     args = parse_arguments()
     
-    # Ensure historical data directory exists
-    os.makedirs(HISTORICAL_DATA_DIR, exist_ok=True)
+    # Create the training data directory if it doesn't exist
+    os.makedirs(TRAINING_DATA_DIR, exist_ok=True)
     
-    # Fetch data for all pairs
-    fetch_data_for_all_pairs(args.pairs, args.timeframes, args.days, not args.no_merge)
+    # Parse start and end dates if provided
+    start_date = None
+    end_date = None
     
-    logger.info("Data fetch completed!")
+    if args.start:
+        start_date = datetime.strptime(args.start, "%Y-%m-%d")
+    
+    if args.end:
+        end_date = datetime.strptime(args.end, "%Y-%m-%d")
+    
+    # Prepare output file
+    pair_filename = args.pair.replace('/', '_')
+    output_file = f"{TRAINING_DATA_DIR}/{pair_filename}_data.csv"
+    
+    # Check if file exists
+    if os.path.exists(output_file) and not args.force:
+        logger.warning(f"File {output_file} already exists. Use --force to overwrite.")
+        return 1
+    
+    # Fetch data
+    logger.info(f"Fetching {args.days} days of {args.interval} data for {args.pair}...")
+    df = fetch_all_historical_data(args.pair, args.interval, args.days, start_date, end_date)
+    
+    if df.empty:
+        logger.error(f"No data found for {args.pair}")
+        return 1
+    
+    # Save to CSV
+    df.to_csv(output_file, index=False)
+    
+    logger.info(f"Saved {len(df)} rows of {args.interval} data for {args.pair} to {output_file}")
+    logger.info(f"Date range: {df['datetime'].min()} to {df['datetime'].max()}")
+    
+    return 0
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

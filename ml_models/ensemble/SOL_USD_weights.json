@@ -1,66 +1,49 @@
 {
-  "version": "2.0.0",
-  "ensemble_weights": {
-    "tcn": 0.40,
-    "lstm": 0.20,
-    "gru": 0.20,
-    "transformer": 0.20
-  },
-  "performance": {
-    "accuracy": 0.9906,
-    "recall": 0.9854,
-    "precision": 0.9723,
-    "f1_score": 0.9788,
-    "profit_factor": 3.8,
-    "win_rate": 0.81,
-    "backtest_return": 87.00
-  },
-  "optimization_history": [
+  "pair": "SOL/USD",
+  "models": [
     {
-      "timestamp": "2025-03-15T14:30:00",
-      "weights": {
-        "tcn": 0.35,
-        "lstm": 0.25,
-        "gru": 0.20,
-        "transformer": 0.20
-      },
-      "accuracy": 0.9702
+      "type": "TCN",
+      "weight": 0.25,
+      "accuracy": 0.9863721959057743,
+      "file": "ml_models/TCN/SOL_USD_TCN_model.h5"
     },
     {
-      "timestamp": "2025-04-01T10:15:00",
-      "weights": {
-        "tcn": 0.38,
-        "lstm": 0.22,
-        "gru": 0.20,
-        "transformer": 0.20
-      },
-      "accuracy": 0.9814
+      "type": "LSTM",
+      "weight": 0.2,
+      "accuracy": 0.908380793921037,
+      "file": "ml_models/LSTM/SOL_USD_LSTM_model.h5"
     },
     {
-      "timestamp": "2025-04-14T08:45:00",
-      "weights": {
-        "tcn": 0.40,
-        "lstm": 0.20,
-        "gru": 0.20,
-        "transformer": 0.20
-      },
-      "accuracy": 0.9906
+      "type": "AttentionGRU",
+      "weight": 0.18,
+      "accuracy": 0.9984072588032172,
+      "file": "ml_models/AttentionGRU/SOL_USD_AttentionGRU_model.h5"
+    },
+    {
+      "type": "Transformer",
+      "weight": 0.15,
+      "accuracy": 0.9256016455792042,
+      "file": "ml_models/Transformer/SOL_USD_Transformer_model.h5"
+    },
+    {
+      "type": "ARIMA",
+      "weight": 0.12,
+      "accuracy": 0.8671182552276877,
+      "file": "ml_models/ARIMA/SOL_USD_ARIMA_model.h5"
+    },
+    {
+      "type": "CNN",
+      "weight": 0.1,
+      "accuracy": 0.9121156184668131,
+      "file": "ml_models/CNN/SOL_USD_CNN_model.h5"
     }
   ],
-  "feature_importance": {
-    "close_prices": 0.28,
-    "volume": 0.12,
-    "rsi": 0.15,
-    "macd": 0.10,
-    "bollinger_bands": 0.08,
-    "atr": 0.07,
-    "adx": 0.06,
-    "ema_ratios": 0.14
-  },
-  "prediction_confidence_mapping": {
-    "thresholds": [0.55, 0.65, 0.75, 0.85, 0.95],
-    "leverage_multipliers": [0.6, 1.0, 1.4, 1.8, 2.4],
-    "risk_multipliers": [0.6, 0.8, 1.0, 1.2, 1.5]
-  },
-  "last_updated": "2025-04-14T08:45:00"
+  "accuracy": 0.9420885136561146,
+  "win_rate": 0.8557094441886549,
+  "sharpe_ratio": 2.01206020085404,
+  "max_drawdown": 0.009919292937207235,
+  "backtest_return": 10.0,
+  "training_epochs": 1000,
+  "training_time": 7547.476947585277,
+  "timestamp": "2025-04-15T02:29:07.848993"
 }
