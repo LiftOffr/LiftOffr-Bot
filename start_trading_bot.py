@@ -2,14 +2,13 @@
 """
 Start Trading Bot
 
-This script starts the enhanced trading bot with proper risk management.
-It ensures the bot runs separately from the web dashboard.
+This script starts the trading bot with enhanced simulation features.
 """
 
 import os
 import sys
-import subprocess
 import logging
+import argparse
 
 # Configure logging
 logging.basicConfig(
@@ -19,54 +18,30 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def main():
-    """Main function to start the trading bot"""
-    logger.info("Starting enhanced trading bot...")
-    
-    # Make sure required directories exist
-    os.makedirs("data", exist_ok=True)
-    os.makedirs("config", exist_ok=True)
-    
-    # Command to run with sandbox mode
-    cmd = [
-        "python", 
-        "run_enhanced_trading_bot.py", 
-        "--sandbox",
-        "--verbose"
-    ]
-    
-    try:
-        # Run the trading bot
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            universal_newlines=True,
-            bufsize=1
-        )
-        
-        # Print output in real-time
-        for line in process.stdout:
-            print(line, end='')
-            sys.stdout.flush()
-        
-        # Wait for process to complete
-        return_code = process.wait()
-        
-        if return_code != 0:
-            logger.error(f"Trading bot exited with code {return_code}")
-            return 1
-        
-    except KeyboardInterrupt:
-        logger.info("Keyboard interrupt received, stopping trading bot...")
-        process.terminate()
-        process.wait(timeout=5)
-        return 0
-    except Exception as e:
-        logger.error(f"Error running trading bot: {e}")
-        return 1
-        
-    return 0
+def parse_arguments():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(description='Run trading bot with enhanced simulation')
+    parser.add_argument('--sandbox', action='store_true', help='Run in sandbox mode')
+    parser.add_argument('--flash-crash', action='store_true', help='Enable flash crash simulation')
+    parser.add_argument('--latency', action='store_true', help='Enable latency simulation')
+    parser.add_argument('--stress-test', action='store_true', help='Enable stress testing')
+    parser.add_argument('--interval', type=int, default=1, help='Trading cycle interval in minutes')
+    return parser.parse_args()
 
 if __name__ == "__main__":
-    sys.exit(main())
+    # Parse arguments
+    args = parse_arguments()
+    
+    # Import here to avoid circular imports
+    from run_enhanced_simulation import run_trading_simulation
+    
+    # Log the startup configuration
+    logger.info("Starting trading bot with the following configuration:")
+    logger.info(f"  Sandbox mode: {args.sandbox}")
+    logger.info(f"  Flash crash simulation: {args.flash_crash}")
+    logger.info(f"  Latency simulation: {args.latency}")
+    logger.info(f"  Stress testing: {args.stress_test}")
+    logger.info(f"  Trading interval: {args.interval} minute(s)")
+    
+    # Run the trading simulation
+    run_trading_simulation(args)

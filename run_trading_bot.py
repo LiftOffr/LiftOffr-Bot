@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 """
-Run Trading Bot
+Trading Bot Runner
 
-This script runs the Kraken trading bot in sandbox mode without starting the web interface.
-It's used to run the trading bot when the web interface is already running in another process.
+This script runs our main trading bot on port 5001 (different from our dashboard port)
 """
-
 import os
 import sys
-import time
 import logging
 import argparse
 import subprocess
@@ -23,78 +20,61 @@ logger = logging.getLogger(__name__)
 
 def parse_arguments():
     """Parse command line arguments"""
-    parser = argparse.ArgumentParser(description='Run Kraken trading bot')
+    parser = argparse.ArgumentParser(description='Run trading bot with enhanced simulation')
     parser.add_argument('--sandbox', action='store_true', help='Run in sandbox mode')
-    parser.add_argument('--pairs', type=str, default='SOL/USD,BTC/USD,ETH/USD,ADA/USD,DOT/USD,LINK/USD',
-                        help='Comma-separated list of trading pairs')
+    parser.add_argument('--flash-crash', action='store_true', help='Enable flash crash simulation')
+    parser.add_argument('--latency', action='store_true', help='Enable latency simulation')
+    parser.add_argument('--stress-test', action='store_true', help='Enable stress testing')
+    parser.add_argument('--interval', type=int, default=5, help='Trading cycle interval in minutes')
     return parser.parse_args()
-
-def run_trading_bot(pairs, sandbox=True):
-    """Run the trading bot"""
-    # Log the start
-    logger.info(f"Starting trading bot with pairs: {pairs}")
-    
-    # Convert pairs list to comma-separated string if needed
-    if isinstance(pairs, list):
-        pairs_str = ','.join(pairs)
-    else:
-        pairs_str = pairs
-    
-    # Run the trading command
-    cmd = [sys.executable, "kraken_trading_bot.py"]
-    if sandbox:
-        cmd.append("--sandbox")
-    cmd.extend(["--pairs", pairs_str])
-    
-    # Start the process
-    try:
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        
-        # Log output in real-time
-        while True:
-            output = process.stdout.readline()
-            if output == '' and process.poll() is not None:
-                break
-            if output:
-                logger.info(output.strip())
-                
-        return_code = process.poll()
-        if return_code != 0:
-            logger.error(f"Trading bot exited with code {return_code}")
-            return False
-        
-        return True
-    except Exception as e:
-        logger.error(f"Error running trading bot: {e}")
-        return False
 
 def main():
     """Main function"""
+    # Parse arguments
     args = parse_arguments()
     
-    # Get trading pairs from command line or environment
-    pairs = args.pairs.split(',')
+    # Prepare command for running the enhanced simulation
+    cmd = [
+        "python", "run_enhanced_simulation.py",
+        "--interval", str(args.interval)
+    ]
     
-    # Run continuously
-    while True:
-        try:
-            # Run the trading bot
-            success = run_trading_bot(pairs, args.sandbox)
+    # Add optional flags
+    if args.sandbox:
+        cmd.append("--sandbox")
+    if args.flash_crash:
+        cmd.append("--flash-crash")
+    if args.latency:
+        cmd.append("--latency")
+    if args.stress_test:
+        cmd.append("--stress-test")
+    
+    logger.info(f"Running command: {' '.join(cmd)}")
+    
+    # Execute the command
+    try:
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True
+        )
+        
+        # Display output in real-time
+        for line in process.stdout:
+            print(line, end='')
+            sys.stdout.flush()
             
-            if not success:
-                # If failed, wait before retrying
-                logger.warning("Trading bot run failed, will retry in 60 seconds")
-                time.sleep(60)
-            else:
-                # If successful but exited, wait a bit before starting again
-                logger.info("Trading bot completed, restarting in 5 seconds")
-                time.sleep(5)
-        except KeyboardInterrupt:
-            logger.info("Keyboard interrupt, exiting")
-            break
-        except Exception as e:
-            logger.error(f"Unexpected error: {e}")
-            time.sleep(60)  # Wait before retrying
+        # Wait for completion
+        process.wait()
+    except KeyboardInterrupt:
+        logger.info("Interrupted by user. Shutting down...")
+        process.terminate()
+    except Exception as e:
+        logger.error(f"Error running trading bot: {e}")
+        return 1
+    
+    return 0
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    sys.exit(main())
