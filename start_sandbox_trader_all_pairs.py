@@ -204,12 +204,12 @@ def start_trading(pairs: List[str], args) -> bool:
     cmd = [
         sys.executable, "run_enhanced_trading_bot.py",
         "--pairs", pairs_arg,
-        "--capital", str(args.capital),
-        "--sandbox"
+        "--sandbox",
+        "--verbose" if args.verbose else ""
     ]
     
-    if not dynamic_leverage:
-        cmd.append("--no-dynamic-leverage")
+    # Filter out empty arguments
+    cmd = [arg for arg in cmd if arg]
     
     if args.verbose:
         cmd.append("--verbose")

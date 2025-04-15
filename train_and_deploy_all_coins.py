@@ -85,7 +85,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def run_command(cmd: List[str], description: str = None, 
+def run_command(cmd: List[str], description: str = "", 
              verbose: bool = False, check: bool = True) -> Tuple[bool, str]:
     """
     Run a shell command.
@@ -150,7 +150,7 @@ def run_command(cmd: List[str], description: str = None,
         logger.error(f"Command failed with exit code {e.returncode}")
         if e.stderr:
             logger.error(f"Error output: {e.stderr}")
-        return False, e.stderr
+        return False, str(e.stderr) if e.stderr else ""
     
     except Exception as e:
         logger.error(f"Error running command: {e}")
@@ -169,6 +169,10 @@ def fetch_historical_data(pair: str, timeframe: str, days: int = 365) -> bool:
     Returns:
         success: Whether the fetch succeeded
     """
+    if not pair or not timeframe:
+        logger.error("Pair or timeframe not provided")
+        return False
+        
     cmd = [
         sys.executable, "fetch_historical_data.py",
         "--pair", pair,
@@ -196,6 +200,10 @@ def fetch_all_historical_data(pairs: List[str], timeframes: List[str], days: int
     Returns:
         success: Whether all fetches succeeded
     """
+    if not pairs or not timeframes:
+        logger.error("No pairs or timeframes provided")
+        return False
+        
     logger.info(f"Fetching historical data for {len(pairs)} pairs across {len(timeframes)} timeframes")
     
     all_success = True
@@ -227,6 +235,10 @@ def prepare_advanced_training_data(pairs: List[str], timeframes: List[str], forc
     Returns:
         success: Whether the preparation succeeded
     """
+    if not pairs or not timeframes:
+        logger.error("No pairs or timeframes provided")
+        return False
+        
     logger.info(f"Preparing advanced training data for {len(pairs)} pairs")
     
     all_success = True
@@ -267,7 +279,7 @@ def prepare_advanced_training_data(pairs: List[str], timeframes: List[str], forc
     return all_success
 
 
-def load_config() -> Optional[Dict]:
+def load_config() -> Dict:
     """Load configuration from config file."""
     try:
         with open(CONFIG_PATH, 'r') as f:
@@ -276,7 +288,15 @@ def load_config() -> Optional[Dict]:
         return config
     except Exception as e:
         logger.error(f"Error loading configuration: {e}")
-        return None
+        # Return empty config instead of None
+        return {
+            "pair_specific_settings": {},
+            "training_config": {
+                "ensemble": {
+                    "models": ["tcn", "lstm", "attention_gru", "transformer", "xgboost", "lightgbm"]
+                }
+            }
+        }
 
 
 def optimize_hyperparameters(pair: str, model_type: str, 
