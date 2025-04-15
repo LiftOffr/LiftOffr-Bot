@@ -102,6 +102,19 @@ def get_trades():
 def get_risk():
     """API endpoint to get risk metrics"""
     risk_metrics = load_file(DEFAULT_RISK_METRICS_FILE, {})
+    
+    # Add default values for additional metrics if not present
+    if 'sharpe_ratio' not in risk_metrics:
+        risk_metrics['sharpe_ratio'] = 0.0
+    if 'sortino_ratio' not in risk_metrics:
+        risk_metrics['sortino_ratio'] = 0.0
+    if 'win_rate' not in risk_metrics:
+        risk_metrics['win_rate'] = 0.0
+    if 'profit_factor' not in risk_metrics:
+        risk_metrics['profit_factor'] = 0.0
+    if 'avg_win_loss_ratio' not in risk_metrics:
+        risk_metrics['avg_win_loss_ratio'] = 0.0
+        
     return jsonify(risk_metrics)
 
 @app.route('/api/ml/accuracy')

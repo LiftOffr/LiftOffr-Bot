@@ -251,6 +251,7 @@
                       N/A
                     {% endif %}
                   </h4>
+                  <small class="text-muted">Optimal portfolio fraction to risk</small>
                 </div>
               </div>
               <div class="col-md-3">
@@ -263,6 +264,61 @@
                       N/A
                     {% endif %}
                   </h4>
+                </div>
+              </div>
+            </div>
+            
+            <div class="row mt-4">
+              <div class="col-md-3">
+                <div class="mb-3">
+                  <h6 class="fw-light">Sharpe Ratio</h6>
+                  <h4>
+                    {% if risk_metrics and risk_metrics.sharpe_ratio %}
+                      {{ "%.2f"|format(risk_metrics.sharpe_ratio) }}
+                    {% else %}
+                      N/A
+                    {% endif %}
+                  </h4>
+                  <small class="text-muted">Risk-adjusted return (>1 is good)</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="mb-3">
+                  <h6 class="fw-light">Sortino Ratio</h6>
+                  <h4>
+                    {% if risk_metrics and risk_metrics.sortino_ratio %}
+                      {{ "%.2f"|format(risk_metrics.sortino_ratio) }}
+                    {% else %}
+                      N/A
+                    {% endif %}
+                  </h4>
+                  <small class="text-muted">Return adjusted for downside risk</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="mb-3">
+                  <h6 class="fw-light">Win Rate</h6>
+                  <h4>
+                    {% if risk_metrics and risk_metrics.win_rate %}
+                      {{ "%.1f"|format(risk_metrics.win_rate * 100) }}%
+                    {% else %}
+                      N/A
+                    {% endif %}
+                  </h4>
+                  <small class="text-muted">Percentage of profitable trades</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="mb-3">
+                  <h6 class="fw-light">Profit Factor</h6>
+                  <h4>
+                    {% if risk_metrics and risk_metrics.profit_factor %}
+                      {{ "%.2f"|format(risk_metrics.profit_factor) }}
+                    {% else %}
+                      N/A
+                    {% endif %}
+                  </h4>
+                  <small class="text-muted">Gross profit / gross loss</small>
                 </div>
               </div>
             </div>

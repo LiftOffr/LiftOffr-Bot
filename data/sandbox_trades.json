@@ -1,1 +1,146 @@
-[]
+[
+  {
+    "timestamp": "2025-04-01T10:25:00.000Z",
+    "pair": "SOL/USD",
+    "strategy": "Adaptive",
+    "type": "Entry",
+    "direction": "Long",
+    "entry_price": 145.25,
+    "exit_price": 0,
+    "size": 68.84,
+    "leverage": 25.0,
+    "pnl_percentage": 0
+  },
+  {
+    "timestamp": "2025-04-02T14:30:00.000Z",
+    "pair": "SOL/USD",
+    "strategy": "Adaptive",
+    "type": "Exit",
+    "direction": "Long",
+    "entry_price": 145.25,
+    "exit_price": 150.75,
+    "size": 68.84,
+    "leverage": 25.0,
+    "pnl_percentage": 0.095
+  },
+  {
+    "timestamp": "2025-04-03T09:15:00.000Z",
+    "pair": "BTC/USD",
+    "strategy": "ARIMA",
+    "type": "Entry",
+    "direction": "Short",
+    "entry_price": 68950.0,
+    "exit_price": 0,
+    "size": 0.12,
+    "leverage": 20.0,
+    "pnl_percentage": 0
+  },
+  {
+    "timestamp": "2025-04-04T11:05:00.000Z",
+    "pair": "BTC/USD",
+    "strategy": "ARIMA",
+    "type": "Exit",
+    "direction": "Short",
+    "entry_price": 68950.0,
+    "exit_price": 68125.0,
+    "size": 0.12,
+    "leverage": 20.0,
+    "pnl_percentage": 0.024
+  },
+  {
+    "timestamp": "2025-04-05T13:45:00.000Z",
+    "pair": "ETH/USD",
+    "strategy": "Adaptive",
+    "type": "Entry",
+    "direction": "Long",
+    "entry_price": 3350.0,
+    "exit_price": 0,
+    "size": 2.985,
+    "leverage": 22.5,
+    "pnl_percentage": 0
+  },
+  {
+    "timestamp": "2025-04-06T16:20:00.000Z",
+    "pair": "ETH/USD",
+    "strategy": "Adaptive",
+    "type": "Exit",
+    "direction": "Long",
+    "entry_price": 3350.0,
+    "exit_price": 3425.0,
+    "size": 2.985,
+    "leverage": 22.5,
+    "pnl_percentage": 0.05
+  },
+  {
+    "timestamp": "2025-04-08T08:10:00.000Z",
+    "pair": "ADA/USD",
+    "strategy": "Adaptive",
+    "type": "Entry",
+    "direction": "Short",
+    "entry_price": 0.48,
+    "exit_price": 0,
+    "size": 20833.33,
+    "leverage": 15.0,
+    "pnl_percentage": 0
+  },
+  {
+    "timestamp": "2025-04-09T15:40:00.000Z",
+    "pair": "ADA/USD",
+    "strategy": "Adaptive",
+    "type": "Exit",
+    "direction": "Short",
+    "entry_price": 0.48,
+    "exit_price": 0.465,
+    "size": 20833.33,
+    "leverage": 15.0,
+    "pnl_percentage": 0.047
+  },
+  {
+    "timestamp": "2025-04-11T10:05:00.000Z",
+    "pair": "SOL/USD",
+    "strategy": "ARIMA",
+    "type": "Entry",
+    "direction": "Long",
+    "entry_price": 154.50,
+    "exit_price": 0,
+    "size": 81.82,
+    "leverage": 30.0,
+    "pnl_percentage": 0
+  },
+  {
+    "timestamp": "2025-04-12T14:30:00.000Z",
+    "pair": "SOL/USD",
+    "strategy": "ARIMA",
+    "type": "Exit",
+    "direction": "Long",
+    "entry_price": 154.50,
+    "exit_price": 156.25,
+    "size": 81.82,
+    "leverage": 30.0,
+    "pnl_percentage": 0.034
+  },
+  {
+    "timestamp": "2025-04-13T09:10:00.000Z",
+    "pair": "DOT/USD",
+    "strategy": "Adaptive",
+    "type": "Entry",
+    "direction": "Long",
+    "entry_price": 6.85,
+    "exit_price": 0,
+    "size": 1094.89,
+    "leverage": 15.0,
+    "pnl_percentage": 0
+  },
+  {
+    "timestamp": "2025-04-14T16:45:00.000Z",
+    "pair": "DOT/USD",
+    "strategy": "Adaptive",
+    "type": "Exit",
+    "direction": "Long",
+    "entry_price": 6.85,
+    "exit_price": 7.15,
+    "size": 1094.89,
+    "leverage": 15.0,
+    "pnl_percentage": 0.066
+  }
+]

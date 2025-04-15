@@ -1,1 +1,30 @@
-[]
+[
+  {
+    "pair": "LINK/USD",
+    "strategy": "Adaptive",
+    "direction": "Long",
+    "entry_price": 17.85,
+    "current_price": 18.25,
+    "size": 672.0,
+    "leverage": 24.0,
+    "stop_loss": 16.95,
+    "take_profit": 20.50,
+    "unrealized_pnl": 0.056,
+    "entry_time": "2025-04-15T08:15:00.000Z",
+    "duration": "4h 15m"
+  },
+  {
+    "pair": "BTC/USD",
+    "strategy": "ARIMA",
+    "direction": "Long",
+    "entry_price": 69450.0,
+    "current_price": 70250.0,
+    "size": 0.14,
+    "leverage": 20.0,
+    "stop_loss": 67950.0,
+    "take_profit": 74500.0,
+    "unrealized_pnl": 0.023,
+    "entry_time": "2025-04-14T14:30:00.000Z",
+    "duration": "22h 0m"
+  }
+]
