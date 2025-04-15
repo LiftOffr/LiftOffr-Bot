@@ -2,7 +2,7 @@
   "workflows": [
     {
       "name": "trading_bot",
-      "entrypoint": "python pure_isolated_bot.py"
+      "entrypoint": "python direct_launcher.py"
     }
   ]
 }
