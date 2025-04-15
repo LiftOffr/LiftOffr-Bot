@@ -146,7 +146,7 @@ class RiskAwareSandboxTrader:
     def _initialize_portfolio(self):
         """Initialize portfolio with starting capital"""
         self.portfolio = [{
-            "timestamp": datetime.datetime.now().isoformat(),
+            "timestamp": datetime.datetime.now().replace(tzinfo=None).isoformat(),
             "portfolio_value": DEFAULT_STARTING_CAPITAL
         }]
         self._save_portfolio()
@@ -623,7 +623,7 @@ class RiskAwareSandboxTrader:
             
             # Update portfolio
             self.portfolio.append({
-                "timestamp": datetime.datetime.now().isoformat(),
+                "timestamp": datetime.datetime.now().replace(tzinfo=None).isoformat(),
                 "portfolio_value": new_portfolio_value
             })
             
