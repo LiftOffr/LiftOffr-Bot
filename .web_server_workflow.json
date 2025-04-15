@@ -4,11 +4,6 @@
       "name": "web_server",
       "command": "python start_web_app.py",
       "terminal": true
-    },
-    "trading_bot": {
-      "name": "trading_bot",
-      "command": "python start_trading_with_liquidation.py",
-      "terminal": true
     }
   }
 }
