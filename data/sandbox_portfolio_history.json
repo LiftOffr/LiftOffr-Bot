@@ -1,30 +1,102 @@
 [
   {
-    "timestamp": "2025-04-15T17:37:35.923110",
-    "total_value": 20000.0,
-    "available_capital": 17362.97136535307,
-    "total_pnl": 0.0,
-    "total_pnl_pct": 0.0,
-    "unrealized_pnl": 0,
-    "unrealized_pnl_pct": 0.0,
-    "win_rate": 0.0,
-    "total_trades": 0,
-    "profitable_trades": 0
+    "timestamp": "2025-04-14T18:31:05.570332",
+    "portfolio_value": 20144.4
   },
   {
-    "timestamp": "2025-04-15T17:37:41.541313",
-    "total_value": 17363.78866843117,
-    "available_capital": 15748.962113198893,
-    "total_pnl": -2636.2113315688293,
-    "total_pnl_pct": -13.181056657844149,
-    "unrealized_pnl": 0.8173030781012965,
-    "unrealized_pnl_pct": 0.004086515390506483,
-    "win_rate": 0.0,
-    "total_trades": 0,
-    "profitable_trades": 0
+    "timestamp": "2025-04-14T19:31:05.570339",
+    "portfolio_value": 19628.18
   },
   {
-    "timestamp": "2025-04-15T18:22:33.645292",
-    "portfolio_value": -474908.18
+    "timestamp": "2025-04-14T20:31:05.570343",
+    "portfolio_value": 20099.48
+  },
+  {
+    "timestamp": "2025-04-14T21:31:05.570346",
+    "portfolio_value": 19946.81
+  },
+  {
+    "timestamp": "2025-04-14T22:31:05.570348",
+    "portfolio_value": 20340.52
+  },
+  {
+    "timestamp": "2025-04-14T23:31:05.570351",
+    "portfolio_value": 19628.04
+  },
+  {
+    "timestamp": "2025-04-15T00:31:05.570354",
+    "portfolio_value": 20356.44
+  },
+  {
+    "timestamp": "2025-04-15T01:31:05.570358",
+    "portfolio_value": 19982.85
+  },
+  {
+    "timestamp": "2025-04-15T02:31:05.570362",
+    "portfolio_value": 19873.65
+  },
+  {
+    "timestamp": "2025-04-15T03:31:05.570366",
+    "portfolio_value": 20266.82
+  },
+  {
+    "timestamp": "2025-04-15T04:31:05.570371",
+    "portfolio_value": 20024.83
+  },
+  {
+    "timestamp": "2025-04-15T05:31:05.570376",
+    "portfolio_value": 20084.12
+  },
+  {
+    "timestamp": "2025-04-15T06:31:05.570381",
+    "portfolio_value": 20392.38
+  },
+  {
+    "timestamp": "2025-04-15T07:31:05.570384",
+    "portfolio_value": 19930.55
+  },
+  {
+    "timestamp": "2025-04-15T08:31:05.570386",
+    "portfolio_value": 19974.79
+  },
+  {
+    "timestamp": "2025-04-15T09:31:05.570389",
+    "portfolio_value": 20053.54
+  },
+  {
+    "timestamp": "2025-04-15T10:31:05.570391",
+    "portfolio_value": 20271.43
+  },
+  {
+    "timestamp": "2025-04-15T11:31:05.570393",
+    "portfolio_value": 20180.73
+  },
+  {
+    "timestamp": "2025-04-15T12:31:05.570396",
+    "portfolio_value": 20280.05
+  },
+  {
+    "timestamp": "2025-04-15T13:31:05.570398",
+    "portfolio_value": 19629.36
+  },
+  {
+    "timestamp": "2025-04-15T14:31:05.570400",
+    "portfolio_value": 19843.61
+  },
+  {
+    "timestamp": "2025-04-15T15:31:05.570403",
+    "portfolio_value": 20015.74
+  },
+  {
+    "timestamp": "2025-04-15T16:31:05.570405",
+    "portfolio_value": 19709.73
+  },
+  {
+    "timestamp": "2025-04-15T17:31:05.570407",
+    "portfolio_value": 20219.31
+  },
+  {
+    "timestamp": "2025-04-15T18:31:05.570410",
+    "portfolio_value": 20000.0
   }
 ]

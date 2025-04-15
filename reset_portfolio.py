@@ -10,7 +10,6 @@ import json
 import logging
 import random
 import requests
-import pandas as pd
 from datetime import datetime, timedelta
 
 # Configure logging
