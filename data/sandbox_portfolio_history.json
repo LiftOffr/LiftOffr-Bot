@@ -6,5 +6,19 @@
     "portfolio_value": 20000.0,
     "num_positions": 0,
     "unrealized_pnl": 0.0
+  },
+  {
+    "timestamp": "2025-04-15T04:23:32.835763",
+    "balance": 21580.45,
+    "equity": 22140.25,
+    "portfolio_value": 22140.25,
+    "num_positions": 2
+  },
+  {
+    "timestamp": "2025-04-15T04:24:16.068942",
+    "balance": 19277.023373467393,
+    "equity": 19836.823373467392,
+    "portfolio_value": 19836.823373467392,
+    "num_positions": 2
   }
 ]
