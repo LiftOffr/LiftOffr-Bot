@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Bot Dashboard</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 20px;
+            padding-bottom: 40px;
+        }
+        .price-card {
+            transition: background-color 0.3s;
+        }
+        .price-up {
+            background-color: rgba(40, 167, 69, 0.2) !important;
+        }
+        .price-down {
+            background-color: rgba(220, 53, 69, 0.2) !important;
+        }
+        .position-long {
+            border-left: 4px solid var(--bs-success);
+        }
+        .position-short {
+            border-left: 4px solid var(--bs-danger);
+        }
+        .profit {
+            color: var(--bs-success);
+        }
+        .loss {
+            color: var(--bs-danger);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">Kraken Trading Bot (Port 8080)</h1>
+        
+        <div class="alert alert-info">
+            This is a separate instance of the trading bot running on port 8080 to avoid conflicts with the main dashboard.
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Portfolio Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="portfolio-value" class="h2">$20,000.00</div>
+                        <div class="text-muted">Total Portfolio Value</div>
+                        
+                        <div class="mt-3">
+                            <span id="unrealized-pnl" class="h4">$0.00</span>
+                            <span id="unrealized-pnl-pct" class="text-muted">(0.00%)</span>
+                        </div>
+                        <div class="text-muted">Unrealized P&L</div>
+                        
+                        <div class="mt-3">
+                            <span id="position-count" class="h5">0</span> Open Positions
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Market Prices</h5>
+                        <div>
+                            <span class="badge bg-secondary" id="last-update">Updating...</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="prices-container">
+                            <!-- Prices will be loaded here -->
+                            <div class="col-md-4 mb-2">
+                                <div class="card price-card">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-title">BTC/USD</h6>
+                                        <p class="card-text">$0.00</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Open Positions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Pair</th>
+                                        <th>Direction</th>
+                                        <th>Size</th>
+                                        <th>Entry Price</th>
+                                        <th>Current Price</th>
+                                        <th>Leverage</th>
+                                        <th>P&L</th>
+                                        <th>Confidence</th>
+                                        <th>Duration</th>
+                                        <th>Strategy</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="positions-table">
+                                    <!-- Positions will be loaded here -->
+                                    <tr>
+                                        <td colspan="10" class="text-center">No open positions</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Trade History</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Pair</th>
+                                        <th>Direction</th>
+                                        <th>Entry Price</th>
+                                        <th>Exit Price</th>
+                                        <th>Leverage</th>
+                                        <th>P&L</th>
+                                        <th>Entry Time</th>
+                                        <th>Exit Time</th>
+                                        <th>Reason</th>
+                                        <th>Strategy</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="trades-table">
+                                    <!-- Trades will be loaded here -->
+                                    <tr>
+                                        <td colspan="10" class="text-center">No trade history</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Store previous prices for comparison
+        let previousPrices = {};
+        
+        // Format currency
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+        }
+        
+        // Format percentage
+        function formatPercentage(pct) {
+            return new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 2 }).format(pct / 100);
+        }
+        
+        // Format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+        
+        // Update portfolio status
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('portfolio-value').innerText = formatCurrency(data.portfolio_value);
+                    document.getElementById('unrealized-pnl').innerText = formatCurrency(data.unrealized_pnl);
+                    document.getElementById('unrealized-pnl-pct').innerText = ` (${data.unrealized_pnl_pct.toFixed(2)}%)`;
+                    document.getElementById('position-count').innerText = data.total_positions;
+                    document.getElementById('last-update').innerText = 'Updated: ' + new Date().toLocaleTimeString();
+                    
+                    // Set color for P&L
+                    const pnlElement = document.getElementById('unrealized-pnl');
+                    const pnlPctElement = document.getElementById('unrealized-pnl-pct');
+                    
+                    if (data.unrealized_pnl > 0) {
+                        pnlElement.className = 'h4 profit';
+                        pnlPctElement.className = 'text-muted profit';
+                    } else if (data.unrealized_pnl < 0) {
+                        pnlElement.className = 'h4 loss';
+                        pnlPctElement.className = 'text-muted loss';
+                    } else {
+                        pnlElement.className = 'h4';
+                        pnlPctElement.className = 'text-muted';
+                    }
+                })
+                .catch(error => console.error('Error fetching status:', error));
+        }
+        
+        // Update price display
+        function updatePrices() {
+            fetch('/api/prices')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('prices-container');
+                    container.innerHTML = '';
+                    
+                    Object.entries(data).forEach(([pair, price]) => {
+                        const priceCard = document.createElement('div');
+                        priceCard.className = 'col-md-4 mb-2';
+                        
+                        // Determine price direction for color
+                        let priceDirection = '';
+                        if (previousPrices[pair]) {
+                            if (price > previousPrices[pair]) {
+                                priceDirection = 'price-up';
+                            } else if (price < previousPrices[pair]) {
+                                priceDirection = 'price-down';
+                            }
+                        }
+                        
+                        priceCard.innerHTML = `
+                            <div class="card price-card ${priceDirection}">
+                                <div class="card-body p-2">
+                                    <h6 class="card-title">${pair}</h6>
+                                    <p class="card-text">${formatCurrency(price)}</p>
+                                </div>
+                            </div>
+                        `;
+                        container.appendChild(priceCard);
+                    });
+                    
+                    // Store current prices for next comparison
+                    previousPrices = {...data};
+                    
+                    // Schedule removal of coloring after a delay
+                    setTimeout(() => {
+                        document.querySelectorAll('.price-up, .price-down').forEach(el => {
+                            el.classList.remove('price-up', 'price-down');
+                        });
+                    }, 1000);
+                })
+                .catch(error => console.error('Error fetching prices:', error));
+        }
+        
+        // Update positions table
+        function updatePositions() {
+            fetch('/api/positions')
+                .then(response => response.json())
+                .then(positions => {
+                    const tableBody = document.getElementById('positions-table');
+                    
+                    if (positions.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="10" class="text-center">No open positions</td></tr>';
+                        return;
+                    }
+                    
+                    tableBody.innerHTML = '';
+                    positions.forEach(pos => {
+                        const row = document.createElement('tr');
+                        
+                        // Set row class based on direction
+                        row.className = pos.direction.toLowerCase() === 'long' ? 'position-long' : 'position-short';
+                        
+                        // Set P&L class
+                        const pnlClass = pos.unrealized_pnl > 0 ? 'profit' : (pos.unrealized_pnl < 0 ? 'loss' : '');
+                        
+                        row.innerHTML = `
+                            <td>${pos.pair}</td>
+                            <td>${pos.direction}</td>
+                            <td>${pos.size.toFixed(6)}</td>
+                            <td>${formatCurrency(pos.entry_price)}</td>
+                            <td>${formatCurrency(pos.current_price)}</td>
+                            <td>${pos.leverage}x</td>
+                            <td class="${pnlClass}">${pos.unrealized_pnl.toFixed(2)}%</td>
+                            <td>${(pos.confidence * 100).toFixed(1)}%</td>
+                            <td>${pos.duration || 'N/A'}</td>
+                            <td>${pos.strategy}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error fetching positions:', error));
+        }
+        
+        // Update trades table
+        function updateTrades() {
+            fetch('/api/trades')
+                .then(response => response.json())
+                .then(trades => {
+                    const tableBody = document.getElementById('trades-table');
+                    
+                    if (trades.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="10" class="text-center">No trade history</td></tr>';
+                        return;
+                    }
+                    
+                    tableBody.innerHTML = '';
+                    
+                    // Sort trades by exit time, most recent first
+                    trades.sort((a, b) => new Date(b.exit_time) - new Date(a.exit_time));
+                    
+                    // Limit to 10 most recent trades
+                    trades.slice(0, 10).forEach(trade => {
+                        const row = document.createElement('tr');
+                        
+                        // Set P&L class
+                        const pnlClass = trade.pnl_percentage > 0 ? 'profit' : (trade.pnl_percentage < 0 ? 'loss' : '');
+                        
+                        row.innerHTML = `
+                            <td>${trade.pair}</td>
+                            <td>${trade.direction}</td>
+                            <td>${formatCurrency(trade.entry_price)}</td>
+                            <td>${formatCurrency(trade.exit_price)}</td>
+                            <td>${trade.leverage}x</td>
+                            <td class="${pnlClass}">${trade.pnl_percentage.toFixed(2)}%</td>
+                            <td>${formatDate(trade.entry_time)}</td>
+                            <td>${formatDate(trade.exit_time)}</td>
+                            <td>${trade.exit_reason}</td>
+                            <td>${trade.strategy}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error fetching trades:', error));
+        }
+        
+        // Update everything
+        function updateAll() {
+            updateStatus();
+            updatePrices();
+            updatePositions();
+            updateTrades();
+        }
+        
+        // Initial update
+        updateAll();
+        
+        // Set up periodic updates
+        setInterval(updateAll, 5000);
+    </script>
+</body>
+</html>

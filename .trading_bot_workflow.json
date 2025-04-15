@@ -2,7 +2,7 @@
   "workflows": [
     {
       "name": "trading_bot",
-      "entrypoint": "python standalone_cli.py"
+      "entrypoint": "python bot_server.py"
     }
   ]
 }
