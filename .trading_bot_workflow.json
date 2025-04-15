@@ -2,7 +2,7 @@
   "workflows": [
     {
       "name": "trading_bot",
-      "entrypoint": "bash -c 'FLASK_RUN_PORT=5001 TRADING_BOT_PROCESS=1 python tiny_bot.py'"
+      "entrypoint": "./run_realtime_bot.sh"
     }
   ]
 }
