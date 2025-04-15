@@ -34,7 +34,7 @@
       "win_rate": 0.9112,
       "backtest_return": 9.74,
       "base_leverage": 41.2,
-      "confidence_threshold": 0.70
+      "confidence_threshold": 0.7
     },
     "DOT/USD": {
       "active": true,
@@ -92,7 +92,14 @@
     }
   },
   "ensemble": {
-    "models": ["tcn", "lstm", "attention_gru", "transformer", "xgboost", "lightgbm"],
+    "models": [
+      "tcn",
+      "lstm",
+      "attention_gru",
+      "transformer",
+      "xgboost",
+      "lightgbm"
+    ],
     "strategy": "weighted_average",
     "dynamic_weights": true,
     "target_accuracy": 0.99,
@@ -119,5 +126,40 @@
     "bear_market_leverage_multiplier": 0.7,
     "volatile_market_leverage_multiplier": 0.8,
     "bull_market_leverage_multiplier": 1.2
+  },
+  "models": {
+    "BTC/USD": {
+      "model_type": "lstm",
+      "model_path": "model_weights/lstm_btc_model.h5",
+      "confidence_threshold": 0.65,
+      "min_leverage": 5.0,
+      "max_leverage": 125.0,
+      "risk_percentage": 0.2
+    },
+    "ETH/USD": {
+      "model_type": "lstm",
+      "model_path": "model_weights/lstm_eth_model.h5",
+      "confidence_threshold": 0.65,
+      "min_leverage": 5.0,
+      "max_leverage": 125.0,
+      "risk_percentage": 0.2
+    },
+    "SOL/USD": {
+      "model_type": "lstm",
+      "model_path": "model_weights/lstm_sol_model.h5",
+      "confidence_threshold": 0.65,
+      "min_leverage": 5.0,
+      "max_leverage": 125.0,
+      "risk_percentage": 0.2
+    }
+  },
+  "global_settings": {
+    "confidence_threshold": 0.65,
+    "dynamic_leverage_range": {
+      "min": 5.0,
+      "max": 125.0
+    },
+    "risk_percentage": 0.2,
+    "max_positions_per_pair": 1
   }
 }

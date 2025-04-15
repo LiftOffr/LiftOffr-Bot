@@ -1,1 +1,26 @@
-[]
+{
+  "trade_btc_usd_20250415232932": {
+    "symbol": "BTC/USD",
+    "entry_price": 55725.17076198649,
+    "exit_price": 56801.13650966276,
+    "size": 6.063736601070692,
+    "long": false,
+    "leverage": 85.79657554626465,
+    "entry_time": "2025-04-15T23:29:32.699354",
+    "exit_time": "2025-04-15T23:33:38.204066",
+    "profit_loss": -6524.372885683011,
+    "status": "closed"
+  },
+  "trade_sol_usd_20250415232933": {
+    "symbol": "SOL/USD",
+    "entry_price": 152.59993486841748,
+    "exit_price": 149.73370430314068,
+    "size": 2611.826760558501,
+    "long": true,
+    "leverage": 100.56313753128052,
+    "entry_time": "2025-04-15T23:29:33.909097",
+    "exit_time": "2025-04-15T23:34:09.388015",
+    "profit_loss": -7486.097692320651,
+    "status": "closed"
+  }
+}
