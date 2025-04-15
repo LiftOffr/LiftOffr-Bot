@@ -1,5 +1,5 @@
-[
-  {
+{
+  "UNI/USD": {
     "pair": "UNI/USD",
     "entry_price": 5.252,
     "current_price": 5.252,
@@ -18,7 +18,7 @@
     "liquidation_price": 5.171784565916399,
     "open_trade_id": "trade_1"
   },
-  {
+  "DOT/USD": {
     "pair": "DOT/USD",
     "entry_price": 3.5968,
     "current_price": 3.5968,
@@ -33,11 +33,11 @@
     "model": "ARIMA",
     "category": "those dudes",
     "stop_loss_pct": 4.0,
-    "take_profit_pct": 17.3,
+    "take_profit_pct": 15.0,
     "liquidation_price": 3.6260798628963156,
     "open_trade_id": "trade_2"
   },
-  {
+  "ATOM/USD": {
     "pair": "ATOM/USD",
     "entry_price": 4.0403,
     "current_price": 4.0403,
@@ -52,11 +52,11 @@
     "model": "Adaptive",
     "category": "him all along",
     "stop_loss_pct": 4.0,
-    "take_profit_pct": 17.1,
+    "take_profit_pct": 15.0,
     "liquidation_price": 4.11098664825046,
     "open_trade_id": "trade_3"
   },
-  {
+  "BTC/USD": {
     "pair": "BTC/USD",
     "entry_price": 84212.4,
     "current_price": 84212.4,
@@ -71,11 +71,11 @@
     "model": "Adaptive",
     "category": "those dudes",
     "stop_loss_pct": 4.0,
-    "take_profit_pct": 17.2,
+    "take_profit_pct": 15.0,
     "liquidation_price": 82934.41629392971,
     "open_trade_id": "trade_4"
   },
-  {
+  "ETH/USD": {
     "pair": "ETH/USD",
     "entry_price": 1610.69,
     "current_price": 1610.69,
@@ -90,11 +90,11 @@
     "model": "ARIMA",
     "category": "him all along",
     "stop_loss_pct": 4.0,
-    "take_profit_pct": 16.8,
+    "take_profit_pct": 15.0,
     "liquidation_price": 1633.5622795216743,
     "open_trade_id": "trade_5"
   },
-  {
+  "SOL/USD": {
     "pair": "SOL/USD",
     "entry_price": 128.12,
     "current_price": 128.12,
@@ -113,7 +113,7 @@
     "liquidation_price": 130.60395918367345,
     "open_trade_id": "trade_6"
   },
-  {
+  "ADA/USD": {
     "pair": "ADA/USD",
     "entry_price": 0.619187,
     "current_price": 0.619187,
@@ -132,4 +132,4 @@
     "liquidation_price": 0.6076304646365422,
     "open_trade_id": "trade_7"
   }
-]
+}

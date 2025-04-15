@@ -8,10 +8,6 @@ It optimizes entry and exit timing for maximum profits and minimum losses.
 import os
 import sys
 import logging
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -109,6 +105,41 @@ def main():
     if position_opts:
         logger.info(f"Position adjustments: {len(position_opts.get('adjustments', []))}")
         logger.info(f"Recommended exits: {len(position_opts.get('exits', []))}")
+        
+        # Show detailed position adjustment recommendations
+        adjustments = position_opts.get('adjustments', [])
+        if adjustments:
+            logger.info("Detailed position adjustments:")
+            for adjustment in adjustments:
+                pair = adjustment.get('pair')
+                current_price = adjustment.get('current_price')
+                pnl = adjustment.get('current_pnl_pct')
+                signals = adjustment.get('signals', [])
+                
+                logger.info(f"  {pair} (Price: ${current_price}, PnL: {pnl:.2f}%):")
+                for signal_type, value in signals:
+                    if isinstance(value, dict):
+                        logger.info(f"    - {signal_type}: {value}")
+                    else:
+                        logger.info(f"    - {signal_type}: {value:.2f}")
+    
+    # Test optimal entry price calculations
+    logger.info("Sample optimal entry price calculations:")
+    for pair in ["BTC/USD", "ETH/USD", "SOL/USD"]:
+        if pair in current_prices:
+            current_price = current_prices[pair]
+            
+            # Test with different confidence levels
+            for direction in ["long", "short"]:
+                for confidence in [0.6, 0.75, 0.9]:
+                    optimal_entry = optimizer.calculate_optimal_entry_price(
+                        pair, current_price, direction, confidence
+                    )
+                    diff_pct = ((optimal_entry / current_price) - 1) * 100
+                    logger.info(
+                        f"  {pair} {direction} (conf: {confidence:.2f}): "
+                        f"${optimal_entry:.2f} ({diff_pct:+.2f}% from current ${current_price:.2f})"
+                    )
     
     # Display portfolio allocation recommendations
     allocations = results.get('allocations', {})
