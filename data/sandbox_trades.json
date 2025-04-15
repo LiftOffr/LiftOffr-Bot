@@ -9,7 +9,9 @@
     "exit_price": 0,
     "size": 68.84,
     "leverage": 25.0,
-    "pnl_percentage": 0
+    "pnl_percentage": 0,
+    "fees": 4.999505,
+    "fee_rate": 0.0005
   },
   {
     "timestamp": "2025-04-02T14:30:00.000Z",
@@ -21,7 +23,9 @@
     "exit_price": 150.75,
     "size": 68.84,
     "leverage": 25.0,
-    "pnl_percentage": 0.095
+    "pnl_percentage": 0.095,
+    "fees": 5.188815000000001,
+    "fee_rate": 0.0005
   },
   {
     "timestamp": "2025-04-03T09:15:00.000Z",
@@ -33,7 +37,9 @@
     "exit_price": 0,
     "size": 0.12,
     "leverage": 20.0,
-    "pnl_percentage": 0
+    "pnl_percentage": 0,
+    "fees": 4.1370000000000005,
+    "fee_rate": 0.0005
   },
   {
     "timestamp": "2025-04-04T11:05:00.000Z",
@@ -45,7 +51,9 @@
     "exit_price": 68125.0,
     "size": 0.12,
     "leverage": 20.0,
-    "pnl_percentage": 0.024
+    "pnl_percentage": 0.024,
+    "fees": 4.0875,
+    "fee_rate": 0.0005
   },
   {
     "timestamp": "2025-04-05T13:45:00.000Z",
@@ -57,7 +65,9 @@
     "exit_price": 0,
     "size": 2.985,
     "leverage": 22.5,
-    "pnl_percentage": 0
+    "pnl_percentage": 0,
+    "fees": 4.999875,
+    "fee_rate": 0.0005
   },
   {
     "timestamp": "2025-04-06T16:20:00.000Z",
@@ -69,7 +79,9 @@
     "exit_price": 3425.0,
     "size": 2.985,
     "leverage": 22.5,
-    "pnl_percentage": 0.05
+    "pnl_percentage": 0.05,
+    "fees": 5.1118125,
+    "fee_rate": 0.0005
   },
   {
     "timestamp": "2025-04-08T08:10:00.000Z",
@@ -81,7 +93,9 @@
     "exit_price": 0,
     "size": 20833.33,
     "leverage": 15.0,
-    "pnl_percentage": 0
+    "pnl_percentage": 0,
+    "fees": 4.9999992,
+    "fee_rate": 0.0005
   },
   {
     "timestamp": "2025-04-09T15:40:00.000Z",
@@ -93,7 +107,9 @@
     "exit_price": 0.465,
     "size": 20833.33,
     "leverage": 15.0,
-    "pnl_percentage": 0.047
+    "pnl_percentage": 0.047,
+    "fees": 4.843749225000001,
+    "fee_rate": 0.0005
   },
   {
     "timestamp": "2025-04-11T10:05:00.000Z",
@@ -101,11 +117,13 @@
     "strategy": "ARIMA",
     "type": "Entry",
     "direction": "Long",
-    "entry_price": 154.50,
+    "entry_price": 154.5,
     "exit_price": 0,
     "size": 81.82,
     "leverage": 30.0,
-    "pnl_percentage": 0
+    "pnl_percentage": 0,
+    "fees": 6.320594999999999,
+    "fee_rate": 0.0005
   },
   {
     "timestamp": "2025-04-12T14:30:00.000Z",
@@ -113,11 +131,13 @@
     "strategy": "ARIMA",
     "type": "Exit",
     "direction": "Long",
-    "entry_price": 154.50,
+    "entry_price": 154.5,
     "exit_price": 156.25,
     "size": 81.82,
     "leverage": 30.0,
-    "pnl_percentage": 0.034
+    "pnl_percentage": 0.034,
+    "fees": 6.3921874999999995,
+    "fee_rate": 0.0005
   },
   {
     "timestamp": "2025-04-13T09:10:00.000Z",
@@ -129,7 +149,9 @@
     "exit_price": 0,
     "size": 1094.89,
     "leverage": 15.0,
-    "pnl_percentage": 0
+    "pnl_percentage": 0,
+    "fees": 3.74999825,
+    "fee_rate": 0.0005
   },
   {
     "timestamp": "2025-04-14T16:45:00.000Z",
@@ -141,6 +163,8 @@
     "exit_price": 7.15,
     "size": 1094.89,
     "leverage": 15.0,
-    "pnl_percentage": 0.066
+    "pnl_percentage": 0.066,
+    "fees": 3.9142317500000003,
+    "fee_rate": 0.0005
   }
 ]

@@ -13,5 +13,11 @@
   "volume_thresholds": {
     "low": 100000,
     "medium": 500000
+  },
+  "max_leverage": 125.0,
+  "liquidation_cascade": {
+    "enabled": true,
+    "threshold": 0.05,
+    "impact_factor": 1.5
   }
 }

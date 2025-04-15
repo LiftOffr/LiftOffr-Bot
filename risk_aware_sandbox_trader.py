@@ -495,8 +495,11 @@ class RiskAwareSandboxTrader:
                 position["unrealized_pnl"] = leveraged_pnl_percentage
                 
                 # Update duration
-                entry_time = datetime.datetime.fromisoformat(position["entry_time"])
-                current_time = datetime.datetime.now()
+                entry_time = datetime.datetime.fromisoformat(position["entry_time"].replace('Z', '+00:00') if position["entry_time"].endswith('Z') else position["entry_time"])
+                current_time = datetime.datetime.now().replace(tzinfo=None)
+                # Make sure entry_time is timezone-naive if current_time is
+                if entry_time.tzinfo is not None:
+                    entry_time = entry_time.replace(tzinfo=None)
                 duration_seconds = (current_time - entry_time).total_seconds()
                 hours = int(duration_seconds // 3600)
                 minutes = int((duration_seconds % 3600) // 60)

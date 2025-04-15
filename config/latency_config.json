@@ -1,0 +1,9 @@
+{
+  "base_latency_ms": 150,
+  "latency_variance_ms": 50,
+  "market_rush_factor": 2.5,
+  "peak_hours_factor": 1.5,
+  "connection_failure_prob": 0.001,
+  "timeout_prob": 0.002,
+  "retry_delay_ms": 500
+}

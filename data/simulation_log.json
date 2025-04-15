@@ -1,0 +1,12 @@
+{
+  "trades": [],
+  "portfolio_history": [
+    {
+      "timestamp": "2025-04-15T01:03:16.381568",
+      "portfolio_value": 23742.45
+    }
+  ],
+  "market_regimes": [],
+  "flash_crashes": [],
+  "latency_events": []
+}

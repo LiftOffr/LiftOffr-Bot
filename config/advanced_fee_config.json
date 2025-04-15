@@ -1,0 +1,22 @@
+{
+  "base_maker_fee": 0.0002,
+  "base_taker_fee": 0.0005,
+  "funding_fee_8h": 0.0001,
+  "liquidation_fee": 0.0075,
+  "min_margin_ratio": 0.0125,
+  "maintenance_margin": 0.04,
+  "withdrawal_fee": {
+    "BTC": 0.0005,
+    "ETH": 0.005,
+    "SOL": 0.01,
+    "ADA": 1,
+    "DOT": 0.1,
+    "LINK": 0.1,
+    "USD": 5
+  },
+  "deposit_fee": {
+    "crypto": 0,
+    "bank_transfer": 0,
+    "credit_card": 0.035
+  }
+}

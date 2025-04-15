@@ -1,0 +1,13 @@
+{
+  "impact_factor": 0.2,
+  "decay_factor": 0.5,
+  "impact_window": 3600,
+  "pair_factors": {
+    "BTC/USD": 0.5,
+    "ETH/USD": 0.7,
+    "SOL/USD": 1.2,
+    "ADA/USD": 1.5,
+    "DOT/USD": 1.4,
+    "LINK/USD": 1.3
+  }
+}

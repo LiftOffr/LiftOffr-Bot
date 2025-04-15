@@ -63,5 +63,25 @@
       "leverage_adjustment": 0.9,
       "risk_adjustment": 0.9
     }
+  },
+  "time_of_day_adjustments": {
+    "high_volume_hours": {
+      "leverage_adjustment": 1.1,
+      "slippage_adjustment": 0.9
+    },
+    "low_volume_hours": {
+      "leverage_adjustment": 0.9,
+      "slippage_adjustment": 1.2
+    }
+  },
+  "position_sizing": {
+    "scale_by_volatility": true,
+    "scale_by_conviction": true,
+    "conviction_scale_factor": 1.5
+  },
+  "execution": {
+    "partial_fill_threshold": 0.5,
+    "entry_price_tolerance": 0.005,
+    "exit_price_tolerance": 0.01
   }
 }
