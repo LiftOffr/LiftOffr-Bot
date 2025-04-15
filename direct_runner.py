@@ -40,7 +40,7 @@ price_cache_time = {}
 PRICE_CACHE_EXPIRY = 5  # seconds
 
 def get_price(pair: str) -> Optional[float]:
-    """Get current price for trading pair"""
+    """Get current price for trading pair from Kraken API"""
     global price_cache, price_cache_time
     
     # Check cache first
@@ -48,31 +48,45 @@ def get_price(pair: str) -> Optional[float]:
     if pair in price_cache and (now - price_cache_time.get(pair, 0)) < PRICE_CACHE_EXPIRY:
         return price_cache[pair]
     
-    # For now, using static prices with small random adjustments
-    # In a real implementation, this would call the Kraken API
-    base_prices = {
-        "BTC/USD": 62350.0,
-        "ETH/USD": 3050.0,
-        "SOL/USD": 142.50,
-        "ADA/USD": 0.45,
-        "DOT/USD": 6.75,
-        "LINK/USD": 15.30,
-        "AVAX/USD": 35.25,
-        "MATIC/USD": 0.65,
-        "UNI/USD": 9.80,
-        "ATOM/USD": 8.45
-    }
-    
-    if pair in base_prices:
-        # Add ±1% random movement
-        movement = random.uniform(-0.01, 0.01)
-        price = base_prices[pair] * (1 + movement)
+    try:
+        # Get price from Kraken API
+        from kraken_api_client import get_price_for_pair
         
-        # Update cache
-        price_cache[pair] = price
-        price_cache_time[pair] = now
+        # Get the current price
+        price = get_price_for_pair(pair, sandbox=True)
         
-        return price
+        if price is not None:
+            # Update cache
+            price_cache[pair] = price
+            price_cache_time[pair] = now
+            return price
+        else:
+            # Fallback to simulated prices if API fails
+            logger.warning(f"Using fallback price for {pair} (API unavailable)")
+            base_prices = {
+                "BTC/USD": 62350.0,
+                "ETH/USD": 3050.0,
+                "SOL/USD": 142.50,
+                "ADA/USD": 0.45,
+                "DOT/USD": 6.75,
+                "LINK/USD": 15.30,
+                "AVAX/USD": 35.25,
+                "MATIC/USD": 0.65,
+                "UNI/USD": 9.80,
+                "ATOM/USD": 8.45
+            }
+            
+            if pair in base_prices:
+                # Add ±1% random movement
+                movement = random.uniform(-0.01, 0.01)
+                price = base_prices[pair] * (1 + movement)
+                
+                # Update cache
+                price_cache[pair] = price
+                price_cache_time[pair] = now
+                return price
+    except Exception as e:
+        logger.error(f"Error fetching price for {pair}: {e}")
     
     return None
 
