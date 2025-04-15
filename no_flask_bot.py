@@ -109,32 +109,63 @@ def get_kraken_price(pair):
     Returns:
         float: Current price
     """
-    # Replace "/" with "" for Kraken API format
-    symbol = pair.replace("/", "")
-    
-    # Current approximate market prices as of April 2025 (for simulation)
-    base_prices = {
-        "SOLUSD": 285.75,
-        "BTCUSD": 93750.25,
-        "ETHUSD": 4975.50,
-        "ADAUSD": 1.25,
-        "DOTUSD": 17.80,
-        "LINKUSD": 22.45,
-        "AVAXUSD": 45.20,
-        "MATICUSD": 1.35,
-        "UNIUSD": 12.80,
-        "ATOMUSD": 14.95
-    }
-    
-    # Add some randomness to simulate price movement
-    if symbol in base_prices:
-        base_price = base_prices[symbol]
-        # Add random noise between -0.5% and +0.5%
-        noise = base_price * (random.random() * 0.01 - 0.005)
-        return round(base_price + noise, 2)
-    else:
-        logger.warning(f"Unknown trading pair: {pair}, using fallback price")
-        return 100.0  # Fallback price
+    try:
+        # Replace "/" with "" for Kraken API format
+        symbol = pair.replace("/", "")
+        url = f"https://api.kraken.com/0/public/Ticker?pair={symbol}"
+        
+        import requests
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            if 'result' in data and data['result']:
+                pair_data = next(iter(data['result'].values()))
+                if 'c' in pair_data and pair_data['c']:
+                    price = float(pair_data['c'][0])  # 'c' is the last trade closed price
+                    logger.info(f"Got real-time price for {pair}: ${price:.2f}")
+                    return price
+        
+        # Fallback prices if API fails
+        base_prices = {
+            "SOLUSD": 285.75,
+            "BTCUSD": 93750.25,
+            "ETHUSD": 4975.50,
+            "ADAUSD": 1.25,
+            "DOTUSD": 17.80,
+            "LINKUSD": 22.45,
+            "AVAXUSD": 45.20,
+            "MATICUSD": 1.35,
+            "UNIUSD": 12.80,
+            "ATOMUSD": 14.95
+        }
+        
+        logger.warning(f"Using fallback price for {pair}")
+        if symbol in base_prices:
+            base_price = base_prices[symbol]
+            # Add random noise between -0.5% and +0.5%
+            noise = base_price * (random.random() * 0.01 - 0.005)
+            return round(base_price + noise, 2)
+        else:
+            logger.warning(f"Unknown trading pair: {pair}, using fallback price")
+            return 100.0  # Fallback price
+    except Exception as e:
+        logger.error(f"Error getting price for {pair}: {e}")
+        # Use simulation as fallback
+        base_prices = {
+            "SOLUSD": 285.75,
+            "BTCUSD": 93750.25,
+            "ETHUSD": 4975.50,
+            "ADAUSD": 1.25,
+            "DOTUSD": 17.80,
+            "LINKUSD": 22.45,
+            "AVAXUSD": 45.20,
+            "MATICUSD": 1.35,
+            "UNIUSD": 12.80,
+            "ATOMUSD": 14.95
+        }
+        if symbol in base_prices:
+            return base_prices[symbol]
+        return 100.0  # Last resort fallback
 
 def create_new_portfolio():
     """Create a new portfolio with default values"""
