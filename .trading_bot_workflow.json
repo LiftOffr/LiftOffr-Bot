@@ -2,7 +2,7 @@
   "workflows": [
     {
       "name": "trading_bot",
-      "entrypoint": "python run_trading_bot_8080.py"
+      "entrypoint": "python simple_trading_bot.py"
     }
   ]
 }
