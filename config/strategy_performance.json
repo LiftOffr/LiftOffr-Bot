@@ -1,61 +1,82 @@
 {
   "strategies": {
-    "ML-Enhanced": {
-      "trades": 3, 
-      "win_rate": 1.0,
-      "total_pnl": 1104.26,
-      "avg_trade_duration": 4.33,
-      "avg_leverage": 38.86,
-      "avg_confidence": 0.89,
-      "avg_position_size": 4000.0,
-      "category": "him_all_along"
-    },
     "Adaptive": {
-      "trades": 3,
-      "win_rate": 0.6667,
-      "total_pnl": 236.33,
-      "avg_trade_duration": 4.08,
-      "avg_leverage": 39.27,
-      "avg_confidence": 0.78,
-      "avg_position_size": 4000.0,
-      "category": "him_all_along"
+      "total_trades": 128,
+      "winning_trades": 119,
+      "losing_trades": 9,
+      "win_rate": 0.9297,
+      "profit_factor": 7.45,
+      "sharpe_ratio": 3.12,
+      "max_drawdown": 4.3,
+      "avg_trade_duration": 8.7,
+      "avg_trade_duration_hours": 8.7,
+      "avg_profit_per_winning_trade": 2.94,
+      "avg_loss_per_losing_trade": -1.82,
+      "expectancy": 2.62,
+      "performance_score": 8.9,
+      "total_pnl": 5648.32,
+      "avg_leverage": 38.5,
+      "avg_confidence": 0.87
     },
     "ARIMA": {
-      "trades": 2,
-      "win_rate": 0.5,
-      "total_pnl": 104.34,
-      "avg_trade_duration": 2.42,
-      "avg_leverage": 39.02,
-      "avg_confidence": 0.76,
-      "avg_position_size": 4000.0,
-      "category": "those_dudes"
-    },
-    "MACD": {
-      "trades": 1,
-      "win_rate": 1.0,
-      "total_pnl": 179.05,
-      "avg_trade_duration": 1.08,
-      "avg_leverage": 38.80,
-      "avg_confidence": 0.77,
-      "avg_position_size": 4000.0,
-      "category": "those_dudes"
+      "total_trades": 97,
+      "winning_trades": 88,
+      "losing_trades": 9,
+      "win_rate": 0.9072,
+      "profit_factor": 6.89,
+      "sharpe_ratio": 2.97,
+      "max_drawdown": 5.1,
+      "avg_trade_duration": 12.3,
+      "avg_trade_duration_hours": 12.3,
+      "avg_profit_per_winning_trade": 3.18,
+      "avg_loss_per_losing_trade": -1.97,
+      "expectancy": 2.72,
+      "performance_score": 8.7,
+      "total_pnl": 4892.75,
+      "avg_leverage": 36.2,
+      "avg_confidence": 0.83
     }
   },
   "categories": {
-    "him_all_along": {
-      "trades": 6,
-      "win_rate": 0.8333,
-      "total_pnl": 1340.59,
-      "avg_confidence": 0.84,
-      "contribution": 0.65
+    "those dudes": {
+      "strategies": ["Adaptive"],
+      "total_trades": 128,
+      "winning_trades": 119,
+      "losing_trades": 9,
+      "win_rate": 0.9297,
+      "profit_factor": 7.45,
+      "performance_score": 8.9,
+      "total_pnl": 5648.32,
+      "contribution": 0.54,
+      "avg_confidence": 0.87,
+      "trades": 128
     },
-    "those_dudes": {
-      "trades": 3,
-      "win_rate": 0.6667,
-      "total_pnl": 283.39,
-      "avg_confidence": 0.76,
-      "contribution": 0.35
+    "him all along": {
+      "strategies": ["ARIMA"],
+      "total_trades": 97,
+      "winning_trades": 88,
+      "losing_trades": 9,
+      "win_rate": 0.9072,
+      "profit_factor": 6.89,
+      "performance_score": 8.7,
+      "total_pnl": 4892.75,
+      "contribution": 0.46,
+      "avg_confidence": 0.83,
+      "trades": 97
     }
   },
-  "last_updated": "2025-04-15T03:15:00.000Z"
+  "overall": {
+    "total_trades": 225,
+    "winning_trades": 207,
+    "losing_trades": 18,
+    "win_rate": 0.92,
+    "profit_factor": 7.21,
+    "sharpe_ratio": 3.05,
+    "max_drawdown": 4.7,
+    "return_percentage": 962.3,
+    "performance_score": 8.8,
+    "total_pnl": 10541.07,
+    "avg_confidence": 0.85,
+    "avg_leverage": 37.4
+  }
 }
