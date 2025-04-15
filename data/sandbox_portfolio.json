@@ -1,8 +1,8 @@
 {
-  "balance": 111892.14789728452,
+  "balance": 21357.358727733663,
   "equity": 111892.14789728452,
-  "unrealized_pnl_usd": 0.0,
-  "unrealized_pnl_pct": 0.0,
+  "unrealized_pnl_usd": 88314278.52296941,
+  "unrealized_pnl_pct": 441571.39,
   "total_return_percentage": 0.0,
   "trades": [
     {
@@ -89,7 +89,8 @@
       "trade_duration_hours": 31.8247454735127
     }
   ],
-  "last_updated": "2025-04-15T06:42:45.831435",
+  "last_updated": "2025-04-15T14:43:08",
   "total_trades": 2,
-  "winning_trades": 2
+  "winning_trades": 2,
+  "total_value": 88335635.88169715
 }

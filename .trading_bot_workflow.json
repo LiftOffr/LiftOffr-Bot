@@ -2,7 +2,7 @@
   "workflows": [
     {
       "name": "trading_bot",
-      "entrypoint": "python start_trading_with_liquidation.py"
+      "entrypoint": "python non_flask_trading_bot.py"
     }
   ]
 }

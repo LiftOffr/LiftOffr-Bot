@@ -80,6 +80,7 @@ def index():
             if "unrealized_pnl_amount" in position:
                 total_pnl += position["unrealized_pnl_amount"]
         
+        # Always set these fields to ensure they exist
         portfolio["unrealized_pnl_usd"] = total_pnl
         portfolio["unrealized_pnl_pct"] = (total_pnl / 20000.0) * 100
         
