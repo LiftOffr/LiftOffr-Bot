@@ -1,202 +1,117 @@
 #!/usr/bin/env python3
 """
-Run Realtime ML Trading
+Run Realtime ML Trading System
 
-This script activates the ML-driven real-time trading system in sandbox mode.
-It manages connections to Kraken's WebSocket API and ML models to optimize
-trading decisions in real-time.
+This script starts the realtime ML trading system in sandbox mode,
+integrating the advanced ensemble ML models with the Kraken trading bot.
 """
-import argparse
 import os
 import sys
 import logging
-from typing import List
+import argparse
+import time
+from datetime import datetime
+import threading
 
 # Import our modules
-from realtime_ml_manager import RealtimeMLManager
+from realtime_ml_trader import RealtimeMLTrader
+import advanced_ml_integration as ami
+from trade_optimizer import TradeOptimizer
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    datefmt='%Y-%m-%d %H:%M:%S',
+    handlers=[
+        logging.FileHandler(f'realtime_ml_trading_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'),
+        logging.StreamHandler()
+    ]
 )
 logger = logging.getLogger(__name__)
 
 # Default trading pairs
 DEFAULT_PAIRS = [
-    "SOL/USD", 
-    "BTC/USD", 
-    "ETH/USD", 
-    "ADA/USD", 
-    "DOT/USD",
-    "LINK/USD",
-    "AVAX/USD",
-    "MATIC/USD",
-    "UNI/USD",
-    "ATOM/USD"
+    "SOL/USD", "BTC/USD", "ETH/USD", "ADA/USD", "DOT/USD",
+    "LINK/USD", "AVAX/USD", "MATIC/USD", "UNI/USD", "ATOM/USD"
 ]
 
 def parse_arguments():
     """Parse command line arguments"""
-    parser = argparse.ArgumentParser(description="Run Realtime ML Trading")
-    
-    parser.add_argument(
-        "--pairs",
-        nargs="+",
-        default=DEFAULT_PAIRS,
-        help="Trading pairs to use"
-    )
-    
-    parser.add_argument(
-        "--capital",
-        type=float,
-        default=20000.0,
-        help="Initial capital in USD"
-    )
-    
-    parser.add_argument(
-        "--max-positions",
-        type=int,
-        default=7,
-        help="Maximum number of open positions"
-    )
-    
-    parser.add_argument(
-        "--allocation",
-        type=float,
-        default=0.85,
-        help="Maximum portfolio allocation percentage (0-1)"
-    )
-    
-    parser.add_argument(
-        "--live",
-        action="store_true",
-        help="Run in live mode (no sandbox)"
-    )
-    
+    parser = argparse.ArgumentParser(description="Run Realtime ML Trading System")
+    parser.add_argument("--sandbox", action="store_true", default=True,
+                        help="Run in sandbox mode (default: True)")
+    parser.add_argument("--pairs", type=str, nargs="+", default=DEFAULT_PAIRS,
+                        help="Trading pairs to trade")
+    parser.add_argument("--interval", type=int, default=60,
+                        help="Trading loop interval in seconds")
+    parser.add_argument("--training", action="store_true",
+                        help="Run full training before starting")
+    parser.add_argument("--optimize", action="store_true",
+                        help="Run optimization before starting")
     return parser.parse_args()
 
-def create_data_directory():
-    """Create data directory if it doesn't exist"""
-    os.makedirs("data", exist_ok=True)
+def run_training(pairs):
+    """Run ML model training for all pairs"""
+    logger.info("Starting ML model training")
+    
+    # Create Advanced ML Trader
+    trader = ami.AdvancedMLTrader(pairs)
+    
+    # Create Continuous Learning Manager
+    learning_manager = ami.ContinuousLearningManager(trader)
+    
+    # Run full training
+    learning_manager.run_full_training()
+    
+    logger.info("ML model training complete")
 
-def check_api_keys():
-    """Check if required API keys are set"""
-    required_keys = ["KRAKEN_API_KEY", "KRAKEN_API_SECRET"]
-    missing_keys = [key for key in required_keys if not os.environ.get(key)]
+def run_optimization(pairs):
+    """Run trading optimization for all pairs"""
+    logger.info("Starting trade optimization")
     
-    if missing_keys:
-        logger.error(f"Missing required environment variables: {', '.join(missing_keys)}")
-        logger.error("Please set the required API keys in your environment or .env file")
-        return False
+    # Create Trade Optimizer
+    optimizer = TradeOptimizer(pairs)
     
-    return True
-
-def reset_portfolio(initial_capital: float):
-    """Reset portfolio for sandbox mode"""
-    import json
+    # Run optimization
+    from integrate_trade_optimizer import optimize_trading
+    optimize_trading(pairs)
     
-    # Create portfolio data
-    portfolio = {
-        "initial_capital": initial_capital,
-        "available_capital": initial_capital,
-        "total_value": initial_capital,
-        "last_updated": "2023-01-01T00:00:00"
-    }
-    
-    # Save to file
-    with open("data/sandbox_portfolio.json", "w") as f:
-        json.dump(portfolio, f, indent=2)
-    
-    # Create empty positions and trades files
-    with open("data/sandbox_positions.json", "w") as f:
-        json.dump([], f, indent=2)
-    
-    with open("data/sandbox_trades.json", "w") as f:
-        json.dump([], f, indent=2)
-    
-    # Create empty portfolio history file
-    with open("data/sandbox_portfolio_history.json", "w") as f:
-        json.dump([], f, indent=2)
-    
-    logger.info(f"Reset portfolio to ${initial_capital:.2f}")
-
-def run_realtime_ml_trading(
-    pairs: List[str],
-    initial_capital: float = 20000.0,
-    max_open_positions: int = 7,
-    max_allocation_pct: float = 0.85,
-    sandbox: bool = True
-):
-    """
-    Run the realtime ML trading system
-    
-    Args:
-        pairs: List of trading pairs
-        initial_capital: Initial capital in USD
-        max_open_positions: Maximum number of open positions
-        max_allocation_pct: Maximum portfolio allocation percentage
-        sandbox: Whether to run in sandbox mode
-    """
-    # Create the Realtime ML Manager
-    ml_manager = RealtimeMLManager(
-        trading_pairs=pairs,
-        initial_capital=initial_capital,
-        max_open_positions=max_open_positions,
-        max_allocation_pct=max_allocation_pct,
-        sandbox=sandbox
-    )
-    
-    # Start the manager
-    ml_manager.start()
-    
-    logger.info(f"Started Realtime ML Trading for {len(pairs)} pairs")
-    
-    try:
-        # Keep running until interrupted
-        import time
-        while True:
-            # Print status periodically
-            status = ml_manager.get_status()
-            logger.info(f"Current status: {len(status.get('positions', []))} "
-                       f"open positions, ${status.get('portfolio_value', 0):.2f} "
-                       f"portfolio value")
-            
-            # Sleep for 5 minutes
-            time.sleep(300)
-    
-    except KeyboardInterrupt:
-        logger.info("Stopping Realtime ML Trading due to user interrupt")
-    
-    finally:
-        # Stop the manager
-        ml_manager.stop()
-        logger.info("Realtime ML Trading stopped")
+    logger.info("Trade optimization complete")
 
 def main():
     """Main function"""
+    # Parse command-line arguments
     args = parse_arguments()
     
-    # Create data directory
-    create_data_directory()
+    # Run training if requested
+    if args.training:
+        run_training(args.pairs)
     
-    # Check API keys
-    if not check_api_keys():
-        sys.exit(1)
+    # Run optimization if requested
+    if args.optimize:
+        run_optimization(args.pairs)
     
-    # Reset portfolio for sandbox mode
-    if not args.live:
-        reset_portfolio(args.capital)
+    # Create realtime ML trader
+    trader = RealtimeMLTrader(args.pairs, args.sandbox)
     
-    # Run the realtime ML trading system
-    run_realtime_ml_trading(
-        pairs=args.pairs,
-        initial_capital=args.capital,
-        max_open_positions=args.max_positions,
-        max_allocation_pct=args.allocation,
-        sandbox=not args.live
-    )
+    # Start data collection
+    trader.start_data_collection()
+    
+    # Wait for initial data
+    logger.info("Waiting for initial data (10 seconds)...")
+    time.sleep(10)
+    
+    # Run trading loop
+    trader.run_trading_loop(args.interval)
 
 if __name__ == "__main__":
-    main()
+    try:
+        logger.info("Starting Realtime ML Trading System")
+        main()
+    except KeyboardInterrupt:
+        logger.info("Trading system stopped by user")
+    except Exception as e:
+        logger.error(f"Error running trading system: {e}")
+        import traceback
+        logger.error(traceback.format_exc())

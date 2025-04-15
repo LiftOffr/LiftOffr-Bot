@@ -87,8 +87,13 @@ def update_positions_with_current_prices(positions):
     updated_positions = []
     
     for position in positions:
-        # Create a copy of the position
-        updated_position = position.copy()
+        # Create a copy of the position (handle both dict and string cases)
+        if isinstance(position, dict):
+            updated_position = position.copy()
+        else:
+            # Handle case where position might be a string
+            logger.warning(f"Expected dict for position but got {type(position)}: {position}")
+            continue
         
         pair = position.get('pair')
         if not pair:
