@@ -114,23 +114,39 @@ def update_positions():
         direction = position.get('direction', '').lower()
         leverage = position.get('leverage', 1.0)
         
+        # Ensure position_size is positive
+        if position_size < 0:
+            position_size = abs(position_size)
+            updated_position['position_size'] = position_size
+        
         # Update current price
         updated_position['current_price'] = current_price
         
         # Calculate PnL
-        if entry_price and position_size:
+        if entry_price and position_size and entry_price > 0:
+            # For long positions:
+            # - Price goes up: profit
+            # - Price goes down: loss
             if direction == 'long':
                 price_change_pct = ((current_price / entry_price) - 1) * 100
                 pnl_pct = price_change_pct * leverage
-                pnl_amount = position_size * price_change_pct / 100 * leverage
+                pnl_amount = (position_size * price_change_pct / 100) * leverage
+            # For short positions:
+            # - Price goes up: loss
+            # - Price goes down: profit
             else:  # short
                 price_change_pct = ((entry_price / current_price) - 1) * 100
                 pnl_pct = price_change_pct * leverage
-                pnl_amount = position_size * price_change_pct / 100 * leverage
+                pnl_amount = (position_size * price_change_pct / 100) * leverage
             
             updated_position['unrealized_pnl_amount'] = round(pnl_amount, 2)
             updated_position['unrealized_pnl_pct'] = round(pnl_pct, 2)
             updated_position['current_value'] = round(position_size + pnl_amount, 2)
+            
+            # Update trade record with the same PnL information
+            trade_id = position.get('open_trade_id')
+            if trade_id:
+                update_trade_with_pnl(trade_id, current_price, pnl_amount, pnl_pct)
             
             logger.info(f"Updated {pair} position: Price=${current_price}, PnL=${pnl_amount:.2f} ({pnl_pct:.2f}%)")
         
@@ -142,9 +158,24 @@ def update_positions():
     
     return updated_positions
 
+def update_trade_with_pnl(trade_id, current_price, pnl_amount, pnl_pct):
+    """Update the corresponding trade record with PnL information"""
+    trades_file = f"{DATA_DIR}/sandbox_trades.json"
+    trades = load_file(trades_file, [])
+    
+    for trade in trades:
+        if trade.get('id') == trade_id and trade.get('status') == 'open':
+            # Update PnL
+            trade['pnl'] = round(pnl_amount, 2)
+            trade['pnl_pct'] = round(pnl_pct, 2)
+            trade['current_price'] = current_price
+            
+    # Save updated trades
+    save_file(trades_file, trades)
+
 def update_portfolio(positions):
     """Update portfolio with current position values"""
-    portfolio = load_file(PORTFOLIO_FILE, {"balance": 20000.0, "equity": 20000.0})
+    portfolio = load_file(PORTFOLIO_FILE, {"initial_capital": 20000.0, "balance": 20000.0, "equity": 20000.0})
     
     # Calculate total unrealized PnL
     total_pnl = 0
@@ -153,22 +184,50 @@ def update_portfolio(positions):
             total_pnl += position.get("unrealized_pnl_amount", 0)
     
     # Update portfolio metrics
-    initial_balance = 20000.0  # Starting balance
+    initial_balance = portfolio.get("initial_capital", 20000.0)
     current_balance = portfolio.get("balance", initial_balance)
     
-    portfolio["unrealized_pnl_usd"] = round(total_pnl, 2)
-    portfolio["unrealized_pnl_pct"] = round((total_pnl / current_balance) * 100, 2) if current_balance > 0 else 0
-    portfolio["equity"] = round(current_balance + total_pnl, 2)
+    # Fix negative balance values if present
+    if current_balance < 0:
+        current_balance = initial_balance
+        portfolio["balance"] = current_balance
+    
+    # Set unrealized PnL values
+    unrealized_pnl = total_pnl  # This is the total unrealized PnL in USD
+    unrealized_pnl_pct = round((unrealized_pnl / current_balance) * 100, 2) if current_balance > 0 else 0
+    
+    # Update the portfolio fields
+    portfolio["unrealized_pnl"] = unrealized_pnl
+    portfolio["unrealized_pnl_usd"] = round(unrealized_pnl, 2)
+    portfolio["unrealized_pnl_pct"] = unrealized_pnl_pct
+    
+    # Calculate total value and equity (balance + unrealized PnL)
+    total_value = current_balance + unrealized_pnl
+    portfolio["equity"] = round(total_value, 2)
+    portfolio["total_value"] = round(total_value, 2)
+    
+    # Calculate total PnL (from initial capital)
+    portfolio["total_pnl"] = round(total_value - initial_balance, 2)
+    portfolio["total_pnl_pct"] = round(((total_value / initial_balance) - 1) * 100, 2)
+    
+    # Position metrics
     portfolio["open_positions_count"] = len(positions)
     
-    # Calculate total margin used
-    total_margin = sum(p.get("position_size", 0) for p in positions)
-    portfolio["margin_used_pct"] = round((total_margin / current_balance) * 100, 2) if current_balance > 0 else 0
-    portfolio["available_margin"] = round(current_balance - total_margin, 2)
+    # Calculate total margin used and available capital
+    total_margin_used = sum(p.get("position_size", 0) for p in positions)
+    available_capital = current_balance - total_margin_used
+    margin_used_pct = (total_margin_used / current_balance) * 100 if current_balance > 0 else 0
+    
+    portfolio["available_capital"] = round(available_capital, 2)
+    portfolio["margin_used_pct"] = round(margin_used_pct, 2)
+    portfolio["available_margin"] = round(available_capital, 2)
+    
+    # Update timestamp
+    portfolio["updated_at"] = datetime.now().isoformat()
     
     # Save updated portfolio
     save_file(PORTFOLIO_FILE, portfolio)
-    logger.info(f"Updated portfolio: Balance=${current_balance}, Equity=${portfolio['equity']}, PnL=${total_pnl:.2f}")
+    logger.info(f"Updated portfolio: Balance=${current_balance}, Equity=${portfolio['equity']}, Unrealized PnL=${unrealized_pnl:.2f} ({unrealized_pnl_pct:.2f}%)")
     
     # Update portfolio history
     update_portfolio_history(portfolio)
