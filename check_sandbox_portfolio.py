@@ -321,6 +321,65 @@ def calculate_performance_metrics(trades: List[Dict[str, Any]]) -> Dict[str, Any
         "largest_loss": largest_loss
     }
 
+def update_positions_with_current_prices(positions, prices):
+    """
+    Update position data with current prices and calculate unrealized PnL
+    
+    Args:
+        positions: List of positions
+        prices: Dictionary of current prices
+        
+    Returns:
+        Updated positions list
+    """
+    updated = False
+    
+    for position in positions:
+        pair = position["pair"]
+        if pair in prices:
+            # Update current price
+            current_price = prices[pair]
+            entry_price = position["entry_price"]
+            size = position["size"]
+            leverage = position["leverage"]
+            direction = position["direction"]
+            
+            # Update current price in position
+            position["current_price"] = current_price
+            
+            # Calculate margin (may not exist in older positions)
+            if "margin" not in position:
+                # Calculate margin from position size and entry price
+                notional_value = size * entry_price
+                position["margin"] = notional_value / leverage
+            
+            margin = position["margin"]
+            
+            # Calculate unrealized P&L
+            if direction.lower() == "long":
+                price_change_pct = (current_price / entry_price) - 1
+            else:  # short
+                price_change_pct = (entry_price / current_price) - 1
+                
+            pnl_pct = price_change_pct * leverage
+            pnl_amount = margin * pnl_pct
+            
+            # Update unrealized PnL in position
+            position["unrealized_pnl"] = pnl_amount
+            position["unrealized_pnl_pct"] = pnl_pct * 100
+            
+            # Update duration
+            entry_time = datetime.datetime.fromisoformat(position["entry_time"])
+            now = datetime.datetime.now()
+            duration = now - entry_time
+            hours, remainder = divmod(duration.total_seconds(), 3600)
+            minutes, _ = divmod(remainder, 60)
+            position["duration"] = f"{int(hours)}h {int(minutes)}m"
+            
+            updated = True
+    
+    return positions, updated
+
 def check_portfolio():
     """Check and display portfolio information"""
     # Create directories if they don't exist
@@ -338,6 +397,18 @@ def check_portfolio():
         pairs = ["SOL/USD", "BTC/USD", "ETH/USD"]  # Default pairs to check
     
     prices = get_current_prices(pairs)
+    
+    # Update positions with current prices and calculate unrealized PnL
+    positions, positions_updated = update_positions_with_current_prices(positions, prices)
+    
+    # Save updated positions if needed
+    if positions_updated:
+        try:
+            with open(POSITION_DATA_FILE, 'w') as f:
+                json.dump(positions, f, indent=2)
+            logger.info("Updated positions with current prices")
+        except Exception as e:
+            logger.error(f"Error saving updated positions: {e}")
     
     # Calculate current portfolio value
     portfolio_value = calculate_portfolio_value(positions, prices)
