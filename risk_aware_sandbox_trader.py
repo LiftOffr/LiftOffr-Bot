@@ -264,10 +264,15 @@ class RiskAwareSandboxTrader:
         # Get current portfolio value
         portfolio_value = self.get_current_portfolio_value()
         
-        # Check if we have enough margin
-        if margin > portfolio_value * 0.20:  # Max 20% per trade
-            logger.warning(f"Margin required ({margin}) exceeds 20% of portfolio ({portfolio_value})")
-            return False, {}
+        # Check if we have enough margin - allow up to 10% of portfolio per trade
+        if margin > portfolio_value * 0.10:  # Max 10% per trade to allow more trades
+            # Scale down the position size to fit within limits
+            adjustment_factor = (portfolio_value * 0.10) / margin
+            size = size * adjustment_factor
+            margin = margin * adjustment_factor
+            logger.info(f"Adjusted position size to fit within portfolio limits: {size:.6f}")
+            # Recalculate notional value
+            notional_value = size * entry_price
         
         # Apply slippage to entry price
         slippage = self.calculate_slippage(notional_value)
