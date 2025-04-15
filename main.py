@@ -184,8 +184,11 @@ def index():
 
 # Only start the server if this file is run directly and not in a trading bot process
 if __name__ == "__main__" and not os.environ.get("TRADING_BOT_PROCESS"):
+    # Use a different port for trading_bot workflow
+    port = 5001 if "trading_bot" in " ".join(sys.argv) else 5000
+    
     # Make sure to bind to 0.0.0.0 so it's accessible externally
-    print("Starting Flask application on port 5000...")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    print(f"Starting Flask application on port {port}...")
+    app.run(host="0.0.0.0", port=port, debug=True)
 else:
     print("Flask app imported but not started (in imported mode or trading bot process)")
