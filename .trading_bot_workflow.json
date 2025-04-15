@@ -2,7 +2,7 @@
   "workflows": [
     {
       "name": "trading_bot",
-      "entrypoint": "python run_bot.py"
+      "entrypoint": "python non_flask_trading_bot.py"
     }
   ]
 }
