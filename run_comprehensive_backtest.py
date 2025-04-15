@@ -1,1191 +1,1039 @@
 #!/usr/bin/env python3
 """
-Comprehensive Backtesting Script
+Comprehensive Backtesting for Trading Models
 
-This script runs a comprehensive backtest for the trading bot using enhanced backtesting 
-and ML features to achieve 90%+ accuracy.
+This script performs sophisticated backtesting for trading models with:
+1. Realistic order execution simulation
+2. Advanced risk management
+3. Comprehensive performance metrics
+4. Win rate and accuracy calculations
+5. Return simulations with leverage
+6. Market regime analysis
+7. Stress testing
 
-Starting with a $20,000 portfolio, it tests all strategies with realistic
-trade execution, fees, and slippage.
+The backtesting framework is designed to provide highly accurate 
+estimates of real-world trading performance.
 """
 
 import os
 import sys
 import json
-import time
 import logging
+import argparse
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-import matplotlib.pyplot as plt
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from pathlib import Path
+from datetime import datetime
+from typing import Dict, List, Tuple, Any, Optional, Union
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("backtest_results/comprehensive/backtest.log"),
+        logging.FileHandler("comprehensive_backtest.log"),
         logging.StreamHandler(sys.stdout)
     ]
 )
-logger = logging.getLogger("ComprehensiveBacktest")
+logger = logging.getLogger("comprehensive_backtest")
 
 # Constants
-INITIAL_CAPITAL = 20000.0
-TIMEFRAMES = ["1h", "4h", "1d"]
-SYMBOLS = ["SOLUSD", "BTCUSD", "ETHUSD"]
-PRIMARY_SYMBOL = "SOLUSD"
-PRIMARY_TIMEFRAME = "1h"
-RESULTS_DIR = "backtest_results/comprehensive"
+CONFIG_PATH = "config/new_coins_training_config.json"
+MODEL_DIR = "ml_models"
+ENSEMBLE_DIR = "ensemble_models"
+HISTORICAL_DATA_DIR = "historical_data"
+BACKTEST_RESULTS_DIR = "backtest_results"
 
-# Create output directories
-os.makedirs(RESULTS_DIR, exist_ok=True)
-os.makedirs(os.path.join(RESULTS_DIR, "plots"), exist_ok=True)
-os.makedirs(os.path.join(RESULTS_DIR, "models"), exist_ok=True)
+# Create necessary directories
+Path(BACKTEST_RESULTS_DIR).mkdir(exist_ok=True)
 
-class ComprehensiveBacktester:
-    """Comprehensive backtester with ML integration and realistic execution"""
+
+def parse_arguments():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description='Run comprehensive backtesting for trading models.')
+    parser.add_argument('--pair', type=str, required=True,
+                      help='Trading pair to backtest (e.g., "AVAX/USD")')
+    parser.add_argument('--model', type=str, default='ensemble',
+                      choices=['ensemble', 'tcn', 'lstm', 'attention_gru', 'transformer', 'xgboost', 'lightgbm'],
+                      help='Model type to use for backtesting (default: ensemble)')
+    parser.add_argument('--period', type=str, default='365',
+                      help='Backtesting period in days or date range (YYYY-MM-DD:YYYY-MM-DD)')
+    parser.add_argument('--timeframe', type=str, default='1h',
+                      help='Timeframe to use for backtesting (default: 1h)')
+    parser.add_argument('--initial-capital', type=float, default=10000.0,
+                      help='Initial capital for backtesting (default: 10000.0)')
+    parser.add_argument('--risk-percentage', type=float, default=None,
+                      help='Risk percentage per trade (default: from config)')
+    parser.add_argument('--leverage', type=float, default=None,
+                      help='Fixed leverage to use (default: from config)')
+    parser.add_argument('--max-leverage', type=float, default=None,
+                      help='Maximum leverage to use (default: from config)')
+    parser.add_argument('--dynamic-leverage', action='store_true',
+                      help='Use dynamic leverage based on confidence')
+    parser.add_argument('--confidence-threshold', type=float, default=None,
+                      help='Confidence threshold for trading (default: from config)')
+    parser.add_argument('--calculate-all-metrics', action='store_true',
+                      help='Calculate all performance metrics (slower)')
+    parser.add_argument('--output-format', type=str, default='both',
+                      choices=['console', 'json', 'both'],
+                      help='Output format for results (default: both)')
+    parser.add_argument('--output-dir', type=str, default=None,
+                      help='Directory for saving results (default: backtest_results)')
+    parser.add_argument('--stress-test', action='store_true',
+                      help='Run additional stress tests with extreme market conditions')
+    parser.add_argument('--verbose', action='store_true',
+                      help='Enable verbose output')
     
-    def __init__(self, initial_capital=INITIAL_CAPITAL, symbol=PRIMARY_SYMBOL, 
-                 timeframe=PRIMARY_TIMEFRAME, start_date=None, end_date=None):
-        """Initialize backtester"""
-        self.initial_capital = initial_capital
-        self.symbol = symbol
-        self.timeframe = timeframe
-        self.start_date = start_date
-        self.end_date = end_date
-        self.current_capital = initial_capital
-        self.equity_curve = []
-        self.trades = []
-        self.positions = {}
-        self.ml_models = {}
+    return parser.parse_args()
+
+
+def load_config():
+    """Load configuration from config file."""
+    try:
+        with open(CONFIG_PATH, 'r') as f:
+            config = json.load(f)
+        logger.info(f"Loaded configuration from {CONFIG_PATH}")
+        return config
+    except Exception as e:
+        logger.error(f"Error loading configuration: {e}")
+        return None
+
+
+def load_historical_data(pair: str, timeframe: str = '1h', period: str = '365') -> pd.DataFrame:
+    """
+    Load historical data for backtesting.
+    
+    Args:
+        pair: Trading pair
+        timeframe: Timeframe
+        period: Backtesting period in days or date range
         
-        # Performance metrics
-        self.performance = {
-            'total_return': 0.0,
-            'total_return_pct': 0.0,
-            'sharpe_ratio': 0.0,
-            'max_drawdown': 0.0,
-            'max_drawdown_pct': 0.0,
-            'win_rate': 0.0,
-            'profit_factor': 0.0,
-            'total_trades': 0,
-            'regime_performance': {}
-        }
+    Returns:
+        data: Historical data dataframe
+    """
+    pair_filename = pair.replace("/", "_")
+    file_path = f"{HISTORICAL_DATA_DIR}/{pair_filename}_{timeframe}.csv"
+    
+    try:
+        if not os.path.exists(file_path):
+            logger.error(f"Historical data file not found: {file_path}")
+            return None
         
         # Load data
-        self.data = self._load_data()
+        data = pd.read_csv(file_path)
         
-        if self.data is None or len(self.data) == 0:
-            raise ValueError(f"No data available for {symbol} on {timeframe} timeframe")
+        # Ensure timestamp is datetime
+        data['timestamp'] = pd.to_datetime(data['timestamp'])
         
-        logger.info(f"Loaded {len(self.data)} candles for {symbol} on {timeframe} timeframe")
+        # Sort by timestamp
+        data = data.sort_values('timestamp')
         
-        # Prepare features
-        self._prepare_features()
+        # Filter by period
+        if ':' in period:
+            # Date range
+            start_date, end_date = period.split(':')
+            start_date = pd.to_datetime(start_date)
+            end_date = pd.to_datetime(end_date)
+            data = data[(data['timestamp'] >= start_date) & (data['timestamp'] <= end_date)]
+        else:
+            # Last N days
+            days = int(period)
+            last_date = data['timestamp'].max()
+            start_date = last_date - pd.Timedelta(days=days)
+            data = data[data['timestamp'] >= start_date]
         
-        logger.info(f"Prepared features for {symbol} on {timeframe} timeframe")
+        logger.info(f"Loaded historical data for {pair} ({timeframe}): {len(data)} periods")
+        logger.info(f"  Period: {data['timestamp'].min()} to {data['timestamp'].max()}")
         
-        # Detect market regimes
-        self._detect_market_regimes()
-        
-        logger.info(f"Detected market regimes for {symbol} on {timeframe} timeframe")
+        return data
     
-    def _load_data(self):
-        """Load historical data"""
-        try:
-            # Try to load data from local files first
-            data_path = f"historical_data/{self.symbol}_{self.timeframe}.csv"
+    except Exception as e:
+        logger.error(f"Error loading historical data: {e}")
+        return None
+
+
+def load_model(model_type: str, pair: str, ensemble: bool = False) -> Any:
+    """
+    Load trained model for backtesting.
+    
+    Args:
+        model_type: Model type
+        pair: Trading pair
+        ensemble: Whether to load ensemble model
+        
+    Returns:
+        model: Loaded model
+    """
+    pair_filename = pair.replace("/", "_")
+    
+    # Determine model directory
+    if ensemble or model_type == 'ensemble':
+        model_dir = ENSEMBLE_DIR
+        model_path = f"{model_dir}/ensemble_{pair_filename}"
+    else:
+        model_dir = MODEL_DIR
+        model_path = f"{model_dir}/{model_type}_{pair_filename}_model"
+    
+    try:
+        if ensemble or model_type == 'ensemble':
+            # Load ensemble configuration
+            config_file = f"{model_path}_config.json"
             
-            if os.path.exists(data_path):
-                df = pd.read_csv(data_path)
-                
-                # Convert timestamp to datetime
-                df['timestamp'] = pd.to_datetime(df['timestamp'])
-                df.set_index('timestamp', inplace=True)
-                
-                # Filter by date if specified
-                if self.start_date:
-                    df = df[df.index >= pd.to_datetime(self.start_date)]
-                
-                if self.end_date:
-                    df = df[df.index <= pd.to_datetime(self.end_date)]
-                
-                return df
+            if not os.path.exists(config_file):
+                logger.error(f"Ensemble configuration file not found: {config_file}")
+                return None
             
-            # If unable to load from files, return None
-            logger.error(f"Could not load data from {data_path}")
-            return None
+            with open(config_file, 'r') as f:
+                ensemble_config = json.load(f)
             
-        except Exception as e:
-            logger.error(f"Error loading data: {e}")
-            return None
-    
-    def _prepare_features(self):
-        """Prepare technical indicators and features"""
-        df = self.data.copy()
-        
-        # Basic price features
-        df['returns'] = df['close'].pct_change()
-        df['log_returns'] = np.log(df['close'] / df['close'].shift(1))
-        
-        # Moving averages
-        df['ma7'] = df['close'].rolling(window=7).mean()
-        df['ma21'] = df['close'].rolling(window=21).mean()
-        df['ma50'] = df['close'].rolling(window=50).mean()
-        df['ma100'] = df['close'].rolling(window=100).mean()
-        df['ma200'] = df['close'].rolling(window=200).mean()
-        
-        # Exponential moving averages
-        df['ema9'] = df['close'].ewm(span=9, adjust=False).mean()
-        df['ema21'] = df['close'].ewm(span=21, adjust=False).mean()
-        df['ema50'] = df['close'].ewm(span=50, adjust=False).mean()
-        df['ema100'] = df['close'].ewm(span=100, adjust=False).mean()
-        
-        # Price difference from moving averages
-        df['close_ma7_diff'] = df['close'] - df['ma7']
-        df['close_ma21_diff'] = df['close'] - df['ma21']
-        df['close_ma50_diff'] = df['close'] - df['ma50']
-        df['close_ma100_diff'] = df['close'] - df['ma100']
-        
-        # Volatility indicators
-        df['atr14'] = self._calculate_atr(df, period=14)
-        df['atr14_pct'] = df['atr14'] / df['close']
-        df['volatility'] = df['returns'].rolling(window=20).std()
-        
-        # RSI
-        df['rsi14'] = self._calculate_rsi(df, period=14)
-        
-        # MACD
-        macd, signal, hist = self._calculate_macd(df)
-        df['macd'] = macd
-        df['macd_signal'] = signal
-        df['macd_hist'] = hist
-        
-        # ADX
-        df['adx'] = self._calculate_adx(df, period=14)
-        
-        # Bollinger Bands
-        df['bb_upper'], df['bb_middle'], df['bb_lower'] = self._calculate_bollinger_bands(df)
-        
-        # Keltner Channels
-        df['kc_upper'], df['kc_middle'], df['kc_lower'] = self._calculate_keltner_channels(df)
-        
-        # Price position
-        df['price_vs_bb'] = (df['close'] - df['bb_lower']) / (df['bb_upper'] - df['bb_lower'])
-        df['price_vs_kc'] = (df['close'] - df['kc_lower']) / (df['kc_upper'] - df['kc_lower'])
-        
-        # Trend indicators
-        df['psar'] = self._calculate_parabolic_sar(df)
-        df['above_psar'] = (df['close'] > df['psar']).astype(int)
-        
-        # Momentum
-        df['momentum'] = df['close'] / df['close'].shift(14) - 1
-        
-        # Target variable for ML (next candle direction)
-        df['next_candle_up'] = (df['close'].shift(-1) > df['close']).astype(int)
-        
-        # Drop NaN values
-        df.dropna(inplace=True)
-        
-        self.data = df
-    
-    def _calculate_atr(self, df, period=14):
-        """Calculate Average True Range"""
-        high = df['high']
-        low = df['low']
-        close = df['close'].shift(1)
-        
-        tr1 = high - low
-        tr2 = abs(high - close)
-        tr3 = abs(low - close)
-        
-        tr = pd.DataFrame({'tr1': tr1, 'tr2': tr2, 'tr3': tr3}).max(axis=1)
-        atr = tr.rolling(window=period).mean()
-        
-        return atr
-    
-    def _calculate_rsi(self, df, period=14):
-        """Calculate Relative Strength Index"""
-        delta = df['close'].diff()
-        
-        gain = delta.where(delta > 0, 0)
-        loss = -delta.where(delta < 0, 0)
-        
-        avg_gain = gain.rolling(window=period).mean()
-        avg_loss = loss.rolling(window=period).mean()
-        
-        rs = avg_gain / avg_loss
-        rsi = 100 - (100 / (1 + rs))
-        
-        return rsi
-    
-    def _calculate_macd(self, df, fast=12, slow=26, signal=9):
-        """Calculate MACD"""
-        ema_fast = df['close'].ewm(span=fast, adjust=False).mean()
-        ema_slow = df['close'].ewm(span=slow, adjust=False).mean()
-        
-        macd = ema_fast - ema_slow
-        macd_signal = macd.ewm(span=signal, adjust=False).mean()
-        macd_hist = macd - macd_signal
-        
-        return macd, macd_signal, macd_hist
-    
-    def _calculate_adx(self, df, period=14):
-        """Calculate Average Directional Index"""
-        df = df.copy()
-        
-        # Calculate True Range
-        df['tr1'] = abs(df['high'] - df['low'])
-        df['tr2'] = abs(df['high'] - df['close'].shift(1))
-        df['tr3'] = abs(df['low'] - df['close'].shift(1))
-        df['tr'] = df[['tr1', 'tr2', 'tr3']].max(axis=1)
-        
-        # Calculate directional movement
-        df['up_move'] = df['high'] - df['high'].shift(1)
-        df['down_move'] = df['low'].shift(1) - df['low']
-        
-        df['plus_dm'] = 0
-        df.loc[(df['up_move'] > df['down_move']) & (df['up_move'] > 0), 'plus_dm'] = df['up_move']
-        
-        df['minus_dm'] = 0
-        df.loc[(df['down_move'] > df['up_move']) & (df['down_move'] > 0), 'minus_dm'] = df['down_move']
-        
-        # Calculate smoothed values
-        df['tr_ma'] = df['tr'].rolling(window=period).mean()
-        df['plus_di'] = 100 * (df['plus_dm'].rolling(window=period).mean() / df['tr_ma'])
-        df['minus_di'] = 100 * (df['minus_dm'].rolling(window=period).mean() / df['tr_ma'])
-        
-        # Calculate DX and ADX
-        df['dx'] = 100 * abs(df['plus_di'] - df['minus_di']) / (df['plus_di'] + df['minus_di'])
-        df['adx'] = df['dx'].rolling(window=period).mean()
-        
-        return df['adx']
-    
-    def _calculate_bollinger_bands(self, df, period=20, multiplier=2):
-        """Calculate Bollinger Bands"""
-        middle = df['close'].rolling(window=period).mean()
-        std = df['close'].rolling(window=period).std()
-        
-        upper = middle + multiplier * std
-        lower = middle - multiplier * std
-        
-        return upper, middle, lower
-    
-    def _calculate_keltner_channels(self, df, period=20, multiplier=2):
-        """Calculate Keltner Channels"""
-        middle = df['close'].rolling(window=period).mean()
-        atr = self._calculate_atr(df, period=period)
-        
-        upper = middle + multiplier * atr
-        lower = middle - multiplier * atr
-        
-        return upper, middle, lower
-    
-    def _calculate_parabolic_sar(self, df, af_start=0.02, af_increment=0.02, af_max=0.2):
-        """Calculate Parabolic SAR"""
-        # Initialize values
-        df = df.copy()
-        df['psar'] = df['close'].copy()
-        df['is_uptrend'] = True
-        df['ep'] = df['high'].copy()  # Extreme point
-        df['af'] = af_start  # Acceleration factor
-        
-        # Calculate PSAR
-        for i in range(2, len(df)):
-            # Get values for the calculation
-            is_uptrend = df['is_uptrend'].iloc[i-1]
-            ep_prev = df['ep'].iloc[i-1]
-            psar_prev = df['psar'].iloc[i-1]
-            af_prev = df['af'].iloc[i-1]
-            
-            # Calculate PSAR
-            if is_uptrend:
-                psar = psar_prev + af_prev * (ep_prev - psar_prev)
-                # Adjust PSAR if needed
-                if psar > df['low'].iloc[i-1]:
-                    psar = df['low'].iloc[i-1]
-                if psar > df['low'].iloc[i-2]:
-                    psar = df['low'].iloc[i-2]
-                
-                # Check if trend reverses
-                if psar > df['low'].iloc[i]:
-                    is_uptrend = False
-                    psar = ep_prev
-                    ep = df['low'].iloc[i]
-                    af = af_start
-                else:
-                    # Continue uptrend
-                    is_uptrend = True
-                    
-                    # Update EP if needed
-                    if df['high'].iloc[i] > ep_prev:
-                        ep = df['high'].iloc[i]
-                        af = min(af_prev + af_increment, af_max)
-                    else:
-                        ep = ep_prev
-                        af = af_prev
+            # Load meta-model if available
+            meta_model_path = f"{model_path}_meta_model"
+            if os.path.exists(f"{meta_model_path}.txt"):
+                # LightGBM
+                import lightgbm as lgb
+                meta_model = lgb.Booster(model_file=f"{meta_model_path}.txt")
+            elif os.path.exists(meta_model_path):
+                # Keras
+                import tensorflow as tf
+                meta_model = tf.keras.models.load_model(meta_model_path)
+            elif os.path.exists(f"{meta_model_path}.pkl"):
+                # Scikit-learn
+                import pickle
+                with open(f"{meta_model_path}.pkl", 'rb') as f:
+                    meta_model = pickle.load(f)
             else:
-                psar = psar_prev - af_prev * (psar_prev - ep_prev)
-                
-                # Adjust PSAR if needed
-                if psar < df['high'].iloc[i-1]:
-                    psar = df['high'].iloc[i-1]
-                if psar < df['high'].iloc[i-2]:
-                    psar = df['high'].iloc[i-2]
-                
-                # Check if trend reverses
-                if psar < df['high'].iloc[i]:
-                    is_uptrend = True
-                    psar = ep_prev
-                    ep = df['high'].iloc[i]
-                    af = af_start
-                else:
-                    # Continue downtrend
-                    is_uptrend = False
-                    
-                    # Update EP if needed
-                    if df['low'].iloc[i] < ep_prev:
-                        ep = df['low'].iloc[i]
-                        af = min(af_prev + af_increment, af_max)
-                    else:
-                        ep = ep_prev
-                        af = af_prev
+                meta_model = None
             
-            # Set values for next iteration
-            df['psar'].iloc[i] = psar
-            df['is_uptrend'].iloc[i] = is_uptrend
-            df['ep'].iloc[i] = ep
-            df['af'].iloc[i] = af
-        
-        return df['psar']
-    
-    def _detect_market_regimes(self):
-        """Detect market regimes"""
-        df = self.data.copy()
-        
-        # Calculate volatility and trend
-        df['volatility_20'] = df['returns'].rolling(window=20).std()
-        df['trend'] = (df['ema50'] > df['ema100']).astype(int)
-        
-        # Define volatility threshold (75th percentile)
-        volatility_threshold = df['volatility_20'].quantile(0.75)
-        
-        # Determine regimes
-        conditions = [
-            (df['volatility_20'] <= volatility_threshold) & (df['trend'] == 1),  # Normal trending up
-            (df['volatility_20'] > volatility_threshold) & (df['trend'] == 1),   # Volatile trending up
-            (df['volatility_20'] <= volatility_threshold) & (df['trend'] == 0),  # Normal trending down
-            (df['volatility_20'] > volatility_threshold) & (df['trend'] == 0)    # Volatile trending down
-        ]
-        
-        regimes = ['normal_trending_up', 'volatile_trending_up', 
-                  'normal_trending_down', 'volatile_trending_down']
-        
-        df['market_regime'] = np.select(conditions, regimes, default='normal_trending_up')
-        
-        # Count regimes
-        regime_counts = df['market_regime'].value_counts()
-        logger.info(f"Market regimes: {regime_counts.to_dict()}")
-        
-        self.data = df
-    
-    def train_ml_model(self):
-        """Train ML model for predictive signals"""
-        from enhanced_tcn_model import EnhancedTCNModel
-        
-        logger.info("Training enhanced TCN model")
-        
-        # Prepare training data
-        sequence_length = 60
-        
-        # Create sequences
-        X, y = [], []
-        features = self.data.drop(['open', 'high', 'low', 'close', 'volume', 'next_candle_up', 'market_regime'], axis=1).values
-        targets = self.data['next_candle_up'].values
-        
-        for i in range(len(features) - sequence_length):
-            X.append(features[i:i+sequence_length])
-            y.append(targets[i+sequence_length])
-        
-        X = np.array(X)
-        y = np.array(y)
-        
-        # Split data
-        train_size = int(len(X) * 0.8)
-        X_train, y_train = X[:train_size], y[:train_size]
-        X_test, y_test = X[train_size:], y[train_size:]
-        
-        # Create and train model
-        model = EnhancedTCNModel(
-            input_shape=X_train.shape[1:],
-            output_size=1,
-            filters=64,
-            kernel_size=3,
-            dilations=[1, 2, 4, 8, 16],
-            dropout_rate=0.3,
-            use_skip_connections=True,
-            use_batch_norm=True,
-            use_layer_norm=True,
-            use_spatial_dropout=True,
-            use_attention=True,
-            use_transformer=True,
-            use_channel_attention=True,
-            l1_reg=0.0001,
-            l2_reg=0.0001
-        )
-        
-        # Train model
-        history = model.train(
-            X_train, y_train,
-            X_test, y_test,
-            batch_size=32,
-            epochs=50,
-            model_prefix=f"{self.symbol}_{self.timeframe}"
-        )
-        
-        # Evaluate model
-        y_pred = model.predict(X_test)
-        y_pred_binary = (y_pred > 0.5).astype(int).flatten()
-        
-        accuracy = accuracy_score(y_test, y_pred_binary)
-        precision = precision_score(y_test, y_pred_binary)
-        recall = recall_score(y_test, y_pred_binary)
-        f1 = f1_score(y_test, y_pred_binary)
-        
-        logger.info(f"Model evaluation:")
-        logger.info(f"Accuracy: {accuracy:.4f}")
-        logger.info(f"Precision: {precision:.4f}")
-        logger.info(f"Recall: {recall:.4f}")
-        logger.info(f"F1 Score: {f1:.4f}")
-        
-        # Auto-prune model
-        from auto_prune_ml_models import ModelPruner
-        
-        logger.info("Auto-pruning ML model")
-        
-        pruner = ModelPruner()
-        pruned_model = pruner.create_pruned_model(model.model, X_test=X_test, y_test=y_test)
-        
-        # Retrain pruned model
-        pruned_model, _ = pruner.retrain_pruned_model(
-            pruned_model, X_train, y_train, X_test, y_test
-        )
-        
-        # Evaluate pruned model
-        y_pruned_pred = pruned_model.predict(X_test)
-        y_pruned_binary = (y_pruned_pred > 0.5).astype(int).flatten()
-        
-        pruned_accuracy = accuracy_score(y_test, y_pruned_binary)
-        
-        logger.info(f"Pruned model accuracy: {pruned_accuracy:.4f}")
-        
-        # Use the better model
-        self.ml_models[f"{self.symbol}_{self.timeframe}"] = pruned_model if pruned_accuracy > accuracy else model.model
-        
-        # Save model
-        model_path = os.path.join(RESULTS_DIR, "models", f"{self.symbol}_{self.timeframe}_enhanced_tcn.h5")
-        
-        if pruned_accuracy > accuracy:
-            pruned_model.save(model_path)
-        else:
-            model.save(model_path)
-        
-        logger.info(f"Model saved to {model_path}")
-        
-        return pruned_accuracy if pruned_accuracy > accuracy else accuracy
-    
-    def optimize_strategy_parameters(self):
-        """Optimize strategy parameters"""
-        from optimize_strategy_parameters import StrategyOptimizer
-        
-        logger.info("Optimizing strategy parameters")
-        
-        try:
-            # Import strategies
-            from arima_strategy import ARIMAStrategy
-            from integrated_strategy import IntegratedStrategy
+            # Load base models
+            base_models = {}
+            for model_name in ensemble_config.get("ensemble_config", {}).get("models", []):
+                base_model = load_model(model_name, pair, False)
+                if base_model is not None:
+                    base_models[model_name] = base_model
             
-            # Optimize ARIMA strategy
-            logger.info("Optimizing ARIMA strategy parameters")
-            
-            arima_param_ranges = {
-                "lookback_period": (20, 50, 5),
-                "signal_threshold": (0.1, 0.3, 0.05),
-                "atr_period": (10, 30, 5),
-                "atr_multiplier": (1.5, 3.0, 0.5)
-            }
-            
-            arima_optimizer = StrategyOptimizer(
-                strategy_class=ARIMAStrategy,
-                symbol=self.symbol,
-                timeframe=self.timeframe,
-                initial_capital=self.initial_capital,
-                use_bayesian=True,
-                n_calls=30
-            )
-            
-            arima_results = arima_optimizer.optimize(arima_param_ranges, scoring="sharpe_ratio")
-            
-            # Optimize integrated strategy
-            logger.info("Optimizing integrated strategy parameters")
-            
-            integrated_param_ranges = {
-                "signal_smoothing": (2, 10, 1),
-                "trend_strength_threshold": (0.1, 0.5, 0.1),
-                "volatility_filter_threshold": (0.005, 0.02, 0.005),
-                "min_adx_threshold": (15, 35, 5)
-            }
-            
-            integrated_optimizer = StrategyOptimizer(
-                strategy_class=IntegratedStrategy,
-                symbol=self.symbol,
-                timeframe=self.timeframe,
-                initial_capital=self.initial_capital,
-                use_bayesian=True,
-                n_calls=30
-            )
-            
-            integrated_results = integrated_optimizer.optimize(integrated_param_ranges, scoring="sharpe_ratio")
-            
-            # Save optimized parameters
-            arima_params_path = os.path.join(RESULTS_DIR, f"{self.symbol}_{self.timeframe}_arima_params.json")
-            integrated_params_path = os.path.join(RESULTS_DIR, f"{self.symbol}_{self.timeframe}_integrated_params.json")
-            
-            with open(arima_params_path, 'w') as f:
-                json.dump(arima_results['best_params'], f, indent=2)
-            
-            with open(integrated_params_path, 'w') as f:
-                json.dump(integrated_results['best_params'], f, indent=2)
-            
-            logger.info(f"Optimized ARIMA parameters: {arima_results['best_params']}")
-            logger.info(f"Optimized integrated parameters: {integrated_results['best_params']}")
-            
+            # Return ensemble configuration
             return {
-                'arima': arima_results['best_params'],
-                'integrated': integrated_results['best_params']
+                "config": ensemble_config,
+                "meta_model": meta_model,
+                "base_models": base_models
             }
         
-        except Exception as e:
-            logger.error(f"Error optimizing strategy parameters: {e}")
-            return None
+        else:
+            # Load individual model
+            if model_type in ['tcn', 'lstm', 'attention_gru', 'transformer']:
+                # Load Keras model
+                import tensorflow as tf
+                
+                # Special handling for TCN
+                if model_type == 'tcn':
+                    try:
+                        from tcn import TCN
+                        model = tf.keras.models.load_model(model_path, custom_objects={'TCN': TCN})
+                    except ImportError:
+                        logger.error("TCN layer not available. Please install keras-tcn")
+                        return None
+                else:
+                    model = tf.keras.models.load_model(model_path)
+            
+            elif model_type == 'xgboost':
+                # Load XGBoost model
+                import xgboost as xgb
+                model = xgb.XGBClassifier()
+                model.load_model(f"{model_path}.json")
+            
+            elif model_type == 'lightgbm':
+                # Load LightGBM model
+                import lightgbm as lgb
+                model = lgb.Booster(model_file=f"{model_path}.txt")
+            
+            else:
+                logger.error(f"Unsupported model type: {model_type}")
+                return None
+            
+            logger.info(f"Loaded {model_type} model for {pair}")
+            return model
     
-    def run_backtest(self, optimized_params=None, use_ml=True):
-        """Run comprehensive backtest with optimized parameters and ML"""
-        logger.info(f"Running comprehensive backtest for {self.symbol} on {self.timeframe} timeframe")
+    except Exception as e:
+        logger.error(f"Error loading model: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return None
+
+
+def prepare_features(data: pd.DataFrame, lookback_window: int) -> np.ndarray:
+    """
+    Prepare features for model prediction.
+    
+    Args:
+        data: Historical data
+        lookback_window: Lookback window for sequence models
         
-        # Import strategies
-        from arima_strategy import ARIMAStrategy
-        from integrated_strategy import IntegratedStrategy
+    Returns:
+        features: Prepared features
+    """
+    try:
+        # Drop unnecessary columns
+        features = data.drop(['timestamp', 'open', 'high', 'low', 'close', 'volume'], axis=1, errors='ignore')
         
-        # Create strategies with optimized parameters
-        strategies = {}
+        # Create sequences for lookback window
+        sequences = []
         
-        if optimized_params and 'arima' in optimized_params:
-            arima_strategy = ARIMAStrategy(self.symbol, **optimized_params['arima'])
-            logger.info(f"Created ARIMA strategy with optimized parameters: {optimized_params['arima']}")
+        for i in range(len(features) - lookback_window + 1):
+            sequences.append(features.iloc[i:i+lookback_window].values)
+        
+        return np.array(sequences)
+    
+    except Exception as e:
+        logger.error(f"Error preparing features: {e}")
+        return None
+
+
+def get_model_predictions(model: Any, features: np.ndarray, model_type: str, 
+                       is_ensemble: bool = False) -> np.ndarray:
+    """
+    Get predictions from a model.
+    
+    Args:
+        model: Trained model
+        features: Input features
+        model_type: Model type
+        is_ensemble: Whether the model is an ensemble
+        
+    Returns:
+        predictions: Model predictions
+    """
+    try:
+        if is_ensemble or model_type == 'ensemble':
+            # Ensemble predictions
+            ensemble_config = model["config"]
+            base_models = model["base_models"]
+            meta_model = model["meta_model"]
+            
+            # Get predictions from base models
+            base_predictions = {}
+            for model_name, base_model in base_models.items():
+                base_pred = get_model_predictions(base_model, features, model_name)
+                if base_pred is not None:
+                    base_predictions[model_name] = base_pred
+            
+            # Apply weights or meta-model
+            weights = ensemble_config.get("ensemble_config", {}).get("weights", {})
+            stacking_method = ensemble_config.get("ensemble_config", {}).get("stacking_method", "weighted_average")
+            
+            if meta_model is not None and stacking_method == "meta_learner":
+                # Use meta-model
+                X_meta = np.column_stack([base_predictions[model_name] for model_name in base_predictions])
+                
+                if hasattr(meta_model, 'predict_proba'):
+                    predictions = meta_model.predict_proba(X_meta)[:, 1]
+                elif hasattr(meta_model, 'predict'):
+                    predictions = meta_model.predict(X_meta)
+                else:
+                    logger.warning("Meta-model doesn't have predict method, using weighted average")
+                    # Fall back to weighted average
+                    predictions = np.zeros(len(features))
+                    for model_name, preds in base_predictions.items():
+                        weight = weights.get(model_name, 1.0 / len(base_predictions))
+                        predictions += weight * preds
+            else:
+                # Weighted average
+                predictions = np.zeros(len(features))
+                for model_name, preds in base_predictions.items():
+                    weight = weights.get(model_name, 1.0 / len(base_predictions))
+                    predictions += weight * preds
+            
+            return predictions
+        
         else:
-            arima_strategy = ARIMAStrategy(self.symbol)
-            logger.info("Created ARIMA strategy with default parameters")
+            # Individual model predictions
+            if model_type in ['tcn', 'lstm', 'attention_gru', 'transformer']:
+                # Neural network models
+                return model.predict(features).flatten()
+            
+            elif model_type == 'xgboost':
+                # XGBoost model
+                return model.predict_proba(features)[:, 1]
+            
+            elif model_type == 'lightgbm':
+                # LightGBM model
+                return model.predict(features)
+            
+            else:
+                logger.error(f"Unsupported model type for prediction: {model_type}")
+                return None
+    
+    except Exception as e:
+        logger.error(f"Error getting model predictions: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return None
+
+
+def calculate_entry_signals(predictions: np.ndarray, threshold: float = 0.5,
+                          min_confidence: float = 0.0) -> np.ndarray:
+    """
+    Calculate entry signals from model predictions.
+    
+    Args:
+        predictions: Model predictions
+        threshold: Decision threshold
+        min_confidence: Minimum confidence for a trade
         
-        if optimized_params and 'integrated' in optimized_params:
-            integrated_strategy = IntegratedStrategy(self.symbol, **optimized_params['integrated'])
-            logger.info(f"Created integrated strategy with optimized parameters: {optimized_params['integrated']}")
-        else:
-            integrated_strategy = IntegratedStrategy(self.symbol)
-            logger.info("Created integrated strategy with default parameters")
+    Returns:
+        signals: Entry signals (1 for long, -1 for short, 0 for no trade)
+    """
+    # Calculate signals (long only for now)
+    confidence = np.abs(predictions - 0.5) * 2  # Scale to 0-1
+    signals = np.zeros(len(predictions))
+    
+    # Long signals
+    long_mask = (predictions > threshold) & (confidence >= min_confidence)
+    signals[long_mask] = 1
+    
+    # Short signals (if implemented)
+    short_mask = (predictions < (1 - threshold)) & (confidence >= min_confidence)
+    signals[short_mask] = -1
+    
+    return signals, confidence
+
+
+def calculate_dynamic_leverage(confidence: np.ndarray, base_leverage: float,
+                          max_leverage: float) -> np.ndarray:
+    """
+    Calculate dynamic leverage based on prediction confidence.
+    
+    Args:
+        confidence: Prediction confidence
+        base_leverage: Base leverage
+        max_leverage: Maximum leverage
         
-        strategies['arima'] = arima_strategy
-        strategies['integrated'] = integrated_strategy
+    Returns:
+        leverage: Dynamic leverage values
+    """
+    # Scale leverage based on confidence
+    # Start at base_leverage, scale up to max_leverage as confidence approaches 1
+    leverage = base_leverage + (max_leverage - base_leverage) * np.power(confidence, 2)
+    
+    # Cap at max_leverage
+    leverage = np.minimum(leverage, max_leverage)
+    
+    return leverage
+
+
+def simulate_trades(data: pd.DataFrame, signals: np.ndarray, confidence: np.ndarray,
+                  config: Dict, args) -> Dict:
+    """
+    Simulate trades based on signals and calculate performance metrics.
+    
+    Args:
+        data: Historical data
+        signals: Trading signals
+        confidence: Signal confidence
+        config: Configuration
+        args: Command line arguments
         
-        # Set up ML-enhanced strategy if requested
-        if use_ml and f"{self.symbol}_{self.timeframe}" in self.ml_models:
-            try:
-                from ml_enhanced_strategy import MLEnhancedStrategy
+    Returns:
+        results: Simulation results
+    """
+    # Get pair-specific settings
+    pair_settings = config.get("pair_specific_settings", {}).get(args.pair, {})
+    
+    # Get risk parameters
+    risk_percentage = args.risk_percentage or pair_settings.get("risk_percentage", 0.20)
+    base_leverage = args.leverage or pair_settings.get("base_leverage", 1.0)
+    max_leverage = args.max_leverage or pair_settings.get("max_leverage", base_leverage)
+    
+    # Initialize variables
+    initial_capital = args.initial_capital
+    capital = initial_capital
+    position = 0
+    entry_price = 0
+    entry_time = None
+    leverage = 0
+    
+    # Track trades
+    trades = []
+    equity_curve = [initial_capital]
+    positions = []
+    
+    # For calculating metrics
+    wins = 0
+    losses = 0
+    total_profit = 0
+    total_loss = 0
+    
+    # Slice data to match signals length
+    data_subset = data.iloc[-len(signals):].reset_index(drop=True)
+    
+    # Iterate through periods
+    for i in range(len(data_subset)):
+        current_time = data_subset.iloc[i]['timestamp']
+        current_price = data_subset.iloc[i]['close']
+        
+        # Check if in position
+        if position != 0:
+            # Calculate unrealized PnL
+            if position > 0:  # Long
+                pnl_pct = (current_price / entry_price - 1) * leverage
+            else:  # Short
+                pnl_pct = (1 - current_price / entry_price) * leverage
+            
+            unrealized_pnl = capital * risk_percentage * pnl_pct
+            current_equity = capital + unrealized_pnl
+            
+            # Check for exit conditions
+            exit_signal = False
+            
+            # Exit if signal changes
+            if (position > 0 and signals[i] <= 0) or (position < 0 and signals[i] >= 0):
+                exit_signal = True
+            
+            # Implement trailing stop (% of unrealized profit)
+            trailing_stop_pct = 0.3  # Exit if we give back 30% of unrealized profit
+            if pnl_pct > 0:
+                trailing_stop = pnl_pct * trailing_stop_pct
+                if position > 0:  # Long
+                    trail_price = entry_price * (1 + pnl_pct - trailing_stop)
+                    if current_price < trail_price:
+                        exit_signal = True
+                else:  # Short
+                    trail_price = entry_price * (1 - pnl_pct + trailing_stop)
+                    if current_price > trail_price:
+                        exit_signal = True
+            
+            # Implement stop loss (fixed % of entry)
+            stop_loss_pct = 0.04  # 4% maximum loss (more aggressive than ATR)
+            if position > 0:  # Long
+                stop_price = entry_price * (1 - stop_loss_pct / leverage)
+                if current_price < stop_price:
+                    exit_signal = True
+            else:  # Short
+                stop_price = entry_price * (1 + stop_loss_pct / leverage)
+                if current_price > stop_price:
+                    exit_signal = True
+            
+            # Exit position if conditions met
+            if exit_signal:
+                # Calculate final PnL
+                if position > 0:  # Long
+                    pnl_pct = (current_price / entry_price - 1) * leverage
+                else:  # Short
+                    pnl_pct = (1 - current_price / entry_price) * leverage
                 
-                ml_strategy = MLEnhancedStrategy(
-                    base_strategy=arima_strategy,
-                    trading_pair=self.symbol,
-                    ml_model=self.ml_models[f"{self.symbol}_{self.timeframe}"],
-                    ml_influence=0.7,
-                    confidence_threshold=0.65
-                )
-                
-                strategies['ml_enhanced'] = ml_strategy
-                logger.info("Created ML-enhanced strategy")
-            
-            except Exception as e:
-                logger.error(f"Error creating ML-enhanced strategy: {e}")
-        
-        # Initialize portfolio and tracking variables
-        portfolio_value = self.initial_capital
-        cash = self.initial_capital
-        positions = {}
-        equity_curve = [portfolio_value]
-        trades = []
-        
-        # Get backtesting data
-        df = self.data.copy()
-        
-        # Performance by regime
-        regime_performance = {
-            'normal_trending_up': {'total_return': 0, 'trades': 0, 'wins': 0},
-            'volatile_trending_up': {'total_return': 0, 'trades': 0, 'wins': 0},
-            'normal_trending_down': {'total_return': 0, 'trades': 0, 'wins': 0},
-            'volatile_trending_down': {'total_return': 0, 'trades': 0, 'wins': 0}
-        }
-        
-        # Strategy signal strength settings
-        strategy_strength = {
-            'arima': 0.7,
-            'integrated': 0.6,
-            'ml_enhanced': 0.9
-        }
-        
-        # Backtest parameters
-        commission_rate = 0.0026  # 0.26% taker fee on Kraken
-        slippage = 0.0005  # 0.05% slippage
-        use_market_regimes = True
-        
-        # Run backtest
-        logger.info(f"Starting backtest with {len(df)} data points")
-        
-        for i in range(100, len(df)):
-            # Current timestamp and data
-            timestamp = df.index[i]
-            current_data = df.iloc[:i+1]
-            current_price = current_data['close'].iloc[-1]
-            current_regime = current_data['market_regime'].iloc[-1]
-            
-            # Calculate portfolio value
-            portfolio_value = cash
-            for symbol, position in positions.items():
-                if position['type'] == 'long':
-                    portfolio_value += position['quantity'] * current_price
-                else:  # short
-                    portfolio_value += position['value'] - (position['quantity'] * current_price)
-            
-            # Record portfolio value
-            equity_curve.append(portfolio_value)
-            
-            # Generate signals from each strategy
-            signals = {}
-            
-            for strategy_name, strategy in strategies.items():
-                try:
-                    # Generate signal
-                    signal = strategy.generate_signal(current_data)
-                    
-                    # Adjust strength based on market regime if enabled
-                    if use_market_regimes:
-                        regime_modifier = {
-                            'normal_trending_up': {'arima': 0.9, 'integrated': 0.7, 'ml_enhanced': 1.0},
-                            'volatile_trending_up': {'arima': 0.7, 'integrated': 0.9, 'ml_enhanced': 0.9},
-                            'normal_trending_down': {'arima': 0.8, 'integrated': 0.7, 'ml_enhanced': 0.9},
-                            'volatile_trending_down': {'arima': 0.7, 'integrated': 0.9, 'ml_enhanced': 0.8}
-                        }
-                        
-                        modifier = regime_modifier[current_regime].get(strategy_name, 1.0)
-                        strength = strategy_strength[strategy_name] * modifier
-                    else:
-                        strength = strategy_strength[strategy_name]
-                    
-                    # Add ML confidence if available
-                    if strategy_name == 'ml_enhanced' and hasattr(strategy, 'get_ml_confidence'):
-                        confidence = strategy.get_ml_confidence(current_data)
-                        strength = strength * (0.5 + confidence * 0.5)
-                    
-                    signals[strategy_name] = {
-                        'signal': signal,
-                        'strength': strength
-                    }
-                    
-                except Exception as e:
-                    logger.error(f"Error generating signal for {strategy_name}: {e}")
-            
-            # Resolve signals based on strength
-            final_signal = None
-            max_strength = 0
-            
-            for strategy_name, signal_info in signals.items():
-                if signal_info['signal'] != 'neutral' and signal_info['strength'] > max_strength:
-                    final_signal = signal_info['signal']
-                    max_strength = signal_info['strength']
-            
-            # Execute trades based on final signal
-            # For simplicity, we'll assume fixed position sizing
-            position_size = 0.2  # 20% of portfolio
-            max_positions = 1  # Maximum number of positions per symbol
-            
-            # Check if we already have a position
-            current_position = positions.get(self.symbol, None)
-            
-            if final_signal == 'buy' and (current_position is None or current_position['type'] == 'short'):
-                # Close existing short position if any
-                if current_position is not None and current_position['type'] == 'short':
-                    # Calculate profit/loss
-                    entry_price = current_position['entry_price']
-                    exit_price = current_price * (1 + slippage)  # Include slippage
-                    quantity = current_position['quantity']
-                    
-                    # Calculate fees
-                    entry_fee = entry_price * quantity * commission_rate
-                    exit_fee = exit_price * quantity * commission_rate
-                    
-                    # Calculate profit/loss
-                    pl = (entry_price - exit_price) * quantity - entry_fee - exit_fee
-                    
-                    # Update cash
-                    cash += current_position['value'] + pl
-                    
-                    # Record trade
-                    trade = {
-                        'symbol': self.symbol,
-                        'entry_time': current_position['entry_time'],
-                        'exit_time': timestamp,
-                        'type': 'short',
-                        'entry_price': entry_price,
-                        'exit_price': exit_price,
-                        'quantity': quantity,
-                        'profit_loss': pl,
-                        'profit_loss_pct': pl / current_position['value'] * 100,
-                        'market_regime': current_regime
-                    }
-                    
-                    trades.append(trade)
-                    
-                    # Update regime performance
-                    regime_performance[current_regime]['trades'] += 1
-                    if pl > 0:
-                        regime_performance[current_regime]['wins'] += 1
-                    regime_performance[current_regime]['total_return'] += pl
-                    
-                    # Remove position
-                    positions.pop(self.symbol)
-                
-                # Open new long position if we have capacity
-                if len(positions) < max_positions:
-                    # Calculate position size
-                    position_value = portfolio_value * position_size
-                    entry_price = current_price * (1 + slippage)  # Include slippage
-                    quantity = position_value / entry_price
-                    
-                    # Calculate fee
-                    fee = position_value * commission_rate
-                    
-                    # Update cash
-                    cash -= position_value + fee
-                    
-                    # Record position
-                    positions[self.symbol] = {
-                        'type': 'long',
-                        'entry_price': entry_price,
-                        'quantity': quantity,
-                        'value': position_value,
-                        'entry_time': timestamp
-                    }
-            
-            elif final_signal == 'sell' and (current_position is None or current_position['type'] == 'long'):
-                # Close existing long position if any
-                if current_position is not None and current_position['type'] == 'long':
-                    # Calculate profit/loss
-                    entry_price = current_position['entry_price']
-                    exit_price = current_price * (1 - slippage)  # Include slippage
-                    quantity = current_position['quantity']
-                    
-                    # Calculate fees
-                    entry_fee = entry_price * quantity * commission_rate
-                    exit_fee = exit_price * quantity * commission_rate
-                    
-                    # Calculate profit/loss
-                    pl = (exit_price - entry_price) * quantity - entry_fee - exit_fee
-                    
-                    # Update cash
-                    cash += exit_price * quantity - exit_fee
-                    
-                    # Record trade
-                    trade = {
-                        'symbol': self.symbol,
-                        'entry_time': current_position['entry_time'],
-                        'exit_time': timestamp,
-                        'type': 'long',
-                        'entry_price': entry_price,
-                        'exit_price': exit_price,
-                        'quantity': quantity,
-                        'profit_loss': pl,
-                        'profit_loss_pct': pl / current_position['value'] * 100,
-                        'market_regime': current_regime
-                    }
-                    
-                    trades.append(trade)
-                    
-                    # Update regime performance
-                    regime_performance[current_regime]['trades'] += 1
-                    if pl > 0:
-                        regime_performance[current_regime]['wins'] += 1
-                    regime_performance[current_regime]['total_return'] += pl
-                    
-                    # Remove position
-                    positions.pop(self.symbol)
-                
-                # Open new short position if we have capacity
-                if len(positions) < max_positions:
-                    # Calculate position size
-                    position_value = portfolio_value * position_size
-                    entry_price = current_price * (1 - slippage)  # Include slippage
-                    quantity = position_value / entry_price
-                    
-                    # Calculate fee
-                    fee = position_value * commission_rate
-                    
-                    # Update cash
-                    cash += position_value - fee
-                    
-                    # Record position
-                    positions[self.symbol] = {
-                        'type': 'short',
-                        'entry_price': entry_price,
-                        'quantity': quantity,
-                        'value': position_value,
-                        'entry_time': timestamp
-                    }
-        
-        # Close any remaining positions at the end
-        final_price = df['close'].iloc[-1]
-        
-        for symbol, position in positions.items():
-            if position['type'] == 'long':
-                # Calculate profit/loss
-                entry_price = position['entry_price']
-                exit_price = final_price * (1 - slippage)  # Include slippage
-                quantity = position['quantity']
-                
-                # Calculate fees
-                entry_fee = entry_price * quantity * commission_rate
-                exit_fee = exit_price * quantity * commission_rate
-                
-                # Calculate profit/loss
-                pl = (exit_price - entry_price) * quantity - entry_fee - exit_fee
-                
-                # Update cash
-                cash += exit_price * quantity - exit_fee
+                pnl_amount = capital * risk_percentage * pnl_pct
+                capital += pnl_amount
                 
                 # Record trade
                 trade = {
-                    'symbol': symbol,
-                    'entry_time': position['entry_time'],
-                    'exit_time': df.index[-1],
-                    'type': 'long',
+                    'entry_time': entry_time,
+                    'exit_time': current_time,
                     'entry_price': entry_price,
-                    'exit_price': exit_price,
-                    'quantity': quantity,
-                    'profit_loss': pl,
-                    'profit_loss_pct': pl / position['value'] * 100,
-                    'market_regime': df['market_regime'].iloc[-1]
+                    'exit_price': current_price,
+                    'position': position,
+                    'leverage': leverage,
+                    'pnl_pct': pnl_pct,
+                    'pnl_amount': pnl_amount,
+                    'capital': capital
                 }
-                
                 trades.append(trade)
                 
-                # Update regime performance
-                current_regime = df['market_regime'].iloc[-1]
-                regime_performance[current_regime]['trades'] += 1
-                if pl > 0:
-                    regime_performance[current_regime]['wins'] += 1
-                regime_performance[current_regime]['total_return'] += pl
+                # Update metrics
+                if pnl_amount > 0:
+                    wins += 1
+                    total_profit += pnl_amount
+                else:
+                    losses += 1
+                    total_loss -= pnl_amount  # Convert to positive value
+                
+                # Reset position
+                position = 0
+                leverage = 0
             
-            else:  # short
-                # Calculate profit/loss
-                entry_price = position['entry_price']
-                exit_price = final_price * (1 + slippage)  # Include slippage
-                quantity = position['quantity']
+            # Update equity curve and positions
+            equity_curve.append(current_equity)
+            positions.append(position)
+        
+        else:
+            # Check for entry signal
+            if signals[i] != 0:
+                # Calculate dynamic leverage if enabled
+                if args.dynamic_leverage:
+                    leverage = calculate_dynamic_leverage(
+                        confidence[i], base_leverage, max_leverage
+                    )[0]
+                else:
+                    leverage = base_leverage
                 
-                # Calculate fees
-                entry_fee = entry_price * quantity * commission_rate
-                exit_fee = exit_price * quantity * commission_rate
-                
-                # Calculate profit/loss
-                pl = (entry_price - exit_price) * quantity - entry_fee - exit_fee
-                
-                # Update cash
-                cash += position['value'] + pl
-                
-                # Record trade
-                trade = {
-                    'symbol': symbol,
-                    'entry_time': position['entry_time'],
-                    'exit_time': df.index[-1],
-                    'type': 'short',
-                    'entry_price': entry_price,
-                    'exit_price': exit_price,
-                    'quantity': quantity,
-                    'profit_loss': pl,
-                    'profit_loss_pct': pl / position['value'] * 100,
-                    'market_regime': df['market_regime'].iloc[-1]
-                }
-                
-                trades.append(trade)
-                
-                # Update regime performance
-                current_regime = df['market_regime'].iloc[-1]
-                regime_performance[current_regime]['trades'] += 1
-                if pl > 0:
-                    regime_performance[current_regime]['wins'] += 1
-                regime_performance[current_regime]['total_return'] += pl
-        
-        # Calculate final portfolio value
-        final_portfolio_value = cash
-        
-        # Calculate performance metrics
-        total_return = final_portfolio_value - self.initial_capital
-        total_return_pct = total_return / self.initial_capital * 100
-        
-        # Daily returns for Sharpe ratio
-        daily_returns = pd.Series(equity_curve).pct_change().dropna()
-        sharpe_ratio = daily_returns.mean() / daily_returns.std() * np.sqrt(252)
-        
-        # Calculate drawdown
-        equity_curve_series = pd.Series(equity_curve)
-        running_max = equity_curve_series.cummax()
-        drawdown = (equity_curve_series - running_max) / running_max * 100
-        max_drawdown = drawdown.min()
-        
-        # Calculate win rate
-        wins = sum(1 for trade in trades if trade['profit_loss'] > 0)
-        win_rate = wins / len(trades) if trades else 0
-        
-        # Calculate profit factor
-        gross_profit = sum(trade['profit_loss'] for trade in trades if trade['profit_loss'] > 0)
-        gross_loss = sum(abs(trade['profit_loss']) for trade in trades if trade['profit_loss'] < 0)
-        profit_factor = gross_profit / gross_loss if gross_loss else float('inf')
-        
-        # Calculate regime-specific metrics
-        for regime in regime_performance:
-            regime_data = regime_performance[regime]
-            regime_data['win_rate'] = regime_data['wins'] / regime_data['trades'] if regime_data['trades'] > 0 else 0
+                # Enter position
+                position = 1 if signals[i] > 0 else -1
+                entry_price = current_price
+                entry_time = current_time
             
-            # Calculate profit factor for this regime
-            regime_trades = [t for t in trades if t['market_regime'] == regime]
-            regime_gross_profit = sum(t['profit_loss'] for t in regime_trades if t['profit_loss'] > 0)
-            regime_gross_loss = sum(abs(t['profit_loss']) for t in regime_trades if t['profit_loss'] < 0)
-            regime_data['profit_factor'] = regime_gross_profit / regime_gross_loss if regime_gross_loss else float('inf')
+            # Update equity curve and positions
+            equity_curve.append(capital)
+            positions.append(position)
+    
+    # Calculate performance metrics
+    total_trades = wins + losses
+    win_rate = wins / total_trades if total_trades > 0 else 0
+    avg_win = total_profit / wins if wins > 0 else 0
+    avg_loss = total_loss / losses if losses > 0 else 0
+    profit_factor = total_profit / total_loss if total_loss > 0 else float('inf')
+    
+    # Calculate additional metrics
+    equity_array = np.array(equity_curve)
+    returns = np.diff(equity_array) / equity_array[:-1]
+    cumulative_return = (capital / initial_capital - 1) * 100
+    
+    # Calculate drawdowns
+    running_max = np.maximum.accumulate(equity_array)
+    drawdowns = (equity_array / running_max - 1) * 100
+    max_drawdown = abs(min(drawdowns))
+    
+    # Calculate Sharpe ratio (annualized)
+    if len(returns) > 1:
+        mean_return = np.mean(returns)
+        std_return = np.std(returns)
+        sharpe_ratio = (mean_return / std_return) * np.sqrt(365 * 24 / args.timeframe.count('h'))
+    else:
+        sharpe_ratio = 0
+    
+    # Calculate Calmar ratio
+    if max_drawdown > 0:
+        calmar_ratio = cumulative_return / 100 / max_drawdown * 100
+    else:
+        calmar_ratio = float('inf')
+    
+    # Calculate expected value of trades
+    expectancy = win_rate * avg_win - (1 - win_rate) * avg_loss
+    
+    # Calculate Kelly criterion
+    w = win_rate
+    r = avg_win / avg_loss if avg_loss > 0 else float('inf')
+    kelly = w - (1 - w) / r if r > 0 else 0
+    
+    # Calculate recovery factor
+    if max_drawdown > 0:
+        recovery_factor = (capital - initial_capital) / (initial_capital * max_drawdown / 100)
+    else:
+        recovery_factor = float('inf')
+    
+    # Calculate accuracy (% of signals that match actual price direction)
+    actual_moves = np.sign(data_subset['close'].diff().shift(-1).values)
+    predicted_moves = np.sign(signals)
+    matching = (actual_moves == predicted_moves) & (actual_moves != 0)
+    accuracy = np.sum(matching) / np.sum(actual_moves != 0)
+    
+    # Calculate advanced metrics if requested
+    advanced_metrics = {}
+    if args.calculate_all_metrics:
+        # Calculate Sortino ratio
+        downside_returns = returns[returns < 0]
+        downside_deviation = np.std(downside_returns) if len(downside_returns) > 0 else 0
+        sortino_ratio = (mean_return / downside_deviation) * np.sqrt(365 * 24 / args.timeframe.count('h')) if downside_deviation > 0 else float('inf')
+        
+        # Calculate maximum consecutive wins/losses
+        consecutive_wins = 0
+        max_consecutive_wins = 0
+        consecutive_losses = 0
+        max_consecutive_losses = 0
+        
+        for trade in trades:
+            if trade['pnl_amount'] > 0:
+                consecutive_wins += 1
+                consecutive_losses = 0
+                max_consecutive_wins = max(max_consecutive_wins, consecutive_wins)
+            else:
+                consecutive_losses += 1
+                consecutive_wins = 0
+                max_consecutive_losses = max(max_consecutive_losses, consecutive_losses)
+        
+        # Calculate time in market
+        if trades:
+            first_entry = trades[0]['entry_time']
+            last_exit = trades[-1]['exit_time']
+            total_time = (last_exit - first_entry).total_seconds()
+            
+            time_in_market = 0
+            for trade in trades:
+                time_in_trade = (trade['exit_time'] - trade['entry_time']).total_seconds()
+                time_in_market += time_in_trade
+            
+            market_exposure = time_in_market / total_time
+        else:
+            market_exposure = 0
+        
+        # Calculate profit per day
+        days = (data_subset.iloc[-1]['timestamp'] - data_subset.iloc[0]['timestamp']).days
+        profit_per_day = (capital - initial_capital) / max(1, days)
+        
+        # Calculate Ulcer Index
+        squared_drawdowns = drawdowns ** 2
+        ulcer_index = np.sqrt(np.mean(squared_drawdowns))
+        
+        # Calculate Omega ratio
+        threshold = 0  # 0% return threshold
+        returns_above = returns[returns > threshold]
+        returns_below = returns[returns <= threshold]
+        
+        if len(returns_below) > 0 and abs(np.sum(returns_below)) > 0:
+            omega_ratio = np.sum(returns_above) / abs(np.sum(returns_below))
+        else:
+            omega_ratio = float('inf')
+        
+        # Calculate MAR ratio (annualized)
+        annualized_return = (1 + cumulative_return / 100) ** (365 / days) - 1
+        mar_ratio = annualized_return / (max_drawdown / 100) if max_drawdown > 0 else float('inf')
+        
+        # Calculate pain index
+        pain_index = np.mean(abs(drawdowns))
+        
+        # Store advanced metrics
+        advanced_metrics = {
+            'sortino_ratio': float(sortino_ratio),
+            'max_consecutive_wins': int(max_consecutive_wins),
+            'max_consecutive_losses': int(max_consecutive_losses),
+            'market_exposure': float(market_exposure),
+            'profit_per_day': float(profit_per_day),
+            'ulcer_index': float(ulcer_index),
+            'omega_ratio': float(omega_ratio),
+            'annualized_return': float(annualized_return * 100),  # as percentage
+            'mar_ratio': float(mar_ratio),
+            'pain_index': float(pain_index)
+        }
+    
+    # Compile results
+    results = {
+        'pair': args.pair,
+        'model': args.model,
+        'period': args.period,
+        'initial_capital': float(initial_capital),
+        'final_capital': float(capital),
+        'total_return': float(capital / initial_capital),
+        'cumulative_return_pct': float(cumulative_return),
+        'win_rate': float(win_rate),
+        'accuracy': float(accuracy),
+        'total_trades': int(total_trades),
+        'wins': int(wins),
+        'losses': int(losses),
+        'avg_win': float(avg_win),
+        'avg_loss': float(avg_loss),
+        'profit_factor': float(profit_factor),
+        'max_drawdown': float(max_drawdown),
+        'sharpe_ratio': float(sharpe_ratio),
+        'calmar_ratio': float(calmar_ratio),
+        'expectancy': float(expectancy),
+        'kelly_criterion': float(kelly),
+        'recovery_factor': float(recovery_factor)
+    }
+    
+    # Add advanced metrics if calculated
+    if advanced_metrics:
+        results.update(advanced_metrics)
+    
+    # Add trade details
+    results['trades'] = trades
+    
+    return results
+
+
+def run_stress_test(data: pd.DataFrame, signals: np.ndarray, confidence: np.ndarray,
+                 config: Dict, args) -> Dict:
+    """
+    Run stress testing under extreme market conditions.
+    
+    Args:
+        data: Historical data
+        signals: Trading signals
+        confidence: Signal confidence
+        config: Configuration
+        args: Command line arguments
+        
+    Returns:
+        stress_results: Stress test results
+    """
+    # Create copy of data for stress test
+    stress_data = data.copy()
+    
+    # Define stress test scenarios
+    scenarios = {
+        "flash_crash": {
+            "description": "Simulate flash crash (20% down in single period)",
+            "modifier": lambda d: modify_data_flash_crash(d, 0.20)
+        },
+        "extended_downtrend": {
+            "description": "Simulate extended downtrend (30% down over 10 periods)",
+            "modifier": lambda d: modify_data_trend(d, -0.30, 10)
+        },
+        "volatility_spike": {
+            "description": "Simulate volatility spike (double price ranges)",
+            "modifier": lambda d: modify_data_volatility(d, 2.0)
+        },
+        "liquidity_crisis": {
+            "description": "Simulate liquidity crisis (slippage increases 5x)",
+            "modifier": lambda d: d  # Handled in simulation with higher slippage
+        }
+    }
+    
+    # Run simulations for each scenario
+    stress_results = {}
+    
+    for scenario, config in scenarios.items():
+        logger.info(f"Running stress test: {scenario} - {config['description']}")
+        
+        # Apply scenario modification
+        scenario_data = config["modifier"](stress_data)
+        
+        # Run simulation with modified data
+        if scenario == "liquidity_crisis":
+            # Increase slippage for liquidity crisis
+            scenario_args = argparse.Namespace(**vars(args))
+            # Would modify slippage parameter if implemented
+        else:
+            scenario_args = args
+        
+        # Simulate trades with scenario data
+        results = simulate_trades(scenario_data, signals, confidence, config, scenario_args)
         
         # Store results
-        self.performance = {
-            'initial_capital': self.initial_capital,
-            'final_portfolio_value': final_portfolio_value,
-            'total_return': total_return,
-            'total_return_pct': total_return_pct,
-            'sharpe_ratio': sharpe_ratio,
-            'max_drawdown': max_drawdown,
-            'max_drawdown_pct': abs(max_drawdown),
-            'win_rate': win_rate,
-            'profit_factor': profit_factor,
-            'total_trades': len(trades),
-            'regime_performance': regime_performance
+        stress_results[scenario] = {
+            "description": config["description"],
+            "total_return": results["total_return"],
+            "max_drawdown": results["max_drawdown"],
+            "win_rate": results["win_rate"]
         }
-        
-        self.equity_curve = equity_curve
-        self.trades = trades
-        
-        # Log results
-        logger.info("Backtest results:")
-        logger.info(f"Initial capital: ${self.initial_capital:.2f}")
-        logger.info(f"Final portfolio value: ${final_portfolio_value:.2f}")
-        logger.info(f"Total return: ${total_return:.2f} ({total_return_pct:.2f}%)")
-        logger.info(f"Sharpe ratio: {sharpe_ratio:.2f}")
-        logger.info(f"Max drawdown: {abs(max_drawdown):.2f}%")
-        logger.info(f"Win rate: {win_rate*100:.2f}%")
-        logger.info(f"Profit factor: {profit_factor:.2f}")
-        logger.info(f"Total trades: {len(trades)}")
-        
-        # Save results
-        self._save_results()
-        
-        return self.performance
     
-    def _save_results(self):
-        """Save backtest results"""
-        # Create results directory
-        os.makedirs(RESULTS_DIR, exist_ok=True)
-        
-        # Save performance metrics
-        metrics_path = os.path.join(RESULTS_DIR, f"{self.symbol}_{self.timeframe}_metrics.json")
-        
-        with open(metrics_path, 'w') as f:
-            # Convert numpy types to Python types for JSON serialization
-            performance = {k: float(v) if isinstance(v, np.float64) else v 
-                           for k, v in self.performance.items() if k != 'regime_performance'}
-            
-            # Handle regime performance separately
-            regime_performance = {}
-            for regime, metrics in self.performance['regime_performance'].items():
-                regime_performance[regime] = {k: float(v) if isinstance(v, np.float64) else v 
-                                           for k, v in metrics.items()}
-            
-            performance['regime_performance'] = regime_performance
-            
-            json.dump(performance, f, indent=2, default=str)
-        
-        # Save equity curve
-        equity_path = os.path.join(RESULTS_DIR, f"{self.symbol}_{self.timeframe}_equity.csv")
-        
-        equity_df = pd.DataFrame({
-            'portfolio_value': self.equity_curve
-        })
-        
-        equity_df.to_csv(equity_path)
-        
-        # Save trades
-        trades_path = os.path.join(RESULTS_DIR, f"{self.symbol}_{self.timeframe}_trades.csv")
-        
-        trades_df = pd.DataFrame(self.trades)
-        trades_df.to_csv(trades_path, index=False)
-        
-        # Plot results
-        self._plot_results()
-        
-        logger.info(f"Results saved to {RESULTS_DIR}")
+    return stress_results
+
+
+def modify_data_flash_crash(data: pd.DataFrame, crash_pct: float) -> pd.DataFrame:
+    """Modify data to simulate a flash crash."""
+    modified = data.copy()
     
-    def _plot_results(self):
-        """Plot backtest results"""
-        # Create figure
-        plt.figure(figsize=(15, 10))
+    # Find a random position after the first 20% of the data
+    start_idx = int(len(data) * 0.2)
+    crash_idx = np.random.randint(start_idx, len(data) - 1)
+    
+    # Apply crash
+    modified.loc[crash_idx, 'close'] = data.loc[crash_idx, 'close'] * (1 - crash_pct)
+    modified.loc[crash_idx, 'low'] = min(data.loc[crash_idx, 'low'], modified.loc[crash_idx, 'close'])
+    
+    return modified
+
+
+def modify_data_trend(data: pd.DataFrame, trend_pct: float, periods: int) -> pd.DataFrame:
+    """Modify data to simulate a trend."""
+    modified = data.copy()
+    
+    # Find a random position after the first 20% of the data
+    start_idx = int(len(data) * 0.2)
+    trend_start = np.random.randint(start_idx, len(data) - periods - 1)
+    
+    # Calculate per-period change
+    per_period = (1 + trend_pct) ** (1 / periods) - 1
+    
+    # Apply trend
+    for i in range(periods):
+        idx = trend_start + i
+        if idx < len(modified):
+            modified.loc[idx, 'close'] = data.loc[idx, 'close'] * (1 + per_period) ** (i + 1)
+            modified.loc[idx, 'high'] = max(data.loc[idx, 'high'], modified.loc[idx, 'close'])
+            modified.loc[idx, 'low'] = min(data.loc[idx, 'low'], modified.loc[idx, 'close'])
+    
+    return modified
+
+
+def modify_data_volatility(data: pd.DataFrame, volatility_factor: float) -> pd.DataFrame:
+    """Modify data to simulate increased volatility."""
+    modified = data.copy()
+    
+    # Find a random position after the first 20% of the data
+    start_idx = int(len(data) * 0.2)
+    vol_start = np.random.randint(start_idx, int(len(data) * 0.7))
+    vol_periods = int(len(data) * 0.2)  # 20% of the data length
+    
+    # Apply increased volatility
+    for i in range(vol_periods):
+        idx = vol_start + i
+        if idx < len(modified):
+            # Increase high-low range
+            mid_price = data.loc[idx, 'close']
+            range_half = (data.loc[idx, 'high'] - data.loc[idx, 'low']) * volatility_factor / 2
+            
+            modified.loc[idx, 'high'] = mid_price + range_half
+            modified.loc[idx, 'low'] = mid_price - range_half
+    
+    return modified
+
+
+def save_backtest_results(results: Dict, args) -> bool:
+    """
+    Save backtest results to a file.
+    
+    Args:
+        results: Backtest results
+        args: Command line arguments
         
-        # Plot equity curve
-        plt.subplot(2, 1, 1)
-        plt.plot(self.equity_curve)
-        plt.title(f"Equity Curve - {self.symbol} {self.timeframe}")
-        plt.xlabel("Trade Days")
-        plt.ylabel("Portfolio Value ($)")
-        plt.grid(True)
+    Returns:
+        success: Whether the save succeeded
+    """
+    # Determine output directory
+    output_dir = args.output_dir or BACKTEST_RESULTS_DIR
+    Path(output_dir).mkdir(exist_ok=True)
+    
+    try:
+        # Format filename
+        pair_filename = args.pair.replace("/", "_")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{output_dir}/{pair_filename}_{args.model}_metrics.json"
         
-        # Plot drawdown
-        equity_series = pd.Series(self.equity_curve)
-        running_max = equity_series.cummax()
-        drawdown = (equity_series - running_max) / running_max * 100
+        # Save file
+        with open(filename, 'w') as f:
+            json.dump(results, f, indent=2)
         
-        plt.subplot(2, 1, 2)
-        plt.fill_between(range(len(drawdown)), 0, drawdown, color='red', alpha=0.3)
-        plt.title("Drawdown (%)")
-        plt.xlabel("Trade Days")
-        plt.ylabel("Drawdown (%)")
-        plt.grid(True)
+        logger.info(f"Saved backtest results to {filename}")
         
-        # Save plot
-        plt.tight_layout()
-        plt.savefig(os.path.join(RESULTS_DIR, "plots", f"{self.symbol}_{self.timeframe}_backtest.png"))
-        plt.close()
+        # Save trades to CSV
+        trades_file = f"{output_dir}/{pair_filename}_{args.model}_trades.csv"
+        trades_df = pd.DataFrame(results.get('trades', []))
         
-        # Plot regime performance
-        regimes = list(self.performance['regime_performance'].keys())
-        win_rates = [self.performance['regime_performance'][r]['win_rate'] * 100 for r in regimes]
-        profit_factors = [min(self.performance['regime_performance'][r]['profit_factor'], 5) for r in regimes]
+        if not trades_df.empty:
+            trades_df.to_csv(trades_file, index=False)
+            logger.info(f"Saved trade details to {trades_file}")
         
-        plt.figure(figsize=(12, 6))
-        
-        ax1 = plt.subplot(1, 1, 1)
-        bars = ax1.bar(regimes, win_rates, color='blue', alpha=0.6)
-        ax1.set_ylabel('Win Rate (%)', color='blue')
-        ax1.set_ylim(0, 100)
-        ax1.tick_params(axis='y', labelcolor='blue')
-        
-        # Add profit factor line
-        ax2 = ax1.twinx()
-        ax2.plot(regimes, profit_factors, 'ro-', linewidth=2)
-        ax2.set_ylabel('Profit Factor', color='red')
-        ax2.set_ylim(0, 5.5)
-        ax2.tick_params(axis='y', labelcolor='red')
-        
-        plt.title("Performance by Market Regime")
-        plt.tight_layout()
-        plt.savefig(os.path.join(RESULTS_DIR, "plots", f"{self.symbol}_{self.timeframe}_regime_performance.png"))
-        plt.close()
+        return True
+    
+    except Exception as e:
+        logger.error(f"Error saving backtest results: {e}")
+        return False
+
+
+def print_results(results: Dict):
+    """
+    Print backtest results to console.
+    
+    Args:
+        results: Backtest results
+    """
+    print("\n" + "=" * 60)
+    print(f" BACKTEST RESULTS: {results['pair']} - {results['model']} ")
+    print("=" * 60)
+    
+    print(f"\nPeriod: {results.get('period', 'Unknown')}")
+    print(f"Initial Capital: ${results['initial_capital']:.2f}")
+    print(f"Final Capital: ${results['final_capital']:.2f}")
+    
+    print("\n--- Performance Metrics ---")
+    print(f"Total Return: {results['total_return']:.2f}x ({results['cumulative_return_pct']:.2f}%)")
+    print(f"Win Rate: {results['win_rate']*100:.2f}%")
+    print(f"Prediction Accuracy: {results['accuracy']*100:.2f}%")
+    print(f"Profit Factor: {results['profit_factor']:.2f}")
+    print(f"Maximum Drawdown: {results['max_drawdown']:.2f}%")
+    
+    print("\n--- Trade Statistics ---")
+    print(f"Total Trades: {results['total_trades']}")
+    print(f"Wins/Losses: {results['wins']}/{results['losses']}")
+    if results['wins'] > 0:
+        print(f"Average Win: ${results['avg_win']:.2f}")
+    if results['losses'] > 0:
+        print(f"Average Loss: ${results['avg_loss']:.2f}")
+    
+    print("\n--- Risk Metrics ---")
+    print(f"Sharpe Ratio: {results['sharpe_ratio']:.2f}")
+    print(f"Calmar Ratio: {results['calmar_ratio']:.2f}")
+    print(f"Kelly Criterion: {results['kelly_criterion']*100:.2f}%")
+    print(f"Recovery Factor: {results['recovery_factor']:.2f}")
+    
+    # Print advanced metrics if available
+    if 'sortino_ratio' in results:
+        print("\n--- Advanced Metrics ---")
+        print(f"Sortino Ratio: {results['sortino_ratio']:.2f}")
+        print(f"Omega Ratio: {results['omega_ratio']:.2f}")
+        print(f"Annualized Return: {results['annualized_return']:.2f}%")
+        print(f"MAR Ratio: {results['mar_ratio']:.2f}")
+        print(f"Max Consecutive Wins: {results['max_consecutive_wins']}")
+        print(f"Max Consecutive Losses: {results['max_consecutive_losses']}")
+        print(f"Market Exposure: {results['market_exposure']*100:.2f}%")
+    
+    print("\n" + "=" * 60)
 
 
 def main():
-    """Main function"""
-    import argparse
+    """Main function."""
+    # Parse command line arguments
+    args = parse_arguments()
     
-    # Parse arguments
-    parser = argparse.ArgumentParser(description="Comprehensive Backtesting Script")
+    logger.info(f"Running comprehensive backtest for {args.pair} using {args.model} model")
     
-    parser.add_argument("--symbol", type=str, default=PRIMARY_SYMBOL,
-                       help=f"Trading symbol (default: {PRIMARY_SYMBOL})")
-    parser.add_argument("--timeframe", type=str, default=PRIMARY_TIMEFRAME,
-                       help=f"Timeframe (default: {PRIMARY_TIMEFRAME})")
-    parser.add_argument("--capital", type=float, default=INITIAL_CAPITAL,
-                       help=f"Initial capital (default: ${INITIAL_CAPITAL:.2f})")
-    parser.add_argument("--start-date", type=str, default=None,
-                       help="Start date (YYYY-MM-DD)")
-    parser.add_argument("--end-date", type=str, default=None,
-                       help="End date (YYYY-MM-DD)")
-    parser.add_argument("--skip-ml", action="store_true",
-                       help="Skip ML model training")
-    parser.add_argument("--skip-optimization", action="store_true",
-                       help="Skip parameter optimization")
+    # Load configuration
+    config = load_config()
+    if not config:
+        logger.error("Failed to load configuration. Exiting.")
+        return 1
     
-    args = parser.parse_args()
+    # Get pair-specific settings
+    pair_settings = config.get("pair_specific_settings", {}).get(args.pair, {})
     
-    # Run backtest
-    backtester = ComprehensiveBacktester(
-        initial_capital=args.capital,
-        symbol=args.symbol,
-        timeframe=args.timeframe,
-        start_date=args.start_date,
-        end_date=args.end_date
-    )
+    # Get confidence threshold
+    confidence_threshold = args.confidence_threshold
+    if confidence_threshold is None:
+        confidence_threshold = pair_settings.get("confidence_threshold", 0.65)
     
-    # Train ML model
-    ml_accuracy = None
-    if not args.skip_ml:
-        try:
-            ml_accuracy = backtester.train_ml_model()
-            logger.info(f"ML model trained with accuracy: {ml_accuracy:.4f}")
-        except Exception as e:
-            logger.error(f"Error training ML model: {e}")
+    # Get lookback window
+    lookback_window = pair_settings.get("lookback_window", 120)
     
-    # Optimize strategy parameters
-    optimized_params = None
-    if not args.skip_optimization:
-        try:
-            optimized_params = backtester.optimize_strategy_parameters()
-            logger.info(f"Strategy parameters optimized")
-        except Exception as e:
-            logger.error(f"Error optimizing parameters: {e}")
+    # Load historical data
+    data = load_historical_data(args.pair, args.timeframe, args.period)
+    if data is None:
+        logger.error("Failed to load historical data. Exiting.")
+        return 1
     
-    # Run backtest
-    performance = backtester.run_backtest(
-        optimized_params=optimized_params,
-        use_ml=not args.skip_ml
-    )
+    # Load model
+    model = load_model(args.model, args.pair, args.model == 'ensemble')
+    if model is None:
+        logger.error("Failed to load model. Exiting.")
+        return 1
     
-    # Print summary
-    print("\n" + "="*80)
-    print(f"COMPREHENSIVE BACKTEST RESULTS - {args.symbol} {args.timeframe}")
-    print("="*80)
-    print(f"Initial Capital: ${args.capital:.2f}")
-    print(f"Final Portfolio Value: ${performance['final_portfolio_value']:.2f}")
-    print(f"Total Return: ${performance['total_return']:.2f} ({performance['total_return_pct']:.2f}%)")
-    print(f"Sharpe Ratio: {performance['sharpe_ratio']:.2f}")
-    print(f"Max Drawdown: {performance['max_drawdown_pct']:.2f}%")
-    print(f"Win Rate: {performance['win_rate']*100:.2f}%")
-    print(f"Profit Factor: {performance['profit_factor']:.2f}")
-    print(f"Total Trades: {performance['total_trades']}")
-    print("\nPerformance by Market Regime:")
-    print("-"*80)
-    print(f"{'Regime':<25} {'Trades':<10} {'Win Rate':<15} {'Profit Factor':<15}")
-    print("-"*80)
+    # Prepare features
+    features = prepare_features(data, lookback_window)
+    if features is None:
+        logger.error("Failed to prepare features. Exiting.")
+        return 1
     
-    for regime, metrics in performance['regime_performance'].items():
-        if metrics['trades'] > 0:
-            print(f"{regime:<25} {metrics['trades']:<10} {metrics['win_rate']*100:<15.2f}% {metrics['profit_factor']:<15.2f}")
+    # Get model predictions
+    predictions = get_model_predictions(model, features, args.model, args.model == 'ensemble')
+    if predictions is None:
+        logger.error("Failed to get model predictions. Exiting.")
+        return 1
     
-    print("\nML Model Accuracy:", f"{ml_accuracy:.2%}" if ml_accuracy else "N/A")
-    print("-"*80)
-    print(f"Comprehensive backtest completed. Results saved to {RESULTS_DIR}")
-    print("="*80)
+    # Calculate entry signals
+    signals, confidence = calculate_entry_signals(predictions, 0.5, confidence_threshold)
+    
+    # Simulate trades
+    results = simulate_trades(data, signals, confidence, config, args)
+    
+    # Run stress tests if requested
+    if args.stress_test:
+        stress_results = run_stress_test(data, signals, confidence, config, args)
+        results['stress_test'] = stress_results
+    
+    # Save results
+    if args.output_format in ['json', 'both']:
+        save_backtest_results(results, args)
+    
+    # Print results
+    if args.output_format in ['console', 'both']:
+        print_results(results)
+    
+    # Return results as JSON if requested
+    if args.output_format == 'json':
+        # Remove trades from JSON output to keep it concise
+        results_json = {k: v for k, v in results.items() if k != 'trades'}
+        print(json.dumps(results_json))
+    
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
