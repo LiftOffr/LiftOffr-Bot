@@ -3,22 +3,22 @@
     "type": "OPEN",
     "pair": "SOL/USD",
     "direction": "LONG",
-    "price": 128.82,
-    "size": 20.68100611129286,
-    "leverage": 112,
-    "confidence": 0.8880424024189153,
-    "allocated_capital": 2664.127207256746,
-    "timestamp": "2025-04-15T17:36:29.501050"
+    "price": 129.1,
+    "size": 20.426248138241128,
+    "leverage": 110,
+    "confidence": 0.87900954488231,
+    "allocated_capital": 2637.0286346469297,
+    "timestamp": "2025-04-15T17:37:35.922377"
   },
   {
     "type": "OPEN",
-    "pair": "BTC/USD",
+    "pair": "UNI/USD",
     "direction": "LONG",
-    "price": 84725.9,
-    "size": 0.029074823080032546,
-    "leverage": 119,
-    "confidence": 0.9473191157808132,
-    "allocated_capital": 2463.3905527965294,
-    "timestamp": "2025-04-15T17:36:34.879015"
+    "price": 5.278,
+    "size": 305.7994035911665,
+    "leverage": 79,
+    "confidence": 0.6197131501638596,
+    "allocated_capital": 1614.0092521541765,
+    "timestamp": "2025-04-15T17:37:41.540518"
   }
 ]

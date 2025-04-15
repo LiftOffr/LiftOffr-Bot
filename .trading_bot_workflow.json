@@ -2,9 +2,9 @@
   "workflows": [
     {
       "name": "trading_bot",
-      "command": "python3 -B run_bot.py",
-      "restart_on": "always",
-      "restart_limit": 10
+      "command": "python3 -B isolated_run.py",
+      "restart_on": "failure",
+      "restart_limit": 5
     }
   ]
 }
