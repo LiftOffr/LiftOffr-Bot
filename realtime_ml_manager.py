@@ -60,18 +60,18 @@ class RealtimeMLManager:
             initial_capital: Initial capital in USD
             max_open_positions: Maximum number of open positions
             max_allocation_pct: Maximum portfolio allocation percentage
-            model_weight_path: Path to model weights (optional)
+            model_weights: Path to model weights (optional)
             sandbox: Whether to run in sandbox mode
         """
         self.trading_pairs = trading_pairs
         self.initial_capital = initial_capital
         self.max_open_positions = max_open_positions
         self.max_allocation_pct = max_allocation_pct
-        self.model_weight_path = model_weight_path
+        self.model_weights = model_weights
         self.sandbox = sandbox
         
         # Create ML components
-        self.risk_manager = MLRiskManager(model_weight_path=model_weight_path)
+        self.risk_manager = MLRiskManager(model_weight_path=model_weights)
         self.ws_integration = MLWebSocketIntegration(
             trading_pairs=trading_pairs,
             ml_risk_manager=self.risk_manager,
