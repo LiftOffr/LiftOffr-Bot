@@ -10,13 +10,15 @@ import json
 import time
 import logging
 import threading
-import numpy as np
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Union, Tuple
 
 # Import ML modules
 from ml_risk_manager import MLRiskManager
 from ml_websocket_integration import MLWebSocketIntegration
+
+# Remove numpy import since it's not used
+# import numpy as np
 
 # Constants
 DATA_DIR = "data"
@@ -47,7 +49,7 @@ class RealtimeMLManager:
         initial_capital: float = 20000.0,
         max_open_positions: int = 7,
         max_allocation_pct: float = 0.85,
-        model_weight_path: Optional[str] = None,
+        model_weights: Optional[str] = None,
         sandbox: bool = True
     ):
         """

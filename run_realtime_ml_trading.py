@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """
-Run Realtime ML Trading Bot
+Run Realtime ML Trading
 
-This script starts the real-time ML trading bot with WebSocket integration
-for Kraken, ensuring trades are managed with the most current market data.
+This script activates the ML-driven real-time trading system in sandbox mode.
+It manages connections to Kraken's WebSocket API and ML models to optimize
+trading decisions in real-time.
 """
+import argparse
 import os
 import sys
-import time
-import json
 import logging
-import argparse
-from typing import List, Dict, Any
+from typing import List
+
+# Import our modules
+from realtime_ml_manager import RealtimeMLManager
 
 # Configure logging
 logging.basicConfig(
@@ -21,185 +23,180 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Import our modules only after logging is configured
-from realtime_ml_manager import RealtimeMLManager
-
-# Constants
-DATA_DIR = "data"
-PORTFOLIO_FILE = f"{DATA_DIR}/sandbox_portfolio.json"
-POSITIONS_FILE = f"{DATA_DIR}/sandbox_positions.json"
-PORTFOLIO_HISTORY_FILE = f"{DATA_DIR}/sandbox_portfolio_history.json"
-TRADES_FILE = f"{DATA_DIR}/sandbox_trades.json"
+# Default trading pairs
+DEFAULT_PAIRS = [
+    "SOL/USD", 
+    "BTC/USD", 
+    "ETH/USD", 
+    "ADA/USD", 
+    "DOT/USD",
+    "LINK/USD",
+    "AVAX/USD",
+    "MATIC/USD",
+    "UNI/USD",
+    "ATOM/USD"
+]
 
 def parse_arguments():
     """Parse command line arguments"""
-    parser = argparse.ArgumentParser(description="Run real-time ML trading bot with WebSockets")
+    parser = argparse.ArgumentParser(description="Run Realtime ML Trading")
     
-    parser.add_argument("--pairs", type=str, default="SOL/USD,BTC/USD,ETH/USD,ADA/USD,DOT/USD,LINK/USD,AVAX/USD,MATIC/USD,UNI/USD,ATOM/USD",
-                        help="Comma-separated list of trading pairs")
+    parser.add_argument(
+        "--pairs",
+        nargs="+",
+        default=DEFAULT_PAIRS,
+        help="Trading pairs to use"
+    )
     
-    parser.add_argument("--capital", type=float, default=20000.0,
-                        help="Initial capital in USD")
+    parser.add_argument(
+        "--capital",
+        type=float,
+        default=20000.0,
+        help="Initial capital in USD"
+    )
     
-    parser.add_argument("--max-positions", type=int, default=7,
-                        help="Maximum number of open positions")
+    parser.add_argument(
+        "--max-positions",
+        type=int,
+        default=7,
+        help="Maximum number of open positions"
+    )
     
-    parser.add_argument("--max-allocation", type=float, default=0.85,
-                        help="Maximum portfolio allocation (0.0-1.0)")
+    parser.add_argument(
+        "--allocation",
+        type=float,
+        default=0.85,
+        help="Maximum portfolio allocation percentage (0-1)"
+    )
     
-    parser.add_argument("--model-weights", type=str, default=None,
-                        help="Path to model weights file (optional)")
-    
-    parser.add_argument("--sandbox", action="store_true", default=True,
-                        help="Run in sandbox mode (default: True)")
-    
-    parser.add_argument("--no-sandbox", action="store_false", dest="sandbox",
-                        help="Run in live mode (not sandbox)")
-    
-    parser.add_argument("--reset-portfolio", action="store_true",
-                        help="Reset portfolio before starting")
+    parser.add_argument(
+        "--live",
+        action="store_true",
+        help="Run in live mode (no sandbox)"
+    )
     
     return parser.parse_args()
 
-def reset_portfolio(capital: float):
-    """Reset portfolio to initial state"""
-    os.makedirs(DATA_DIR, exist_ok=True)
+def create_data_directory():
+    """Create data directory if it doesn't exist"""
+    os.makedirs("data", exist_ok=True)
+
+def check_api_keys():
+    """Check if required API keys are set"""
+    required_keys = ["KRAKEN_API_KEY", "KRAKEN_API_SECRET"]
+    missing_keys = [key for key in required_keys if not os.environ.get(key)]
     
-    # Create fresh portfolio
-    portfolio = {
-        "initial_capital": capital,
-        "available_capital": capital,
-        "balance": capital,
-        "equity": capital,
-        "total_value": capital,
-        "total_pnl": 0.0,
-        "total_pnl_pct": 0.0,
-        "unrealized_pnl": 0.0,
-        "unrealized_pnl_pct": 0.0,
-        "unrealized_pnl_usd": 0.0,
-        "win_rate": 0.0,
-        "total_trades": 0,
-        "profitable_trades": 0,
-        "updated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "open_positions_count": 0,
-        "margin_used_pct": 0.0,
-        "available_margin": capital
-    }
+    if missing_keys:
+        logger.error(f"Missing required environment variables: {', '.join(missing_keys)}")
+        logger.error("Please set the required API keys in your environment or .env file")
+        return False
     
-    with open(PORTFOLIO_FILE, 'w') as f:
-        json.dump(portfolio, f, indent=2)
-    
-    # Reset positions to empty list
-    with open(POSITIONS_FILE, 'w') as f:
-        json.dump([], f, indent=2)
-    
-    # Reset trades to empty list
-    with open(TRADES_FILE, 'w') as f:
-        json.dump([], f, indent=2)
-    
-    # Initialize portfolio history
-    with open(PORTFOLIO_HISTORY_FILE, 'w') as f:
-        json.dump([{
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "portfolio_value": capital
-        }], f, indent=2)
-    
-    logger.info(f"Portfolio reset to ${capital:,.2f}")
     return True
 
-def validate_websocket_connection():
-    """Validate WebSocket connection to Kraken"""
-    try:
-        import kraken_websocket_test
-        
-        logger.info("Testing WebSocket connection to Kraken...")
-        result = kraken_websocket_test.test_connection()
-        
-        if result:
-            logger.info("✓ WebSocket connection successful")
-            return True
-        else:
-            logger.error("× WebSocket connection failed")
-            return False
+def reset_portfolio(initial_capital: float):
+    """Reset portfolio for sandbox mode"""
+    import json
     
-    except Exception as e:
-        logger.error(f"Error testing WebSocket connection: {e}")
-        return False
+    # Create portfolio data
+    portfolio = {
+        "initial_capital": initial_capital,
+        "available_capital": initial_capital,
+        "total_value": initial_capital,
+        "last_updated": "2023-01-01T00:00:00"
+    }
+    
+    # Save to file
+    with open("data/sandbox_portfolio.json", "w") as f:
+        json.dump(portfolio, f, indent=2)
+    
+    # Create empty positions and trades files
+    with open("data/sandbox_positions.json", "w") as f:
+        json.dump([], f, indent=2)
+    
+    with open("data/sandbox_trades.json", "w") as f:
+        json.dump([], f, indent=2)
+    
+    # Create empty portfolio history file
+    with open("data/sandbox_portfolio_history.json", "w") as f:
+        json.dump([], f, indent=2)
+    
+    logger.info(f"Reset portfolio to ${initial_capital:.2f}")
 
-def main():
-    """Main function"""
-    # Parse command line arguments
-    args = parse_arguments()
+def run_realtime_ml_trading(
+    pairs: List[str],
+    initial_capital: float = 20000.0,
+    max_open_positions: int = 7,
+    max_allocation_pct: float = 0.85,
+    sandbox: bool = True
+):
+    """
+    Run the realtime ML trading system
     
-    # Parse trading pairs
-    trading_pairs = args.pairs.split(',')
-    logger.info(f"Starting real-time ML trading bot for {len(trading_pairs)} pairs: {args.pairs}")
-    
-    # Reset portfolio if requested
-    if args.reset_portfolio:
-        reset_portfolio(args.capital)
-    
-    # Validate WebSocket connection
-    if not validate_websocket_connection():
-        logger.error("Cannot proceed without WebSocket connection. Please check your network and try again.")
-        return 1
-    
-    # Create Realtime ML Manager
-    manager = RealtimeMLManager(
-        trading_pairs=trading_pairs,
-        initial_capital=args.capital,
-        max_open_positions=args.max_positions,
-        max_allocation_pct=args.max_allocation,
-        model_weight_path=args.model_weights,
-        sandbox=args.sandbox
+    Args:
+        pairs: List of trading pairs
+        initial_capital: Initial capital in USD
+        max_open_positions: Maximum number of open positions
+        max_allocation_pct: Maximum portfolio allocation percentage
+        sandbox: Whether to run in sandbox mode
+    """
+    # Create the Realtime ML Manager
+    ml_manager = RealtimeMLManager(
+        trading_pairs=pairs,
+        initial_capital=initial_capital,
+        max_open_positions=max_open_positions,
+        max_allocation_pct=max_allocation_pct,
+        sandbox=sandbox
     )
     
     # Start the manager
-    logger.info("Starting Realtime ML Manager...")
-    if not manager.start():
-        logger.error("Failed to start Realtime ML Manager")
-        return 1
+    ml_manager.start()
     
-    logger.info("=" * 70)
-    logger.info("REALTIME ML TRADING BOT IS RUNNING")
-    logger.info("=" * 70)
-    logger.info(f"Mode: {'Sandbox' if args.sandbox else 'Live'}")
-    logger.info(f"Trading pairs: {', '.join(trading_pairs)}")
-    logger.info(f"Initial capital: ${args.capital:,.2f}")
-    logger.info(f"Maximum positions: {args.max_positions}")
-    logger.info(f"Maximum allocation: {args.max_allocation * 100:.1f}%")
-    logger.info("=" * 70)
-    logger.info("Press Ctrl+C to stop")
-    logger.info("=" * 70)
+    logger.info(f"Started Realtime ML Trading for {len(pairs)} pairs")
     
     try:
-        # Main loop
+        # Keep running until interrupted
+        import time
         while True:
-            # Get status every 5 minutes
-            status = manager.get_status()
-            
-            # Display current status
-            logger.info("-" * 50)
-            logger.info("CURRENT STATUS:")
-            logger.info(f"Open positions: {status['open_positions']}")
-            logger.info(f"Closed trades: {status['closed_trades']}")
-            logger.info(f"Available capital: ${status['portfolio']['available_capital']:,.2f}")
-            logger.info(f"Total portfolio value: ${status['portfolio']['total_value']:,.2f}")
-            logger.info(f"Unrealized PnL: ${status['portfolio']['unrealized_pnl']:,.2f} ({status['portfolio']['unrealized_pnl_pct']:.2f}%)")
-            logger.info("-" * 50)
+            # Print status periodically
+            status = ml_manager.get_status()
+            logger.info(f"Current status: {len(status.get('positions', []))} "
+                       f"open positions, ${status.get('portfolio_value', 0):.2f} "
+                       f"portfolio value")
             
             # Sleep for 5 minutes
             time.sleep(300)
     
     except KeyboardInterrupt:
-        logger.info("User interrupted. Stopping Realtime ML Manager...")
+        logger.info("Stopping Realtime ML Trading due to user interrupt")
     
     finally:
         # Stop the manager
-        manager.stop()
-        logger.info("Realtime ML trading bot stopped")
+        ml_manager.stop()
+        logger.info("Realtime ML Trading stopped")
+
+def main():
+    """Main function"""
+    args = parse_arguments()
     
-    return 0
+    # Create data directory
+    create_data_directory()
+    
+    # Check API keys
+    if not check_api_keys():
+        sys.exit(1)
+    
+    # Reset portfolio for sandbox mode
+    if not args.live:
+        reset_portfolio(args.capital)
+    
+    # Run the realtime ML trading system
+    run_realtime_ml_trading(
+        pairs=args.pairs,
+        initial_capital=args.capital,
+        max_open_positions=args.max_positions,
+        max_allocation_pct=args.allocation,
+        sandbox=not args.live
+    )
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
