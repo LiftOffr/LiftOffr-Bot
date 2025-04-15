@@ -18,8 +18,9 @@ import random
 import threading
 from typing import Dict, List, Tuple, Optional, Union, Any
 
-# Import risk-aware sandbox trader
+# Import risk-aware sandbox trader and integration controller
 from risk_aware_sandbox_trader import RiskAwareSandboxTrader
+from integration_controller import IntegrationController
 
 # Configure logging
 logging.basicConfig(
@@ -207,6 +208,10 @@ def run_trading_bot(args: argparse.Namespace):
     # Initialize risk-aware sandbox trader
     trader = RiskAwareSandboxTrader()
     
+    # Initialize integration controller for real-time market data
+    pairs = args.pairs.split(',')
+    integration = IntegrationController(pairs=pairs)
+    
     # Load configurations
     ml_config = load_config(ML_CONFIG_FILE, {"pairs": {}, "strategies": {}})
     risk_config = load_config(RISK_CONFIG_FILE, {
@@ -218,120 +223,166 @@ def run_trading_bot(args: argparse.Namespace):
     })
     dynamic_params = load_config(DYNAMIC_PARAMS_CONFIG_FILE, {"leverage_adjustment": 1.0, "risk_adjustment": 1.0})
     
-    # Parse trading pairs and strategies
-    pairs = args.pairs.split(',')
+    # Parse trading strategies
     strategies = args.strategies.split(',')
-    
-    # Store initial prices for simulation
-    simulated_prices = {
-        "SOL/USD": 160.0,
-        "BTC/USD": 70000.0,
-        "ETH/USD": 3500.0,
-        "ADA/USD": 0.45,
-        "DOT/USD": 7.0,
-        "LINK/USD": 18.0,
-        "AVAX/USD": 35.0,
-        "MATIC/USD": 0.70,
-        "UNI/USD": 8.0,
-        "ATOM/USD": 6.5
-    }
-    
-    # Initialize prices for any missing pairs
-    for pair in pairs:
-        if pair not in simulated_prices:
-            simulated_prices[pair] = 100.0  # Default placeholder
     
     # Initialize last funding fee time
     last_funding_fee_time = datetime.datetime.now()
     
-    # Trading loop
-    while True:
-        try:
-            current_time = datetime.datetime.now()
-            logger.info(f"Trading cycle at {current_time}")
-            
-            # Update simulated prices
-            for pair in pairs:
-                simulated_prices[pair] = simulate_market_price(pair, simulated_prices[pair])
-            
-            # Update position prices
-            trader.update_position_prices(simulated_prices)
-            
-            # Check if we need to apply funding fees (every 8 hours)
-            if (current_time - last_funding_fee_time).total_seconds() >= 28800:  # 8 hours
-                trader.apply_funding_fees()
-                last_funding_fee_time = current_time
-            
-            # Get current portfolio value
-            portfolio_value = trader.get_current_portfolio_value()
-            logger.info(f"Current portfolio value: ${portfolio_value:.2f}")
-            
-            # Check for trading signals
-            for pair in pairs:
-                current_price = simulated_prices[pair]
+    # Start the integration controller
+    integration.start()
+    logger.info("Started real-time market data integration")
+    
+    try:
+        # Trading loop
+        while True:
+            try:
+                current_time = datetime.datetime.now()
+                logger.info(f"Trading cycle at {current_time}")
                 
-                # Check each strategy
-                for strategy in strategies:
-                    # Skip if we already have a position for this pair and strategy
-                    if any(pos["pair"] == pair and pos["strategy"] == strategy for pos in trader.positions):
+                # Fetch current prices from integration controller
+                integration.update_prices()  # Force update prices
+                current_prices = integration.latest_prices
+                
+                if not current_prices:
+                    logger.warning("No price data available, skipping trading cycle")
+                    time.sleep(30)
+                    continue
+                    
+                # Update position prices using real market data
+                trader.update_position_prices(current_prices)
+                
+                # Check if we need to apply funding fees (every 8 hours)
+                if (current_time - last_funding_fee_time).total_seconds() >= 28800:  # 8 hours
+                    trader.apply_funding_fees()
+                    last_funding_fee_time = current_time
+                
+                # Run liquidation check
+                integration.check_liquidations()
+                
+                # Get current portfolio value
+                portfolio_value = trader.get_current_portfolio_value()
+                logger.info(f"Current portfolio value: ${portfolio_value:.2f}")
+                
+                # Check for trading signals
+                for pair in pairs:
+                    if pair not in current_prices:
+                        logger.warning(f"No price data for {pair}, skipping")
                         continue
+                        
+                    current_price = current_prices[pair]
                     
-                    # Get ML prediction
-                    direction, confidence, target_price = get_ml_prediction(
-                        pair, strategy, current_price, ml_config
-                    )
-                    
-                    # Check confidence threshold
-                    if confidence < risk_config.get("confidence_threshold", 0.65):
-                        logger.info(f"Skipping {pair} with {strategy}: confidence {confidence:.2f} below threshold")
-                        continue
-                    
-                    # Calculate size and leverage
-                    size, leverage = calculate_size_and_leverage(
-                        direction, confidence, current_price, portfolio_value,
-                        dynamic_params, risk_config
-                    )
-                    
-                    # Open position
-                    logger.info(f"Opening {direction} position for {pair} with {strategy} strategy")
-                    logger.info(f"  Price: ${current_price:.2f}, Size: {size:.6f}, Leverage: {leverage:.1f}x")
-                    logger.info(f"  Confidence: {confidence:.2f}, Target: ${target_price:.2f}")
-                    
-                    success, position = trader.open_position(
-                        pair=pair,
-                        direction=direction,
-                        size=size,
-                        entry_price=current_price,
-                        leverage=leverage,
-                        strategy=strategy,
-                        confidence=confidence
-                    )
-                    
-                    if success:
-                        logger.info(f"Successfully opened position for {pair}")
-                    else:
-                        logger.warning(f"Failed to open position for {pair}")
-            
-            # Log current positions
-            if trader.positions:
-                logger.info(f"Current positions: {len(trader.positions)}")
-                for pos in trader.positions:
-                    unrealized_pnl = pos["unrealized_pnl"] * 100
-                    logger.info(f"  {pos['pair']} {pos['direction']} {pos['leverage']}x: {unrealized_pnl:.2f}%")
-            else:
-                logger.info("No open positions")
-            
-            # Sleep until next cycle
-            sleep_time = args.interval * 60
-            logger.info(f"Sleeping for {args.interval} minutes")
-            time.sleep(sleep_time)
-            
-        except KeyboardInterrupt:
-            logger.info("Keyboard interrupt, exiting")
-            break
-        except Exception as e:
-            logger.error(f"Error in trading cycle: {e}")
-            time.sleep(60)  # Wait a bit before retrying
+                    # Check each strategy
+                    for strategy in strategies:
+                        # Skip if we already have a position for this pair and strategy
+                        if any(pos["pair"] == pair and pos["strategy"] == strategy for pos in trader.positions):
+                            continue
+                        
+                        # Get ML prediction
+                        direction, confidence, target_price = get_ml_prediction(
+                            pair, strategy, current_price, ml_config
+                        )
+                        
+                        # Check confidence threshold
+                        if confidence < risk_config.get("confidence_threshold", 0.65):
+                            logger.info(f"Skipping {pair} with {strategy}: confidence {confidence:.2f} below threshold")
+                            continue
+                        
+                        # Calculate size and leverage
+                        size, leverage = calculate_size_and_leverage(
+                            direction, confidence, current_price, portfolio_value,
+                            dynamic_params, risk_config
+                        )
+                        
+                        # Validate leverage to prevent liquidation risk
+                        # For higher leverage, restrict maximum risk exposure
+                        if leverage > 50:
+                            # Calculate liquidation price
+                            liquidation_price = integration.calculate_liquidation_price(
+                                current_price, leverage, direction
+                            )
+                            
+                            # Calculate price distance to liquidation as percentage
+                            if direction.lower() == "long":
+                                price_buffer = (current_price - liquidation_price) / current_price
+                            else:
+                                price_buffer = (liquidation_price - current_price) / current_price
+                                
+                            # If buffer is too small, reduce leverage
+                            min_buffer = 0.05  # Minimum 5% buffer to liquidation price
+                            if price_buffer < min_buffer:
+                                # Adjust leverage to ensure minimum buffer
+                                adjusted_leverage = (1.0 / (min_buffer + 0.01)) * 0.9
+                                logger.warning(
+                                    f"Reducing leverage from {leverage:.1f}x to {adjusted_leverage:.1f}x "
+                                    f"to ensure sufficient liquidation buffer"
+                                )
+                                leverage = min(leverage, adjusted_leverage)
+                                
+                                # Recalculate size with adjusted leverage
+                                notional_value = portfolio_value * risk_config.get("risk_percentage", 0.2) * leverage
+                                size = notional_value / current_price
+                        
+                        # Open position
+                        logger.info(f"Opening {direction} position for {pair} with {strategy} strategy")
+                        logger.info(f"  Price: ${current_price:.2f}, Size: {size:.6f}, Leverage: {leverage:.1f}x")
+                        logger.info(f"  Confidence: {confidence:.2f}, Target: ${target_price:.2f}")
+                        
+                        # Calculate and record liquidation price
+                        liquidation_price = integration.calculate_liquidation_price(
+                            current_price, leverage, direction
+                        )
+                        logger.info(f"  Liquidation price: ${liquidation_price:.2f}")
+                        
+                        success, position = trader.open_position(
+                            pair=pair,
+                            direction=direction,
+                            size=size,
+                            entry_price=current_price,
+                            leverage=leverage,
+                            strategy=strategy,
+                            confidence=confidence
+                        )
+                        
+                        if success:
+                            # Add liquidation price to position
+                            position["liquidation_price"] = liquidation_price
+                            logger.info(f"Successfully opened position for {pair}")
+                        else:
+                            logger.warning(f"Failed to open position for {pair}")
+                
+                # Update portfolio with current unrealized P&L
+                integration.update_portfolio()
+                
+                # Log current positions
+                if trader.positions:
+                    logger.info(f"Current positions: {len(trader.positions)}")
+                    for pos in trader.positions:
+                        unrealized_pnl = pos.get("unrealized_pnl", 0) * 100
+                        pair = pos["pair"]
+                        current = current_prices.get(pair, pos["entry_price"])
+                        logger.info(
+                            f"  {pair} {pos['direction']} {pos['leverage']}x: {unrealized_pnl:.2f}% "
+                            f"(Entry: ${pos['entry_price']:.2f}, Current: ${current:.2f})"
+                        )
+                else:
+                    logger.info("No open positions")
+                
+                # Sleep until next cycle
+                sleep_time = args.interval * 60
+                logger.info(f"Sleeping for {args.interval} minutes")
+                time.sleep(sleep_time)
+                
+            except KeyboardInterrupt:
+                logger.info("Keyboard interrupt, exiting")
+                break
+            except Exception as e:
+                logger.error(f"Error in trading cycle: {e}")
+                time.sleep(60)  # Wait a bit before retrying
+    finally:
+        # Ensure integration controller is stopped
+        integration.stop()
+        logger.info("Stopped real-time market data integration")
 
 def main():
     """Main function"""
