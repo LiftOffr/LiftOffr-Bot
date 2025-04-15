@@ -1,6 +1,6 @@
 {
   "initial_capital": 20000.0,
-  "available_capital": 8000.0,
+  "available_capital": 3276.8,
   "balance": 20000.0,
   "equity": 20000.0,
   "total_value": 20000.0,
@@ -12,7 +12,7 @@
   "win_rate": 0.0,
   "total_trades": 0,
   "profitable_trades": 0,
-  "updated_at": "2025-04-15T18:51:25.409981",
+  "updated_at": "2025-04-15T18:54:42.767664",
   "open_positions_count": 3,
   "margin_used_pct": 60.0,
   "available_margin": 8000.0
