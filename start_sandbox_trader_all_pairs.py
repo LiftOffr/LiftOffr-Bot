@@ -150,7 +150,7 @@ def get_active_pairs(ml_config: Dict, args) -> List[str]:
         return active_pairs
 
 
-def run_command(cmd: List[str], description: str = None) -> bool:
+def run_command(cmd: List[str], description: str = "") -> bool:
     """
     Run a shell command.
     
@@ -204,12 +204,8 @@ def start_trading(pairs: List[str], args) -> bool:
     cmd = [
         sys.executable, "run_enhanced_trading_bot.py",
         "--pairs", pairs_arg,
-        "--sandbox",
-        "--verbose" if args.verbose else ""
+        "--sandbox"
     ]
-    
-    # Filter out empty arguments
-    cmd = [arg for arg in cmd if arg]
     
     if args.verbose:
         cmd.append("--verbose")
