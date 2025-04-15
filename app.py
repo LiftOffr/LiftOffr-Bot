@@ -456,15 +456,15 @@ def format_trades(trades):
 def index():
     """Render the dashboard index page"""
     try:
+        logger.info("Dashboard request received at: %s", datetime.now().isoformat())
+        
         # Get ML metrics
         accuracy_data = get_ml_metrics()
+        logger.info(f"ML metrics loaded: {len(accuracy_data)} pairs found")
         
         # Get portfolio data
         portfolio, positions, portfolio_history = get_portfolio_data()
-        
-        # Log the portfolio history for debugging
-        logger.info(f"Portfolio history type: {type(portfolio_history)}")
-        logger.info(f"Portfolio history content: {portfolio_history}")
+        logger.info(f"Portfolio loaded: balance=${portfolio.get('balance', 0):.2f}, positions={len(positions)}")
         
         # Process portfolio history
         portfolio_history = process_portfolio_history(portfolio_history)
