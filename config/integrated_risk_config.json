@@ -1,129 +1,224 @@
 {
-  "version": "1.2.0",
-  "risk_profile": "aggressive",
-  "integrated_risk_management": {
-    "enabled": true,
-    "portfolio_drawdown_protection": {
-      "enabled": true,
-      "max_drawdown": 0.20,
-      "risk_reduction_stages": [
-        {"drawdown": 0.05, "reduction": 0.20},
-        {"drawdown": 0.10, "reduction": 0.50},
-        {"drawdown": 0.15, "reduction": 0.75}
-      ],
-      "auto_recovery": {
-        "enabled": true,
-        "recovery_threshold": 0.03,
-        "recovery_duration_days": 3
-      }
+  "correlation_matrix": {
+    "SOL/USD": {
+      "SOL/USD": 1.0,
+      "BTC/USD": 0.5,
+      "ETH/USD": 0.5,
+      "ADA/USD": 0.75,
+      "DOT/USD": 0.75,
+      "LINK/USD": 0.5
     },
-    "cross_strategy_management": {
-      "signal_strength_arbitration": true,
-      "opposing_signal_cancellation": true,
-      "cross_strategy_exits": true,
-      "emergency_coordinated_exit": true,
-      "max_concurrent_strategies_per_pair": 2,
-      "strategy_categories": {
-        "category_1": {
-          "name": "those dudes",
-          "strategies": ["adaptive", "cyclical", "seasonal"],
-          "max_concurrent_trades": 3
+    "BTC/USD": {
+      "SOL/USD": 0.5,
+      "BTC/USD": 1.0,
+      "ETH/USD": 0.5,
+      "ADA/USD": 0.5,
+      "DOT/USD": 0.5,
+      "LINK/USD": 0.5
+    },
+    "ETH/USD": {
+      "SOL/USD": 0.5,
+      "BTC/USD": 0.5,
+      "ETH/USD": 1.0,
+      "ADA/USD": 0.5,
+      "DOT/USD": 0.5,
+      "LINK/USD": 0.5
+    },
+    "ADA/USD": {
+      "SOL/USD": 0.75,
+      "BTC/USD": 0.5,
+      "ETH/USD": 0.5,
+      "ADA/USD": 1.0,
+      "DOT/USD": 0.75,
+      "LINK/USD": 0.5
+    },
+    "DOT/USD": {
+      "SOL/USD": 0.75,
+      "BTC/USD": 0.5,
+      "ETH/USD": 0.5,
+      "ADA/USD": 0.75,
+      "DOT/USD": 1.0,
+      "LINK/USD": 0.5
+    },
+    "LINK/USD": {
+      "SOL/USD": 0.5,
+      "BTC/USD": 0.5,
+      "ETH/USD": 0.5,
+      "ADA/USD": 0.5,
+      "DOT/USD": 0.5,
+      "LINK/USD": 1.0
+    }
+  },
+  "pair_risks": {
+    "SOL/USD": -2.8181731803566588,
+    "BTC/USD": -4.272458113610647,
+    "ETH/USD": -4.632200373582121,
+    "ADA/USD": -2.984239346665314,
+    "DOT/USD": -4.315887404622927,
+    "LINK/USD": -4.48450708737694
+  },
+  "diversification_rules": {
+    "max_exposure_per_pair": 0.3,
+    "max_correlation_weight": 0.6,
+    "min_uncorrelated_allocation": 0.2,
+    "correlation_threshold": 0.7
+  },
+  "stress_scenarios": [
+    {
+      "name": "Market Crash",
+      "description": "Sudden market-wide crash of 15-25%",
+      "impacts": {
+        "SOL/USD": {
+          "price_change": -0.2,
+          "volatility_multiplier": 3.0
         },
-        "category_2": {
-          "name": "him all along",
-          "strategies": ["arima", "momentum", "ml"],
-          "max_concurrent_trades": 3
+        "BTC/USD": {
+          "price_change": -0.2,
+          "volatility_multiplier": 3.0
+        },
+        "ETH/USD": {
+          "price_change": -0.2,
+          "volatility_multiplier": 3.0
+        },
+        "ADA/USD": {
+          "price_change": -0.2,
+          "volatility_multiplier": 3.0
+        },
+        "DOT/USD": {
+          "price_change": -0.2,
+          "volatility_multiplier": 3.0
+        },
+        "LINK/USD": {
+          "price_change": -0.2,
+          "volatility_multiplier": 3.0
         }
-      }
+      },
+      "duration": 48,
+      "recovery_pattern": "V-shaped",
+      "probability": 0.05
     },
-    "dynamic_parameter_adjustment": {
-      "enabled": true,
-      "confidence_based_leverage": true,
-      "risk_based_position_sizing": true,
-      "volatility_based_atr_multiplier": true,
-      "profit_target_adjustment": true,
-      "win_streak_factor": 0.05,
-      "loss_streak_factor": 0.1
+    {
+      "name": "Prolonged Bear Market",
+      "description": "Extended downtrend with 30-50% decline over weeks",
+      "impacts": {
+        "SOL/USD": {
+          "price_change": -0.4,
+          "volatility_multiplier": 1.5
+        },
+        "BTC/USD": {
+          "price_change": -0.4,
+          "volatility_multiplier": 1.5
+        },
+        "ETH/USD": {
+          "price_change": -0.4,
+          "volatility_multiplier": 1.5
+        },
+        "ADA/USD": {
+          "price_change": -0.4,
+          "volatility_multiplier": 1.5
+        },
+        "DOT/USD": {
+          "price_change": -0.4,
+          "volatility_multiplier": 1.5
+        },
+        "LINK/USD": {
+          "price_change": -0.4,
+          "volatility_multiplier": 1.5
+        }
+      },
+      "duration": 720,
+      "recovery_pattern": "U-shaped",
+      "probability": 0.15
+    },
+    {
+      "name": "Liquidity Crisis",
+      "description": "Sudden drop in liquidity causing slippage and execution issues",
+      "impacts": {
+        "SOL/USD": {
+          "price_change": -0.1,
+          "slippage_multiplier": 5.0,
+          "execution_delay": 10
+        },
+        "BTC/USD": {
+          "price_change": -0.1,
+          "slippage_multiplier": 5.0,
+          "execution_delay": 10
+        },
+        "ETH/USD": {
+          "price_change": -0.1,
+          "slippage_multiplier": 5.0,
+          "execution_delay": 10
+        },
+        "ADA/USD": {
+          "price_change": -0.1,
+          "slippage_multiplier": 5.0,
+          "execution_delay": 10
+        },
+        "DOT/USD": {
+          "price_change": -0.1,
+          "slippage_multiplier": 5.0,
+          "execution_delay": 10
+        },
+        "LINK/USD": {
+          "price_change": -0.1,
+          "slippage_multiplier": 5.0,
+          "execution_delay": 10
+        }
+      },
+      "duration": 24,
+      "recovery_pattern": "Volatile",
+      "probability": 0.1
     }
-  },
-  "market_regime_detection": {
-    "enabled": true,
-    "lookback_periods": 30,
-    "refresh_interval_minutes": 60,
-    "regime_specific_parameters": {
-      "trending": {
+  ],
+  "risk_policies": {
+    "portfolio_protection": {
+      "max_drawdown_trigger": 0.027271661236423765,
+      "actions": [
+        {
+          "trigger": 0.027271661236423765,
+          "action": "reduce_leverage",
+          "target": 0.5
+        },
+        {
+          "trigger": 0.07727166123642376,
+          "action": "reduce_positions",
+          "target": 0.5
+        },
+        {
+          "trigger": 0.12727166123642378,
+          "action": "close_all",
+          "target": 1.0
+        }
+      ]
+    },
+    "volatility_adjustment": {
+      "low_volatility": {
         "leverage_multiplier": 1.2,
-        "risk_multiplier": 1.1,
-        "atr_multiplier": 1.0
+        "position_size_multiplier": 1.1
       },
-      "ranging": {
-        "leverage_multiplier": 0.9,
-        "risk_multiplier": 0.9,
-        "atr_multiplier": 1.1
+      "medium_volatility": {
+        "leverage_multiplier": 1.0,
+        "position_size_multiplier": 1.0
       },
-      "volatile": {
-        "leverage_multiplier": 0.7,
-        "risk_multiplier": 0.8,
-        "atr_multiplier": 1.3
-      },
-      "extremely_volatile": {
-        "leverage_multiplier": 0.4,
-        "risk_multiplier": 0.6,
-        "atr_multiplier": 1.5
+      "high_volatility": {
+        "leverage_multiplier": 0.8,
+        "position_size_multiplier": 0.8
       }
     },
-    "classification_thresholds": {
-      "adx_trending_threshold": 25,
-      "bb_ranging_threshold": 0.03,
-      "volatility_threshold": 0.04,
-      "extreme_volatility_threshold": 0.08
+    "trend_following": {
+      "uptrend": {
+        "long_bias": 0.7,
+        "short_bias": 0.3
+      },
+      "downtrend": {
+        "long_bias": 0.3,
+        "short_bias": 0.7
+      },
+      "sideways": {
+        "long_bias": 0.5,
+        "short_bias": 0.5
+      }
     }
   },
-  "integrated_ml_optimization": {
-    "enabled": true,
-    "model_accuracy_monitoring": true,
-    "retraining_trigger_threshold": 0.05,
-    "auto_ensemble_adjustment": true,
-    "ensemble_weights_optimization": {
-      "enabled": true,
-      "optimization_interval_hours": 24,
-      "accuracy_weight": 0.7,
-      "profit_weight": 0.3
-    },
-    "hyperparameter_optimization": {
-      "enabled": true,
-      "optimization_interval_days": 7,
-      "max_trials": 50
-    }
-  },
-  "risk_aware_backtesting": {
-    "realistic_slippage": true,
-    "simulated_partial_fills": true,
-    "liquidity_constraints": true,
-    "market_impact_modeling": true,
-    "stress_test_scenarios": [
-      "flash_crash",
-      "liquidity_crisis",
-      "extreme_volatility",
-      "correlation_breakdown"
-    ]
-  },
-  "risk_reporting": {
-    "real_time_metrics": {
-      "current_drawdown": true,
-      "open_risk": true,
-      "value_at_risk": true,
-      "exposure_concentration": true
-    },
-    "alerts": {
-      "drawdown_warning": 0.1,
-      "high_concentration_warning": 0.3,
-      "consecutive_loss_warning": 3
-    },
-    "periodic_reports": {
-      "daily_summary": true,
-      "weekly_detailed": true,
-      "monthly_comprehensive": true
-    }
-  }
+  "last_updated": "2025-04-15T02:38:05.753991"
 }

@@ -75,13 +75,88 @@
     }
   },
   "position_sizing": {
-    "scale_by_volatility": true,
-    "scale_by_conviction": true,
-    "conviction_scale_factor": 1.5
+    "base_risk_percentage": 0.2,
+    "max_risk_percentage": 0.3,
+    "min_risk_percentage": 0.05,
+    "kelly_criterion_weight": 0.5,
+    "max_position_size_percentage": 0.3,
+    "adjustment_factors": {
+      "high_confidence": 1.2,
+      "medium_confidence": 1.0,
+      "low_confidence": 0.8,
+      "high_volatility": 0.8,
+      "medium_volatility": 1.0,
+      "low_volatility": 1.2
+    }
   },
   "execution": {
     "partial_fill_threshold": 0.5,
     "entry_price_tolerance": 0.005,
     "exit_price_tolerance": 0.01
+  },
+  "global": {
+    "base_leverage": 20.0,
+    "max_leverage": 125.0,
+    "risk_percentage": 0.2,
+    "confidence_threshold": 0.65,
+    "dynamic_leverage_scaling": true,
+    "dynamic_position_sizing": true,
+    "dynamic_stop_loss": true,
+    "dynamic_take_profit": true,
+    "last_updated": "2025-04-15T02:38:05.753394"
+  },
+  "leverage_scaling": {
+    "min_confidence": 0.65,
+    "max_confidence": 0.95,
+    "min_leverage": 20.0,
+    "max_leverage": 125.0,
+    "scaling_formula": "linear",
+    "confidence_weight": 0.7,
+    "volatility_weight": 0.2,
+    "trend_weight": 0.1
+  },
+  "pairs": {
+    "SOL/USD": {
+      "kelly_criterion": 0.3,
+      "optimal_risk_percentage": 0.15,
+      "risk_adjusted_leverage": 99.00807070627927,
+      "adjustment_factor": 1.0,
+      "last_updated": "2025-04-15T02:38:05.753408"
+    },
+    "BTC/USD": {
+      "kelly_criterion": 0.3,
+      "optimal_risk_percentage": 0.15,
+      "risk_adjusted_leverage": 99.52771894145758,
+      "adjustment_factor": 1.0,
+      "last_updated": "2025-04-15T02:38:05.753412"
+    },
+    "ETH/USD": {
+      "kelly_criterion": 0.3,
+      "optimal_risk_percentage": 0.15,
+      "risk_adjusted_leverage": 99.11015695775838,
+      "adjustment_factor": 1.0,
+      "last_updated": "2025-04-15T02:38:05.753417"
+    },
+    "ADA/USD": {
+      "kelly_criterion": 0.3,
+      "optimal_risk_percentage": 0.15,
+      "risk_adjusted_leverage": 98.95201758144604,
+      "adjustment_factor": 1.0,
+      "last_updated": "2025-04-15T02:38:05.753420"
+    },
+    "DOT/USD": {
+      "kelly_criterion": 0.3,
+      "optimal_risk_percentage": 0.15,
+      "risk_adjusted_leverage": 98.92004138283956,
+      "adjustment_factor": 1.0,
+      "last_updated": "2025-04-15T02:38:05.753424"
+    },
+    "LINK/USD": {
+      "kelly_criterion": 0.3,
+      "optimal_risk_percentage": 0.15,
+      "risk_adjusted_leverage": 99.02766218293444,
+      "adjustment_factor": 1.0,
+      "last_updated": "2025-04-15T02:38:05.753428"
+    }
   }
 }

@@ -68,5 +68,88 @@
   "market_conditions": {
     "high_volatility_threshold": 0.04,
     "low_liquidity_threshold": 100000
+  },
+  "global": {
+    "max_acceptable_drawdown": 0.027271661236423765,
+    "daily_var_95": 0.004545276872737294,
+    "position_correlation_limit": 0.7,
+    "max_open_positions": 12,
+    "max_leverage_total": 100.0,
+    "margin_reserve_percentage": 0.2,
+    "last_updated": "2025-04-15T02:38:05.752740"
+  },
+  "flash_crash": {
+    "enabled": true,
+    "trigger_threshold": -0.05,
+    "max_acceptable_loss": -0.15,
+    "recovery_threshold": 0.03,
+    "cooldown_period": 6,
+    "protection_levels": [
+      {
+        "threshold": -0.05,
+        "action": "reduce_leverage",
+        "factor": 0.5
+      },
+      {
+        "threshold": -0.1,
+        "action": "hedge",
+        "factor": 0.25
+      },
+      {
+        "threshold": -0.15,
+        "action": "close_all",
+        "factor": 1.0
+      }
+    ]
+  },
+  "pairs": {
+    "SOL/USD": {
+      "risk_level": "Medium",
+      "max_drawdown_historical": 0.009919292937207235,
+      "max_leverage": 100.0,
+      "position_size_limit": 0.25,
+      "stop_loss_multiplier": 1.2,
+      "last_updated": "2025-04-15T02:38:05.752748"
+    },
+    "BTC/USD": {
+      "risk_level": "Low",
+      "max_drawdown_historical": 0.00472281058542422,
+      "max_leverage": 125.0,
+      "position_size_limit": 0.3,
+      "stop_loss_multiplier": 1.5,
+      "last_updated": "2025-04-15T02:38:05.752754"
+    },
+    "ETH/USD": {
+      "risk_level": "Medium",
+      "max_drawdown_historical": 0.008898430422416259,
+      "max_leverage": 100.0,
+      "position_size_limit": 0.25,
+      "stop_loss_multiplier": 1.2,
+      "last_updated": "2025-04-15T02:38:05.752756"
+    },
+    "ADA/USD": {
+      "risk_level": "Medium",
+      "max_drawdown_historical": 0.010479824185539641,
+      "max_leverage": 100.0,
+      "position_size_limit": 0.25,
+      "stop_loss_multiplier": 1.2,
+      "last_updated": "2025-04-15T02:38:05.752758"
+    },
+    "DOT/USD": {
+      "risk_level": "Medium",
+      "max_drawdown_historical": 0.010799586171604427,
+      "max_leverage": 100.0,
+      "position_size_limit": 0.25,
+      "stop_loss_multiplier": 1.2,
+      "last_updated": "2025-04-15T02:38:05.752760"
+    },
+    "LINK/USD": {
+      "risk_level": "Medium",
+      "max_drawdown_historical": 0.009723378170655748,
+      "max_leverage": 100.0,
+      "position_size_limit": 0.25,
+      "stop_loss_multiplier": 1.2,
+      "last_updated": "2025-04-15T02:38:05.752762"
+    }
   }
 }
