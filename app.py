@@ -545,4 +545,6 @@ def api_risk():
     return jsonify(risk_metrics)
 
 if __name__ == '__main__':
+    # Make sure to bind to 0.0.0.0 so it's accessible externally
+    print("Starting Flask application on port 5000...")
     app.run(host='0.0.0.0', port=5000, debug=True)
