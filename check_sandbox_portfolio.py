@@ -231,10 +231,17 @@ def calculate_portfolio_value(positions: List[Dict[str, Any]], prices: Dict[str,
             size = position["size"]
             leverage = position["leverage"]
             direction = position["direction"]
-            margin = position["margin"]
+            
+            # Calculate margin (may not exist in older positions)
+            if "margin" in position:
+                margin = position["margin"]
+            else:
+                # Calculate margin from position size and entry price
+                notional_value = size * entry_price
+                margin = notional_value / leverage
             
             # Calculate unrealized P&L
-            if direction == "long":
+            if direction.lower() == "long":
                 price_change_pct = (current_price / entry_price) - 1
             else:  # short
                 price_change_pct = (entry_price / current_price) - 1
@@ -372,10 +379,17 @@ def check_portfolio():
                 size = position["size"]
                 leverage = position["leverage"]
                 direction = position["direction"]
-                margin = position["margin"]
+                
+                # Calculate margin (may not exist in older positions)
+                if "margin" in position:
+                    margin = position["margin"]
+                else:
+                    # Calculate margin from position size and entry price
+                    notional_value = size * entry_price
+                    margin = notional_value / leverage
                 
                 # Calculate unrealized P&L
-                if direction == "long":
+                if direction.lower() == "long":
                     price_change_pct = (current_price / entry_price) - 1
                 else:  # short
                     price_change_pct = (entry_price / current_price) - 1

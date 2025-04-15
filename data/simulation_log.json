@@ -1,44 +1,57 @@
 {
-  "trades": [],
+  "trades": [
+    {
+      "timestamp": "2025-04-15T01:12:56.822126",
+      "pair": "BTC/USD",
+      "direction": "Short",
+      "entry_price": 66350.47671771861,
+      "size": 6.0549284606478295,
+      "leverage": 90.34192732286094,
+      "strategy": "Adaptive",
+      "confidence": 0.9003225520100384,
+      "type": "open",
+      "market_regime": "unknown"
+    }
+  ],
   "portfolio_history": [
     {
-      "timestamp": "2025-04-15T01:06:12.718552",
+      "timestamp": "2025-04-15T01:12:56.822126",
       "portfolio_value": 23742.45
     }
   ],
   "market_regimes": [
     {
-      "timestamp": "2025-04-15T01:06:12.718552",
+      "timestamp": "2025-04-15T01:12:56.822126",
       "pair": "SOL/USD",
       "regime": "unknown",
       "volatility": 0.01
     },
     {
-      "timestamp": "2025-04-15T01:06:12.718552",
+      "timestamp": "2025-04-15T01:12:56.822126",
       "pair": "BTC/USD",
       "regime": "unknown",
       "volatility": 0.01
     },
     {
-      "timestamp": "2025-04-15T01:06:12.718552",
+      "timestamp": "2025-04-15T01:12:56.822126",
       "pair": "ETH/USD",
       "regime": "unknown",
       "volatility": 0.01
     },
     {
-      "timestamp": "2025-04-15T01:06:12.718552",
+      "timestamp": "2025-04-15T01:12:56.822126",
       "pair": "ADA/USD",
       "regime": "unknown",
       "volatility": 0.01
     },
     {
-      "timestamp": "2025-04-15T01:06:12.718552",
+      "timestamp": "2025-04-15T01:12:56.822126",
       "pair": "DOT/USD",
       "regime": "unknown",
       "volatility": 0.01
     },
     {
-      "timestamp": "2025-04-15T01:06:12.718552",
+      "timestamp": "2025-04-15T01:12:56.822126",
       "pair": "LINK/USD",
       "regime": "unknown",
       "volatility": 0.01

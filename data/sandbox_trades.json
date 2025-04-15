@@ -166,5 +166,19 @@
     "pnl_percentage": 0.066,
     "fees": 3.9142317500000003,
     "fee_rate": 0.0005
+  },
+  {
+    "timestamp": "2025-04-15T01:12:57.482179",
+    "pair": "BTC/USD",
+    "strategy": "Adaptive",
+    "type": "Entry",
+    "direction": "Short",
+    "entry_price": 66350.47671771861,
+    "exit_price": 0,
+    "size": 6.0549284606478295,
+    "leverage": 90.34192732286094,
+    "fees": 200.93397512036893,
+    "slippage": 120.56038507222134,
+    "pnl_percentage": 0
   }
 ]
