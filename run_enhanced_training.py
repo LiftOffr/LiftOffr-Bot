@@ -1,479 +1,277 @@
 #!/usr/bin/env python3
+
 """
-Enhanced Training and Optimization Process for Kraken Trading Bot
+Run Enhanced Ultra Training
 
-This script orchestrates a comprehensive training and optimization
-process for the Kraken trading bot, including:
+This script orchestrates the ultra-enhanced training process to achieve higher
+accuracy and returns by:
 
-1. Fetching historical data for multiple cryptocurrencies
-2. Analyzing correlations and market regimes
-3. Training ML models with advanced techniques
-4. Optimizing trading strategies through backtesting
-5. Generating detailed reports and visualizations
+1. Preparing and checking dependencies
+2. Validating data availability
+3. Training and optimizing models with ultra parameters
+4. Applying optimized settings to the trading system
+5. Starting the trading bot with improved models
+
+Usage:
+    python run_enhanced_training.py [--pairs PAIRS] [--sandbox] [--aggressive]
 """
 
 import os
 import sys
-import json
 import time
 import logging
 import argparse
 import subprocess
-from datetime import datetime, timedelta
+from typing import List, Optional
 
-# Setup logging
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    handlers=[
-        logging.FileHandler("enhanced_training.log"),
-        logging.StreamHandler()
-    ]
+    datefmt='%Y-%m-%d %H:%M:%S'
 )
 logger = logging.getLogger(__name__)
 
-# Constants
-DEFAULT_PAIRS = ["SOL/USD", "BTC/USD", "ETH/USD"]
-DEFAULT_TIMEFRAMES = ["1h", "4h", "1d"]
-OUTPUT_DIR = "optimization_results"
-DATA_DIR = "historical_data"
+# Default pairs
+DEFAULT_PAIRS = ["SOL/USD", "BTC/USD", "ETH/USD", "ADA/USD", "DOT/USD", "LINK/USD"]
 
+def parse_arguments():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(description="Run Enhanced Ultra Training")
+    parser.add_argument("--pairs", type=str, default=",".join(DEFAULT_PAIRS),
+                        help="Comma-separated list of trading pairs")
+    parser.add_argument("--sandbox", action="store_true", default=True,
+                        help="Run in sandbox mode")
+    parser.add_argument("--aggressive", action="store_true",
+                        help="Use more aggressive optimization settings")
+    parser.add_argument("--epochs", type=int, default=1000,
+                        help="Number of training epochs")
+    parser.add_argument("--trials", type=int, default=100,
+                        help="Number of hyperparameter optimization trials")
+    parser.add_argument("--target-accuracy", type=float, default=0.999,
+                        help="Target accuracy (0.0-1.0)")
+    parser.add_argument("--target-return", type=float, default=10.0,
+                        help="Target return (1.0 = 100%)")
+    parser.add_argument("--skip-training", action="store_true",
+                        help="Skip training and just apply settings")
+    parser.add_argument("--reset-portfolio", action="store_true",
+                        help="Reset portfolio to initial balance")
+    parser.add_argument("--initial-balance", type=float, default=20000.0,
+                        help="Initial portfolio balance if resetting")
+    return parser.parse_args()
 
-def execute_script(script, args=None, description=None):
-    """
-    Execute a Python script with optional arguments
-    
-    Args:
-        script (str): Script name
-        args (list): Command line arguments
-        description (str): Description for logging
-    
-    Returns:
-        bool: Success status
-    """
+def run_command(cmd: List[str], description: str = None) -> Optional[subprocess.CompletedProcess]:
+    """Run a shell command and log output"""
     if description:
-        logger.info(f"{description}...")
+        logger.info(description)
+        
+    try:
+        result = subprocess.run(
+            cmd,
+            check=True,
+            text=True,
+            capture_output=True
+        )
+        
+        if result.stdout:
+            logger.info(result.stdout)
+        
+        if result.stderr:
+            logger.warning(result.stderr)
+            
+        return result
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Command failed with exit code {e.returncode}")
+        logger.error(f"stdout: {e.stdout}")
+        logger.error(f"stderr: {e.stderr}")
+        return None
+    except Exception as e:
+        logger.error(f"Error running command: {e}")
+        return None
+
+def check_dependencies():
+    """Check and install required dependencies"""
+    logger.info("Checking dependencies...")
     
-    if args is None:
-        args = []
+    # Check for required ML libraries
+    try:
+        import tensorflow
+        import numpy
+        import pandas
+        import optuna
+        logger.info("Core ML dependencies are already installed")
+    except ImportError:
+        logger.info("Installing missing ML dependencies...")
+        result = run_command(
+            ["python", "ensure_ml_dependencies.py"],
+            "Installing required ML dependencies"
+        )
+        if not result:
+            logger.error("Failed to install ML dependencies")
+            return False
     
-    command = [sys.executable, script] + args
-    logger.info(f"Executing: {' '.join(command)}")
+    return True
+
+def check_historical_data(pairs):
+    """Check if historical data is available for all pairs"""
+    logger.info("Checking historical data availability...")
     
+    missing_pairs = []
+    for pair in pairs:
+        pair_filename = pair.replace('/', '_')
+        data_file = f"training_data/{pair_filename}_data.csv"
+        
+        if not os.path.exists(data_file):
+            missing_pairs.append(pair)
+    
+    if missing_pairs:
+        logger.warning(f"Missing historical data for {len(missing_pairs)} pairs: {missing_pairs}")
+        
+        # Fetch missing data
+        for pair in missing_pairs:
+            logger.info(f"Fetching historical data for {pair}...")
+            run_command(
+                ["python", "fetch_extended_historical_data.py", "--pair", pair],
+                f"Fetching historical data for {pair}"
+            )
+    
+    return True
+
+def train_and_optimize_models(args):
+    """Train and optimize models with ultra parameters"""
+    logger.info("Starting ultra-enhanced training process...")
+    
+    # Prepare command
+    cmd = [
+        "python", "enhanced_ultra_training.py",
+        "--pairs", args.pairs,
+        "--epochs", str(args.epochs),
+        "--trials", str(args.trials),
+        "--target-accuracy", str(args.target_accuracy),
+        "--target-return", str(args.target_return)
+    ]
+    
+    if args.aggressive:
+        cmd.append("--aggressive")
+    
+    # Run training
+    result = run_command(
+        cmd,
+        "Training and optimizing ML models"
+    )
+    
+    if not result:
+        logger.error("Training and optimization failed")
+        return False
+    
+    logger.info("Training and optimization completed successfully")
+    return True
+
+def apply_optimized_settings(args):
+    """Apply optimized settings to the trading system"""
+    logger.info("Applying optimized settings...")
+    
+    # Prepare command
+    cmd = [
+        "python", "apply_optimized_settings.py",
+        "--pairs", args.pairs
+    ]
+    
+    if args.reset_portfolio:
+        cmd.append("--reset-portfolio")
+        cmd.extend(["--initial-balance", str(args.initial_balance)])
+    
+    if args.aggressive:
+        cmd.append("--aggressive")
+    
+    # Apply settings
+    result = run_command(
+        cmd,
+        "Applying optimized settings to trading configuration"
+    )
+    
+    if not result:
+        logger.error("Failed to apply optimized settings")
+        return False
+    
+    logger.info("Optimized settings applied successfully")
+    return True
+
+def start_trading_bot(args):
+    """Start the trading bot with improved models"""
+    if not args.sandbox:
+        logger.warning("CAUTION: Starting trading bot in LIVE mode!")
+        time.sleep(5)  # Give user time to cancel if needed
+    
+    logger.info(f"Starting trading bot in {'sandbox' if args.sandbox else 'LIVE'} mode...")
+    
+    # Prepare command
+    cmd = [
+        "python", 
+        "run_risk_aware_sandbox_trader.py" if args.sandbox else "run_risk_aware_trader.py",
+        "--pairs", args.pairs
+    ]
+    
+    # Run in background
     try:
         process = subprocess.Popen(
-            command,
+            cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            universal_newlines=True
+            text=True
         )
         
-        # Log output in real-time
-        for line in process.stdout:
-            logger.info(f"[{script}] {line.strip()}")
+        logger.info(f"Trading bot started with PID {process.pid}")
+        logger.info("Trading bot is now running in the background")
         
-        process.wait()
-        
-        if process.returncode != 0:
-            stderr = process.stderr.read()
-            logger.error(f"Error in {script}: {stderr}")
-            return False
+        # Write PID to file for later management
+        with open("bot_pid.txt", "w") as f:
+            f.write(str(process.pid))
         
         return True
-    
     except Exception as e:
-        logger.error(f"Error executing {script}: {e}")
+        logger.error(f"Failed to start trading bot: {e}")
         return False
-
-
-def fetch_historical_data(pairs, timeframes):
-    """
-    Fetch historical data for multiple pairs and timeframes
-    
-    Args:
-        pairs (list): List of trading pairs
-        timeframes (list): List of timeframes
-    
-    Returns:
-        bool: Success status
-    """
-    logger.info("Starting historical data fetching process")
-    
-    # Ensure data directories exist
-    for pair in pairs:
-        pair_dir = os.path.join(DATA_DIR, pair.replace("/", ""))
-        os.makedirs(pair_dir, exist_ok=True)
-    
-    success = execute_script(
-        "enhanced_historical_data_fetcher.py",
-        description="Fetching historical data from Kraken"
-    )
-    
-    if not success:
-        logger.error("Failed to fetch historical data")
-        return False
-    
-    return True
-
-
-def analyze_correlations(pairs, timeframes):
-    """
-    Analyze correlations between assets
-    
-    Args:
-        pairs (list): List of trading pairs
-        timeframes (list): List of timeframes
-    
-    Returns:
-        bool: Success status
-    """
-    logger.info("Starting correlation analysis")
-    
-    success = execute_script(
-        "multi_asset_correlation_analyzer.py",
-        description="Analyzing correlations between assets"
-    )
-    
-    if not success:
-        logger.error("Failed to complete correlation analysis")
-        return False
-    
-    return True
-
-
-def train_ml_models(pairs):
-    """
-    Train ML models for each pair
-    
-    Args:
-        pairs (list): List of trading pairs
-    
-    Returns:
-        bool: Success status
-    """
-    logger.info("Starting ML model training")
-    
-    all_success = True
-    
-    for pair in pairs:
-        symbol = pair.replace("/", "")
-        
-        success = execute_script(
-            "advanced_ml_training.py",
-            args=["--symbol", symbol, "--epochs", "50", "--early-stopping"],
-            description=f"Training ML models for {pair}"
-        )
-        
-        if not success:
-            logger.error(f"Failed to train ML models for {pair}")
-            all_success = False
-    
-    return all_success
-
-
-def optimize_strategies(pairs, timeframes, strategies):
-    """
-    Optimize trading strategies through backtesting
-    
-    Args:
-        pairs (list): List of trading pairs
-        timeframes (list): List of timeframes
-        strategies (list): List of strategies to optimize
-    
-    Returns:
-        dict: Dictionary with optimization results
-    """
-    logger.info("Starting strategy optimization through backtesting")
-    
-    results = {}
-    
-    for pair in pairs:
-        pair_results = {}
-        
-        for timeframe in timeframes:
-            # Create directory for this pair/timeframe combination
-            result_dir = os.path.join(OUTPUT_DIR, pair.replace("/", ""), timeframe)
-            os.makedirs(result_dir, exist_ok=True)
-            
-            for strategy in strategies:
-                logger.info(f"Optimizing {strategy} strategy for {pair} on {timeframe} timeframe")
-                
-                output_file = os.path.join(result_dir, f"{strategy}_optimization.json")
-                
-                success = execute_script(
-                    "comprehensive_backtest.py",
-                    args=[
-                        "--pair", pair,
-                        "--timeframe", timeframe,
-                        "--strategy", strategy,
-                        "--optimize",
-                        "--plot",
-                        "--output", result_dir
-                    ],
-                    description=f"Running backtest optimization for {strategy} on {pair} ({timeframe})"
-                )
-                
-                if not success:
-                    logger.error(f"Failed to optimize {strategy} for {pair} on {timeframe}")
-                    continue
-                
-                # Check if optimization results were saved
-                if os.path.exists(output_file):
-                    try:
-                        with open(output_file, 'r') as f:
-                            strategy_results = json.load(f)
-                            
-                        if timeframe not in pair_results:
-                            pair_results[timeframe] = {}
-                            
-                        pair_results[timeframe][strategy] = strategy_results
-                        
-                    except Exception as e:
-                        logger.error(f"Error reading optimization results: {e}")
-            
-        results[pair] = pair_results
-    
-    return results
-
-
-def run_multi_strategy_backtest(pairs, timeframes):
-    """
-    Run backtests with multiple strategies
-    
-    Args:
-        pairs (list): List of trading pairs
-        timeframes (list): List of timeframes
-    
-    Returns:
-        bool: Success status
-    """
-    logger.info("Running multi-strategy backtests")
-    
-    all_success = True
-    
-    for pair in pairs:
-        for timeframe in timeframes:
-            result_dir = os.path.join(OUTPUT_DIR, pair.replace("/", ""), timeframe)
-            
-            success = execute_script(
-                "comprehensive_backtest.py",
-                args=[
-                    "--pair", pair,
-                    "--timeframe", timeframe,
-                    "--multi-strategy",
-                    "--ml",
-                    "--plot",
-                    "--output", result_dir
-                ],
-                description=f"Running multi-strategy backtest for {pair} on {timeframe}"
-            )
-            
-            if not success:
-                logger.error(f"Failed to run multi-strategy backtest for {pair} on {timeframe}")
-                all_success = False
-    
-    return all_success
-
-
-def generate_summary_report(optimization_results):
-    """
-    Generate a summary report of optimization results
-    
-    Args:
-        optimization_results (dict): Optimization results
-        
-    Returns:
-        dict: Summary report
-    """
-    logger.info("Generating summary report")
-    
-    summary = {
-        "pairs": {},
-        "strategies": {},
-        "best_combinations": [],
-        "generation_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    
-    # Initialize strategy stats
-    strategy_stats = {}
-    
-    # Process each pair
-    for pair, pair_results in optimization_results.items():
-        pair_summary = {
-            "timeframes": {}
-        }
-        
-        best_pair_combination = None
-        best_pair_performance = -float('inf')
-        
-        # Process each timeframe
-        for timeframe, timeframe_results in pair_results.items():
-            timeframe_summary = {
-                "strategies": {}
-            }
-            
-            best_tf_combination = None
-            best_tf_performance = -float('inf')
-            
-            # Process each strategy
-            for strategy, strategy_results in timeframe_results.items():
-                # Initialize strategy stats if needed
-                if strategy not in strategy_stats:
-                    strategy_stats[strategy] = {
-                        "total_profit": 0.0,
-                        "win_rate_sum": 0.0,
-                        "count": 0
-                    }
-                
-                # Extract metrics
-                if "best_metrics" in strategy_results:
-                    metrics = strategy_results["best_metrics"]
-                    
-                    # Update strategy stats
-                    strategy_stats[strategy]["total_profit"] += metrics.get("profit_loss_pct", 0.0)
-                    strategy_stats[strategy]["win_rate_sum"] += metrics.get("win_rate", 0.0)
-                    strategy_stats[strategy]["count"] += 1
-                    
-                    # Add to timeframe summary
-                    timeframe_summary["strategies"][strategy] = {
-                        "profit_loss_pct": metrics.get("profit_loss_pct", 0.0),
-                        "win_rate": metrics.get("win_rate", 0.0),
-                        "max_drawdown": metrics.get("max_drawdown", 0.0),
-                        "sharpe_ratio": metrics.get("sharpe_ratio", 0.0)
-                    }
-                    
-                    # Check if this is the best combination for this timeframe
-                    performance = metrics.get("profit_loss_pct", 0.0)
-                    if performance > best_tf_performance:
-                        best_tf_performance = performance
-                        best_tf_combination = {
-                            "pair": pair,
-                            "timeframe": timeframe,
-                            "strategy": strategy,
-                            "profit_loss_pct": performance,
-                            "win_rate": metrics.get("win_rate", 0.0)
-                        }
-            
-            # Add best combination for this timeframe
-            if best_tf_combination:
-                timeframe_summary["best_combination"] = best_tf_combination
-                
-                # Check if this is the best combination for this pair
-                if best_tf_performance > best_pair_performance:
-                    best_pair_performance = best_tf_performance
-                    best_pair_combination = best_tf_combination
-            
-            # Add timeframe summary to pair summary
-            pair_summary["timeframes"][timeframe] = timeframe_summary
-        
-        # Add best combination for this pair
-        if best_pair_combination:
-            pair_summary["best_combination"] = best_pair_combination
-            summary["best_combinations"].append(best_pair_combination)
-        
-        # Add pair summary to main summary
-        summary["pairs"][pair] = pair_summary
-    
-    # Compute average statistics for each strategy
-    for strategy, stats in strategy_stats.items():
-        if stats["count"] > 0:
-            summary["strategies"][strategy] = {
-                "avg_profit_pct": stats["total_profit"] / stats["count"],
-                "avg_win_rate": stats["win_rate_sum"] / stats["count"],
-                "test_count": stats["count"]
-            }
-    
-    # Save summary report
-    summary_file = os.path.join(OUTPUT_DIR, "optimization_summary.json")
-    with open(summary_file, 'w') as f:
-        json.dump(summary, f, indent=2)
-    
-    logger.info(f"Saved summary report to {summary_file}")
-    
-    return summary
-
 
 def main():
-    """Main function to run the enhanced training process"""
-    parser = argparse.ArgumentParser(description="Enhanced training and optimization for Kraken Trading Bot")
+    """Main function"""
+    # Parse command line arguments
+    args = parse_arguments()
+    pairs = args.pairs.split(",")
     
-    parser.add_argument("--pairs", nargs="+", default=DEFAULT_PAIRS,
-                       help=f"Trading pairs to process (default: {DEFAULT_PAIRS})")
-    parser.add_argument("--timeframes", nargs="+", default=DEFAULT_TIMEFRAMES,
-                       help=f"Timeframes to process (default: {DEFAULT_TIMEFRAMES})")
-    parser.add_argument("--strategies", nargs="+", default=["arima", "integrated", "mlenhanced"],
-                       help="Strategies to optimize (default: arima integrated mlenhanced)")
-    parser.add_argument("--skip-data", action="store_true",
-                       help="Skip historical data fetching")
-    parser.add_argument("--skip-correlation", action="store_true",
-                       help="Skip correlation analysis")
-    parser.add_argument("--skip-ml", action="store_true",
-                       help="Skip ML model training")
-    parser.add_argument("--skip-optimization", action="store_true",
-                       help="Skip strategy optimization")
-    parser.add_argument("--skip-multi", action="store_true",
-                       help="Skip multi-strategy backtests")
+    logger.info(f"Starting enhanced ultra training process for {len(pairs)} pairs")
     
-    args = parser.parse_args()
+    # Check dependencies
+    if not check_dependencies():
+        logger.error("Failed to check or install dependencies")
+        return 1
     
-    # Ensure output directory exists
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    # Check historical data
+    if not check_historical_data(pairs):
+        logger.error("Failed to check or fetch historical data")
+        return 1
     
-    # Start time measurement
-    start_time = time.time()
-    
-    logger.info("Starting enhanced training and optimization process")
-    logger.info(f"Processing pairs: {args.pairs}")
-    logger.info(f"Processing timeframes: {args.timeframes}")
-    logger.info(f"Optimizing strategies: {args.strategies}")
-    
-    # Step 1: Fetch historical data
-    if not args.skip_data:
-        if not fetch_historical_data(args.pairs, args.timeframes):
-            logger.error("Historical data fetching failed, aborting process")
-            return
+    # Train and optimize models
+    if not args.skip_training:
+        if not train_and_optimize_models(args):
+            logger.error("Training and optimization failed")
+            return 1
     else:
-        logger.info("Skipping historical data fetching")
+        logger.info("Skipping training as requested")
     
-    # Step 2: Analyze correlations
-    if not args.skip_correlation:
-        if not analyze_correlations(args.pairs, args.timeframes):
-            logger.warning("Correlation analysis failed, continuing with process")
-    else:
-        logger.info("Skipping correlation analysis")
+    # Apply optimized settings
+    if not apply_optimized_settings(args):
+        logger.error("Failed to apply optimized settings")
+        return 1
     
-    # Step 3: Train ML models
-    if not args.skip_ml:
-        if not train_ml_models(args.pairs):
-            logger.warning("ML model training failed for some pairs, continuing with process")
-    else:
-        logger.info("Skipping ML model training")
+    # Start trading bot
+    if not start_trading_bot(args):
+        logger.error("Failed to start trading bot")
+        return 1
     
-    # Step 4: Optimize trading strategies
-    optimization_results = {}
-    if not args.skip_optimization:
-        optimization_results = optimize_strategies(args.pairs, args.timeframes, args.strategies)
-        
-        # Generate summary report
-        generate_summary_report(optimization_results)
-    else:
-        logger.info("Skipping strategy optimization")
-    
-    # Step 5: Run multi-strategy backtests
-    if not args.skip_multi:
-        if not run_multi_strategy_backtest(args.pairs, args.timeframes):
-            logger.warning("Multi-strategy backtests failed for some combinations")
-    else:
-        logger.info("Skipping multi-strategy backtests")
-    
-    # Calculate total runtime
-    runtime = time.time() - start_time
-    hours, remainder = divmod(runtime, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    
-    logger.info(f"Enhanced training and optimization process completed in {int(hours)}h {int(minutes)}m {int(seconds)}s")
-
+    logger.info("Enhanced ultra training process completed successfully")
+    logger.info("Trading bot is now running with ultra-optimized models and settings")
+    return 0
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
