@@ -102,6 +102,11 @@ def get_portfolio_data():
     
     return portfolio, positions, portfolio_history
 
+def get_strategy_performance():
+    """Get strategy performance metrics"""
+    performance = load_file("config/strategy_performance.json", {"strategies": {}, "categories": {}})
+    return performance
+
 def get_risk_metrics():
     """Calculate risk metrics from the trading data"""
     portfolio = load_file(PORTFOLIO_FILE, {"balance": 20000.0, "equity": 20000.0})
@@ -111,6 +116,7 @@ def get_risk_metrics():
     
     # Default metrics
     risk_metrics = {
+        # Standard risk metrics
         "win_rate": 0.0,
         "profit_factor": 0.0,
         "avg_win_loss_ratio": 0.0,
@@ -120,7 +126,22 @@ def get_risk_metrics():
         "value_at_risk": 0.0,
         "current_risk_level": "Medium",
         "optimal_position_size": "20-25% of balance",
-        "optimal_risk_per_trade": "2-3% of balance"
+        "optimal_risk_per_trade": "2-3% of balance",
+        
+        # Advanced trading metrics
+        "avg_trade_duration": 0.0,         # Average duration of trades (hours)
+        "consecutive_wins": 0,             # Longest streak of winning trades
+        "consecutive_losses": 0,           # Longest streak of losing trades
+        "largest_win": 0.0,                # Largest winning trade (%)
+        "largest_loss": 0.0,               # Largest losing trade (%)
+        "avg_leverage_used": 0.0,          # Average leverage used across trades
+        "return_on_capital": 0.0,          # Return on initial capital
+        "expectancy": 0.0,                 # Average expected return per trade
+        "avg_position_size": 0.0,          # Average position size as % of portfolio
+        "max_capacity_utilization": 0.0,   # Maximum portfolio allocation used at once
+        "recovery_factor": 0.0,            # Net profit divided by max drawdown
+        "calmar_ratio": 0.0,               # Annual return divided by max drawdown
+        "kelly_criterion": 0.0             # Optimal position size based on win rate and win/loss ratio
     }
     
     # Calculate win rate
@@ -148,6 +169,96 @@ def get_risk_metrics():
             
             if avg_loss > 0:
                 risk_metrics["avg_win_loss_ratio"] = avg_win / avg_loss
+    
+    # Calculate advanced trading metrics if we have trades
+    if trades:
+        # Largest win and loss
+        pnl_percentages = [t.get("pnl_percentage", 0.0) * 100 for t in trades]
+        if pnl_percentages:
+            risk_metrics["largest_win"] = max(max(pnl_percentages), 0.0)
+            risk_metrics["largest_loss"] = abs(min(min(pnl_percentages), 0.0))
+        
+        # Average leverage
+        leverages = [t.get("leverage", 1.0) for t in trades]
+        if leverages:
+            risk_metrics["avg_leverage_used"] = sum(leverages) / len(leverages)
+        
+        # Average trade duration
+        durations_hours = []
+        for trade in trades:
+            entry_time = trade.get("entry_time", "")
+            exit_time = trade.get("exit_time", "")
+            
+            if entry_time and exit_time:
+                try:
+                    entry_dt = datetime.fromisoformat(entry_time.replace("Z", "+00:00"))
+                    exit_dt = datetime.fromisoformat(exit_time.replace("Z", "+00:00"))
+                    duration_hours = (exit_dt - entry_dt).total_seconds() / 3600
+                    durations_hours.append(duration_hours)
+                except Exception:
+                    pass
+        
+        if durations_hours:
+            risk_metrics["avg_trade_duration"] = sum(durations_hours) / len(durations_hours)
+        
+        # Consecutive wins and losses
+        current_streak = 0
+        max_win_streak = 0
+        max_loss_streak = 0
+        
+        # Sort trades by time
+        sorted_trades = sorted(trades, key=lambda t: t.get("exit_time", ""))
+        
+        for trade in sorted_trades:
+            pnl = trade.get("pnl_amount", 0.0)
+            
+            if pnl > 0:  # Winning trade
+                if current_streak > 0:
+                    current_streak += 1
+                else:
+                    current_streak = 1
+                max_win_streak = max(max_win_streak, current_streak)
+            else:  # Losing trade
+                if current_streak < 0:
+                    current_streak -= 1
+                else:
+                    current_streak = -1
+                max_loss_streak = max(max_loss_streak, abs(current_streak))
+        
+        risk_metrics["consecutive_wins"] = max_win_streak
+        risk_metrics["consecutive_losses"] = max_loss_streak
+        
+        # Return on capital
+        initial_capital = 20000.0  # Initial portfolio value
+        current_equity = portfolio.get("equity", initial_capital)
+        risk_metrics["return_on_capital"] = (current_equity / initial_capital - 1) * 100
+        
+        # Expectancy (average expected return per trade)
+        if len(trades) > 0:
+            net_profit = total_profit - total_loss
+            risk_metrics["expectancy"] = net_profit / len(trades)
+        
+        # Average position size
+        position_sizes = [t.get("position_size", 0.0) for t in trades]
+        if position_sizes:
+            avg_size = sum(position_sizes) / len(position_sizes)
+            risk_metrics["avg_position_size"] = (avg_size / initial_capital) * 100
+        
+        # Calculate Kelly Criterion
+        win_rate = risk_metrics["win_rate"]
+        win_loss_ratio = risk_metrics["avg_win_loss_ratio"]
+        if win_rate > 0 and win_loss_ratio > 0:
+            kelly = win_rate - ((1 - win_rate) / win_loss_ratio)
+            risk_metrics["kelly_criterion"] = max(0, kelly)
+        
+        # Calculate Calmar Ratio
+        if risk_metrics["max_drawdown"] > 0:
+            # Use return on capital as a proxy for annual return in this simplified context
+            risk_metrics["calmar_ratio"] = risk_metrics["return_on_capital"] / (risk_metrics["max_drawdown"] * 100)
+        
+        # Calculate Recovery Factor
+        if risk_metrics["max_drawdown"] > 0:
+            risk_metrics["recovery_factor"] = net_profit / (risk_metrics["max_drawdown"] * initial_capital)
     
     # Set some reasonable defaults for other metrics based on model performance
     ml_config = load_file(ML_CONFIG_FILE, {"pairs": {}})
@@ -314,6 +425,9 @@ def index():
     # Get risk metrics
     risk_metrics = get_risk_metrics()
     
+    # Get strategy performance
+    strategy_performance = get_strategy_performance()
+    
     # Get current time
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
@@ -325,6 +439,7 @@ def index():
         portfolio_history=portfolio_history,
         trades=formatted_trades,
         risk_metrics=risk_metrics,
+        strategy_performance=strategy_performance,
         current_time=current_time
     )
 
