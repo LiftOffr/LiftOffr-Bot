@@ -348,6 +348,17 @@ if __name__ == "__main__" and not os.environ.get("TRADING_BOT_PROCESS"):
     # Use a different port for trading_bot workflow
     port = 5001 if "trading_bot" in " ".join(sys.argv) else 5000
     
+    # Make sure port 5000 is not already in use
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(("0.0.0.0", port))
+        s.close()
+    except socket.error as e:
+        if e.errno == 98:  # Address already in use
+            print(f"Port {port} is already in use. Trying port 5002 instead.")
+            port = 5002
+    
     # Make sure to bind to 0.0.0.0 so it's accessible externally
     print(f"Starting Flask application on port {port}...")
     app.run(host="0.0.0.0", port=port, debug=True)
