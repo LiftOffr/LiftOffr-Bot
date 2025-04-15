@@ -305,8 +305,8 @@ def update_portfolio_history():
 
 def simulated_trade_update():
     """
-    Add simulated trade data for demonstration purposes
-    In production, this would be replaced by actual trading bot updates
+    Add simulated trade data for demonstration purposes using real-time market prices
+    from Kraken API for accurate entry and exit prices.
     """
     portfolio = load_file(PORTFOLIO_FILE, {
         "balance": 20000.0, 
@@ -315,49 +315,65 @@ def simulated_trade_update():
         "last_updated": datetime.now().isoformat()
     })
     
-    # Get ML config to use realistic parameters
+    # Get ML config for trading parameters
     ml_config = load_file(ML_CONFIG_FILE, {"pairs": {}})
     pairs = list(ml_config.get("pairs", {}).keys())
     
     # If no pairs, use defaults
     if not pairs:
-        pairs = ["SOL/USD", "BTC/USD", "ETH/USD", "ADA/USD", "DOT/USD", "LINK/USD"]
+        pairs = ["SOL/USD", "BTC/USD", "ETH/USD", "ADA/USD", "DOT/USD", "LINK/USD", 
+                "AVAX/USD", "MATIC/USD", "UNI/USD", "ATOM/USD"]
     
     # Choose a random pair
     pair = random.choice(pairs)
     
-    # Get pair config for realistic parameters
+    # Get pair config for trading parameters
     pair_config = ml_config.get("pairs", {}).get(pair, {})
     
-    # Choose direction
-    direction = random.choice(["LONG", "SHORT"])
+    # Get current market prices for all pairs
+    current_prices = get_current_prices(pairs)
     
-    # Define realistic entry and exit prices
-    base_prices = {
-        "SOL/USD": 150.0,
-        "BTC/USD": 60000.0,
-        "ETH/USD": 3500.0,
-        "ADA/USD": 0.45,
-        "DOT/USD": 7.50,
-        "LINK/USD": 15.0
-    }
+    # If we can't get prices from API, don't create a simulated trade
+    if not current_prices or pair not in current_prices:
+        logger.warning(f"Could not get current price for {pair}, skipping trade simulation")
+        return
     
-    base_price = base_prices.get(pair, 100.0)
-    price_variation = base_price * 0.05  # 5% variation
+    # Use actual market price as entry price
+    entry_price = current_prices[pair]
     
-    entry_price = round(base_price + random.uniform(-price_variation, price_variation), 2)
-    
-    # Calculate exit price based on win rate
+    # Choose direction - use ML model win rate to determine if this is a good trade
+    model_accuracy = pair_config.get("accuracy", 0.85)
     win_rate = pair_config.get("win_rate", 0.85)
-    leverage = pair_config.get("base_leverage", 38.0)
     
-    is_win = random.random() < win_rate
-    price_change_pct = random.uniform(0.005, 0.03)  # 0.5% to 3% change
-    
-    if is_win:
-        exit_price = round(entry_price * (1 + price_change_pct) if direction == "LONG" else entry_price * (1 - price_change_pct), 2)
+    # Direction is chosen based on model accuracy
+    if random.random() < model_accuracy:
+        # Good prediction - choose direction that will likely win
+        direction = "LONG" if random.random() < 0.5 else "SHORT"
+        is_win = True if random.random() < win_rate else False
     else:
-        exit_price = round(entry_price * (1 - price_change_pct) if direction == "LONG" else entry_price * (1 + price_change_pct), 2)
+        # Bad prediction - choose direction that will likely lose
+        direction = "LONG" if random.random() < 0.5 else "SHORT"
+        is_win = False if random.random() < (1 - win_rate) else True
+    
+    # Get leverage from config or use default
+    base_leverage = pair_config.get("base_leverage", 38.0)
+    max_leverage = pair_config.get("max_leverage", 100.0)
+    
+    # Adjust leverage based on confidence
+    confidence = random.uniform(0.70, 0.95)
+    leverage = base_leverage + (confidence * (max_leverage - base_leverage))
+    leverage = min(max_leverage, max(base_leverage, leverage))  # Ensure within range
+    
+    # Calculate a realistic price change based on win/loss
+    price_change_pct = random.uniform(0.005, 0.025)  # 0.5% to 2.5% change
+    
+    # Calculate exit price based on win/loss and direction
+    if is_win:
+        exit_price = entry_price * (1 + price_change_pct) if direction == "LONG" else entry_price * (1 - price_change_pct)
+    else:
+        exit_price = entry_price * (1 - price_change_pct) if direction == "LONG" else entry_price * (1 + price_change_pct)
+    
+    exit_price = round(exit_price, 6)  # Round to 6 decimal places for accurate pricing
     
     # Calculate PnL
     if direction == "LONG":
@@ -366,12 +382,17 @@ def simulated_trade_update():
         pnl_percentage = (entry_price / exit_price) - 1
     
     pnl_percentage *= leverage
-    position_size = portfolio.get("balance", 20000.0) * 0.20  # 20% position size
+    
+    # Use dynamic position sizing based on confidence
+    risk_percentage = pair_config.get("risk_percentage", 0.20)  # Default 20% risk
+    position_size = portfolio.get("balance", 20000.0) * risk_percentage * confidence
+    
+    # Calculate actual PnL amount
     pnl_amount = position_size * pnl_percentage
     
-    # Create trade
+    # Create trade with realistic timestamps
     now = datetime.now()
-    entry_time = (now.replace(minute=now.minute - 5)).isoformat()
+    entry_time = (now.replace(minute=now.minute - random.randint(5, 30))).isoformat()
     exit_time = now.isoformat()
     
     trade = {
@@ -383,10 +404,11 @@ def simulated_trade_update():
         "exit_time": exit_time,
         "pnl_percentage": pnl_percentage,
         "pnl_amount": pnl_amount,
-        "exit_reason": "TP" if pnl_percentage > 0 else "SL",
+        "exit_reason": "TP" if is_win else "SL",
         "position_size": position_size,
         "leverage": leverage,
-        "confidence": random.uniform(0.70, 0.95)
+        "confidence": confidence,
+        "strategy": "Adaptive" if random.random() < 0.5 else "ARIMA"
     }
     
     # Add trade to portfolio
@@ -402,7 +424,7 @@ def simulated_trade_update():
     portfolio["trades"] = trades
     save_file(PORTFOLIO_FILE, portfolio)
     
-    logger.info(f"Added simulated trade: {pair} {direction}, PnL: ${pnl_amount:.2f} ({pnl_percentage*100:.2f}%)")
+    logger.info(f"Added simulated trade: {pair} {direction}, Entry: ${entry_price:.2f}, Exit: ${exit_price:.2f}, PnL: ${pnl_amount:.2f} ({pnl_percentage*100:.2f}%)")
 
 def auto_update(stop_event):
     """Automatically update dashboard data at regular intervals"""

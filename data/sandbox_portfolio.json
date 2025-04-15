@@ -1,6 +1,55 @@
 {
-  "balance": 20000.0,
-  "equity": 20000.0,
-  "trades": [],
-  "last_updated": "2025-04-15T04:28:00.000Z"
+  "balance": 32597.649146281765,
+  "equity": 32597.649146281765,
+  "unrealized_pnl_usd": 0.0,
+  "unrealized_pnl_pct": 0.0,
+  "total_return_percentage": 0.0,
+  "trades": [
+    {
+      "pair": "ADA/USD",
+      "direction": "LONG",
+      "entry_price": 0.639607,
+      "exit_price": 0.65497,
+      "entry_time": "2025-04-15T06:01:03.400620",
+      "exit_time": "2025-04-15T06:25:03.400620",
+      "pnl_percentage": 2.1766427921040656,
+      "pnl_amount": 7317.6745030805105,
+      "exit_reason": "TP",
+      "position_size": 3361.9087751219085,
+      "leverage": 90.62005899429207,
+      "confidence": 0.8404771937804771,
+      "strategy": "ARIMA"
+    },
+    {
+      "pair": "SOL/USD",
+      "direction": "SHORT",
+      "entry_price": 130.89,
+      "exit_price": 130.046764,
+      "entry_time": "2025-04-15T06:09:13.175477",
+      "exit_time": "2025-04-15T06:25:13.175477",
+      "pnl_percentage": 0.5584070241111487,
+      "pnl_amount": 2357.7859368718377,
+      "exit_reason": "TP",
+      "position_size": 4222.342905920413,
+      "leverage": 86.11945704467729,
+      "confidence": 0.7728225375560931,
+      "strategy": "ARIMA"
+    },
+    {
+      "pair": "AVAX/USD",
+      "direction": "SHORT",
+      "entry_price": 19.83,
+      "exit_price": 19.714987,
+      "entry_time": "2025-04-15T06:15:18.164510",
+      "exit_time": "2025-04-15T06:25:18.164510",
+      "pnl_percentage": 0.5479722127260481,
+      "pnl_amount": 2922.1887063294157,
+      "exit_reason": "TP",
+      "position_size": 5332.731548178571,
+      "leverage": 93.93081695334777,
+      "confidence": 0.8985086447048122,
+      "strategy": "Adaptive"
+    }
+  ],
+  "last_updated": "2025-04-15T06:25:18.164510"
 }
