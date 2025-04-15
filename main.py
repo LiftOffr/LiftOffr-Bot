@@ -6,6 +6,8 @@ import os
 import sys
 import json
 import logging
+import requests
+import time
 from datetime import datetime
 
 # Check if we're running as a trading bot process first, before importing Flask
@@ -55,12 +57,82 @@ def load_file(filepath, default=None):
         logger.error(f"Error loading {filepath}: {e}")
         return default
 
+def get_kraken_price(pair):
+    """Get current price from Kraken API"""
+    try:
+        # Replace '/' with '' in pair name for Kraken API format
+        kraken_pair = pair.replace('/', '')
+        url = f"https://api.kraken.com/0/public/Ticker?pair={kraken_pair}"
+        
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            if 'result' in data and data['result']:
+                pair_data = next(iter(data['result'].values()))
+                if 'c' in pair_data and pair_data['c']:
+                    return float(pair_data['c'][0])  # 'c' is the last trade closed price
+        
+        logger.warning(f"Could not get price for {pair} from Kraken API")
+        return None
+    except Exception as e:
+        logger.error(f"Error getting price for {pair} from Kraken API: {e}")
+        return None
+
+def update_positions_with_current_prices(positions):
+    """Update positions with current prices from Kraken API"""
+    if not positions:
+        return positions
+    
+    # Make a copy to avoid modifying the original
+    updated_positions = []
+    
+    for position in positions:
+        # Create a copy of the position
+        updated_position = position.copy()
+        
+        pair = position.get('pair')
+        if not pair:
+            updated_positions.append(updated_position)
+            continue
+            
+        # Get current price from Kraken API
+        current_price = get_kraken_price(pair)
+        
+        if current_price:
+            # Update current price
+            updated_position['current_price'] = current_price
+            
+            # Calculate unrealized PnL
+            entry_price = position.get('entry_price', 0)
+            position_size = position.get('position_size', 0)
+            direction = position.get('direction', '').lower()
+            
+            if entry_price and position_size:
+                if direction == 'long':
+                    pnl_amount = (current_price - entry_price) * position_size
+                    pnl_pct = ((current_price / entry_price) - 1) * 100
+                else:  # short
+                    pnl_amount = (entry_price - current_price) * position_size
+                    pnl_pct = ((entry_price / current_price) - 1) * 100
+                
+                updated_position['unrealized_pnl_amount'] = pnl_amount
+                updated_position['unrealized_pnl_pct'] = pnl_pct
+        
+        updated_positions.append(updated_position)
+    
+    return updated_positions
+
 @app.route('/')
 def index():
     """Simple dashboard page"""
     try:
         portfolio = load_file(PORTFOLIO_FILE, {"balance": 20000.0, "equity": 20000.0})
         positions = load_file(POSITIONS_FILE, [])
+        
+        # Update positions with current prices from Kraken API
+        if positions:
+            positions = update_positions_with_current_prices(positions)
+        
         portfolio_history = load_file(PORTFOLIO_HISTORY_FILE, [])
         
         # Handle new portfolio history format

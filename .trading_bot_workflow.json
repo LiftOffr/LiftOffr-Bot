@@ -2,7 +2,7 @@
   "workflows": [
     {
       "name": "trading_bot",
-      "command": "./run_bot_background.sh",
+      "command": "python main_trading_bot.py",
       "restart_on": "failure",
       "restart_limit": 5
     }
