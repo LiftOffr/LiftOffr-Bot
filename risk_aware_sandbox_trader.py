@@ -430,7 +430,11 @@ class RiskAwareSandboxTrader:
         }
         
         # Calculate duration
-        entry_time = datetime.datetime.fromisoformat(position["entry_time"])
+        entry_time = datetime.datetime.fromisoformat(position["entry_time"].replace("Z", "+00:00") if position["entry_time"].endswith("Z") else position["entry_time"])
+        exit_time = datetime.datetime.now().replace(tzinfo=None)
+        # Make sure entry_time is timezone-naive if exit_time is
+        if entry_time.tzinfo is not None:
+            entry_time = entry_time.replace(tzinfo=None)
         exit_time = datetime.datetime.now()
         duration_seconds = (exit_time - entry_time).total_seconds()
         hours = int(duration_seconds // 3600)

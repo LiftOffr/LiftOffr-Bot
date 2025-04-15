@@ -2,11 +2,48 @@
   "trades": [],
   "portfolio_history": [
     {
-      "timestamp": "2025-04-15T01:03:16.381568",
+      "timestamp": "2025-04-15T01:06:12.718552",
       "portfolio_value": 23742.45
     }
   ],
-  "market_regimes": [],
+  "market_regimes": [
+    {
+      "timestamp": "2025-04-15T01:06:12.718552",
+      "pair": "SOL/USD",
+      "regime": "unknown",
+      "volatility": 0.01
+    },
+    {
+      "timestamp": "2025-04-15T01:06:12.718552",
+      "pair": "BTC/USD",
+      "regime": "unknown",
+      "volatility": 0.01
+    },
+    {
+      "timestamp": "2025-04-15T01:06:12.718552",
+      "pair": "ETH/USD",
+      "regime": "unknown",
+      "volatility": 0.01
+    },
+    {
+      "timestamp": "2025-04-15T01:06:12.718552",
+      "pair": "ADA/USD",
+      "regime": "unknown",
+      "volatility": 0.01
+    },
+    {
+      "timestamp": "2025-04-15T01:06:12.718552",
+      "pair": "DOT/USD",
+      "regime": "unknown",
+      "volatility": 0.01
+    },
+    {
+      "timestamp": "2025-04-15T01:06:12.718552",
+      "pair": "LINK/USD",
+      "regime": "unknown",
+      "volatility": 0.01
+    }
+  ],
   "flash_crashes": [],
   "latency_events": []
 }
