@@ -80,6 +80,11 @@ def index():
             logger.info(f"Converted portfolio history: {portfolio_history}")
         
         # Ensure we have at least two data points for the chart
+        # First check if portfolio_history is a list or None
+        if not portfolio_history:
+            portfolio_history = []
+            
+        # Now check if we have enough data points
         if len(portfolio_history) < 2:
             now = datetime.now().isoformat()
             

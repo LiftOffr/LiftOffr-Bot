@@ -233,20 +233,20 @@
                                             <td><strong>{{ position.pair }}</strong></td>
                                             <td>
                                                 <span class="position-badge 
-                                                {% if position.direction == 'LONG' %}badge-long{% else %}badge-short{% endif %}">
-                                                {{ position.direction }}
+                                                {% if position.direction == 'long' or position.direction == 'LONG' %}badge-long{% else %}badge-short{% endif %}">
+                                                {{ position.direction|upper }}
                                                 </span>
                                             </td>
-                                            <td>{{ "%.2f"|format(position.size) }}</td>
+                                            <td>{{ "%.2f"|format(position.position_size) }}</td>
                                             <td>${{ "%.4f"|format(position.entry_price) }}</td>
                                             <td>${{ "%.4f"|format(position.current_price) }}</td>
                                             <td>{{ "%.1f"|format(position.leverage) }}x</td>
-                                            <td class="{% if position.unrealized_pnl > 0 %}positive{% else %}negative{% endif %}">
-                                                ${{ "%.2f"|format(position.unrealized_pnl) }}
+                                            <td class="{% if position.unrealized_pnl_amount > 0 %}positive{% else %}negative{% endif %}">
+                                                ${{ "%.2f"|format(position.unrealized_pnl_amount) }}
                                                 ({{ "%.2f"|format(position.unrealized_pnl_pct) }}%)
                                             </td>
-                                            <td>{{ position.duration }}</td>
-                                            <td>{{ position.strategy }}</td>
+                                            <td>{{ position.entry_time.split('T')[0] if 'T' in position.entry_time else position.entry_time }}</td>
+                                            <td>{{ position.model }}</td>
                                         </tr>
                                         {% endfor %}
                                     {% else %}

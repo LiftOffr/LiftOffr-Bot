@@ -2,7 +2,7 @@
   "workflows": [
     {
       "name": "trading_bot",
-      "command": "./run_completely_isolated.sh",
+      "command": "./run_bot_background.sh",
       "restart_on": "failure",
       "restart_limit": 5
     }
