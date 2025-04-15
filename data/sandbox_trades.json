@@ -1,24 +1,24 @@
 [
   {
     "type": "OPEN",
-    "pair": "MATIC/USD",
-    "direction": "SHORT",
-    "price": 0.182,
-    "size": 12375.303456768765,
-    "leverage": 16,
-    "confidence": 0.7507684097106384,
-    "allocated_capital": 2252.305229131915,
-    "timestamp": "2025-04-15T17:27:28.716698"
+    "pair": "SOL/USD",
+    "direction": "LONG",
+    "price": 128.82,
+    "size": 20.68100611129286,
+    "leverage": 112,
+    "confidence": 0.8880424024189153,
+    "allocated_capital": 2664.127207256746,
+    "timestamp": "2025-04-15T17:36:29.501050"
   },
   {
     "type": "OPEN",
-    "pair": "ATOM/USD",
-    "direction": "SHORT",
-    "price": 4.0773,
-    "size": 437.5403581575242,
-    "leverage": 15,
-    "confidence": 0.6701277077944753,
-    "allocated_capital": 1783.9833023156737,
-    "timestamp": "2025-04-15T17:27:34.166346"
+    "pair": "BTC/USD",
+    "direction": "LONG",
+    "price": 84725.9,
+    "size": 0.029074823080032546,
+    "leverage": 119,
+    "confidence": 0.9473191157808132,
+    "allocated_capital": 2463.3905527965294,
+    "timestamp": "2025-04-15T17:36:34.879015"
   }
 ]

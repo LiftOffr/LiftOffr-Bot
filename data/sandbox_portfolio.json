@@ -1,15 +1,15 @@
 {
   "initial_capital": 20000.0,
-  "available_capital": 15963.711468552412,
+  "available_capital": 14872.482239946727,
   "balance": 20000.0,
   "equity": 20000.0,
-  "total_value": 17747.694770868085,
-  "total_pnl": -2252.3052291319145,
-  "total_pnl_pct": -11.261526145659573,
-  "unrealized_pnl": 0.0,
-  "unrealized_pnl_pct": 0.0,
+  "total_value": 17335.045809365827,
+  "total_pnl": -2664.954190634173,
+  "total_pnl_pct": -13.324770953170864,
+  "unrealized_pnl": -0.8269833774295187,
+  "unrealized_pnl_pct": -0.004134916887147593,
   "win_rate": 0.0,
   "total_trades": 0,
   "profitable_trades": 0,
-  "updated_at": "2025-04-15T17:27:34.167269"
+  "updated_at": "2025-04-15T17:36:34.879725"
 }

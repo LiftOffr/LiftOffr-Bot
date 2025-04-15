@@ -312,9 +312,9 @@ def simulate_trading():
                             # For now, using random simulation values
                             confidence = random.uniform(0.6, 0.95)
                             
-                            # Scale leverage based on confidence (5x-125x)
+                            # Scale leverage based on confidence (5x-20x)
                             # Higher confidence = higher leverage
-                            max_leverage = 125
+                            max_leverage = 20
                             min_leverage = 5
                             leverage = min_leverage + (max_leverage - min_leverage) * confidence
                             leverage = round(leverage)
@@ -561,9 +561,9 @@ def simulate_continuous_trading():
                             # For now, using random simulation values
                             confidence = random.uniform(0.6, 0.95)
                             
-                            # Scale leverage based on confidence (5x-125x)
+                            # Scale leverage based on confidence (5x-20x)
                             # Higher confidence = higher leverage
-                            max_leverage = 125
+                            max_leverage = 20
                             min_leverage = 5
                             leverage = min_leverage + (max_leverage - min_leverage) * confidence
                             leverage = round(leverage)
