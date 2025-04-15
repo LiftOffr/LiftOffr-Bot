@@ -88,5 +88,12 @@
   {
     "timestamp": "2025-04-15T04:44:26.063786",
     "portfolio_value": 18660.33616409153
+  },
+  {
+    "timestamp": "2025-04-15T05:40:16.255812",
+    "balance": 20000.0,
+    "equity": 20000.0,
+    "portfolio_value": 20000.0,
+    "num_positions": 19
   }
 ]
