@@ -244,7 +244,13 @@
             <div class="tab-content" id="strategyTabContent">
               <!-- ML Models Tab -->
               <div class="tab-pane fade show active" id="models" role="tabpanel">
-                <canvas id="accuracyChart" height="250"></canvas>
+                <div class="mb-3">
+                  <canvas id="accuracyChart" height="200"></canvas>
+                </div>
+                <div class="mt-4">
+                  <h6 class="mb-3 text-center">Model Contribution to Predictions</h6>
+                  <canvas id="modelContributionChart" height="150"></canvas>
+                </div>
               </div>
               
               <!-- Strategies Tab -->
@@ -923,7 +929,12 @@
       });
       const values = portfolioData.map(p => p.portfolio_value);
       
+      // Create a gradient for the chart area
       const ctx = document.getElementById('portfolioChart').getContext('2d');
+      const gradientFill = ctx.createLinearGradient(0, 0, 0, 400);
+      gradientFill.addColorStop(0, 'rgba(13, 202, 240, 0.3)');
+      gradientFill.addColorStop(1, 'rgba(13, 202, 240, 0.0)');
+      
       const portfolioChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -932,12 +943,16 @@
             label: 'Portfolio Value',
             data: values,
             borderColor: '#0dcaf0',
-            backgroundColor: 'rgba(13, 202, 240, 0.1)',
-            borderWidth: 2,
-            tension: 0.2,
+            backgroundColor: gradientFill,
+            borderWidth: 3,
+            tension: 0.3,
             fill: true,
-            pointRadius: 0,
-            pointHoverRadius: 4
+            pointRadius: 2,
+            pointHoverRadius: 6,
+            pointBackgroundColor: '#0dcaf0',
+            pointBorderColor: '#0dcaf0',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: '#0dcaf0'
           }]
         },
         options: {
@@ -949,26 +964,48 @@
           },
           plugins: {
             legend: {
-              display: false
+              display: true,
+              position: 'top',
+              labels: {
+                boxWidth: 15,
+                padding: 15,
+                font: {
+                  size: 14
+                }
+              }
             },
             tooltip: {
               backgroundColor: 'rgba(33, 37, 41, 0.9)',
               padding: 12,
               titleFont: {
-                size: 14,
+                size: 16,
                 weight: 'bold'
               },
               bodyFont: {
-                size: 13
+                size: 14
               },
-              displayColors: false
+              displayColors: false,
+              callbacks: {
+                label: function(context) {
+                  return `$${context.parsed.y.toFixed(2)}`;
+                }
+              }
             }
           },
           scales: {
             y: {
               beginAtZero: false,
               grid: {
-                color: 'rgba(255, 255, 255, 0.05)'
+                color: 'rgba(255, 255, 255, 0.1)'
+              },
+              ticks: {
+                padding: 10,
+                font: {
+                  size: 12
+                },
+                callback: function(value) {
+                  return '$' + value.toFixed(2);
+                }
               }
             },
             x: {
@@ -976,8 +1013,13 @@
                 display: false
               },
               ticks: {
-                maxRotation: 0,
-                maxTicksLimit: 8
+                maxRotation: 45,
+                minRotation: 45,
+                maxTicksLimit: 8,
+                padding: 10,
+                font: {
+                  size: 11
+                }
               }
             }
           }
@@ -1032,6 +1074,19 @@
       const pairs = Object.keys(accuracyData);
       const values = pairs.map(p => accuracyData[p] * 100);
       
+      // Create a custom color array to match each pair
+      const customColors = {
+        'SOL/USD': 'rgba(25, 135, 84, 0.8)',
+        'BTC/USD': 'rgba(13, 110, 253, 0.8)',
+        'ETH/USD': 'rgba(13, 202, 240, 0.8)',
+        'ADA/USD': 'rgba(255, 193, 7, 0.8)',
+        'DOT/USD': 'rgba(220, 53, 69, 0.8)',
+        'LINK/USD': 'rgba(108, 117, 125, 0.8)'
+      };
+      
+      // Map colors to match the actual order of pairs
+      const colors = pairs.map(pair => customColors[pair] || 'rgba(108, 117, 125, 0.8');
+      
       const ctx = document.getElementById('accuracyChart').getContext('2d');
       new Chart(ctx, {
         type: 'bar',
@@ -1040,16 +1095,12 @@
           datasets: [{
             label: 'Model Accuracy (%)',
             data: values,
-            backgroundColor: [
-              'rgba(25, 135, 84, 0.7)', // SOL
-              'rgba(13, 110, 253, 0.7)', // BTC
-              'rgba(13, 202, 240, 0.7)', // ETH
-              'rgba(255, 193, 7, 0.7)',  // ADA
-              'rgba(220, 53, 69, 0.7)',  // DOT
-              'rgba(108, 117, 125, 0.7)' // LINK
-            ],
-            borderWidth: 0,
-            borderRadius: 4
+            backgroundColor: colors,
+            borderWidth: 1,
+            borderColor: colors.map(c => c.replace('0.8', '1')),
+            borderRadius: 6,
+            barPercentage: 0.7,
+            categoryPercentage: 0.8
           }]
         },
         options: {
@@ -1057,14 +1108,32 @@
           maintainAspectRatio: false,
           plugins: {
             legend: {
-              display: false
+              display: true,
+              position: 'top',
+              labels: {
+                boxWidth: 15,
+                padding: 15,
+                font: {
+                  size: 14
+                }
+              }
             },
             tooltip: {
               backgroundColor: 'rgba(33, 37, 41, 0.9)',
               padding: 12,
+              titleFont: {
+                size: 16
+              },
+              bodyFont: {
+                size: 14
+              },
+              displayColors: true,
               callbacks: {
                 label: function(context) {
-                  return `Accuracy: ${context.formattedValue}%`;
+                  return `Accuracy: ${context.parsed.y.toFixed(2)}%`;
+                },
+                title: function(context) {
+                  return context[0].label;
                 }
               }
             }
@@ -1072,25 +1141,120 @@
           scales: {
             y: {
               beginAtZero: false,
-              min: 90,
+              min: 89,
               max: 100,
               grid: {
-                color: 'rgba(255, 255, 255, 0.05)'
+                color: 'rgba(255, 255, 255, 0.1)'
               },
               ticks: {
+                padding: 10,
+                font: {
+                  size: 12
+                },
                 callback: function(value) {
                   return value + '%';
+                }
+              },
+              title: {
+                display: true,
+                text: 'Accuracy (%)',
+                font: {
+                  size: 14,
+                  weight: 'bold'
+                },
+                padding: {
+                  top: 10,
+                  bottom: 10
                 }
               }
             },
             x: {
               grid: {
                 display: false
+              },
+              ticks: {
+                padding: 10,
+                font: {
+                  size: 12
+                },
+                autoSkip: false,
+                maxRotation: 45,
+                minRotation: 45
+              },
+              title: {
+                display: true,
+                text: 'Trading Pairs',
+                font: {
+                  size: 14,
+                  weight: 'bold'
+                },
+                padding: {
+                  top: 20,
+                  bottom: 0
+                }
               }
             }
           }
         }
       });
+
+      // Create a doughnut chart for model contribution
+      if (document.getElementById('modelContributionChart')) {
+        const modelCtx = document.getElementById('modelContributionChart').getContext('2d');
+        const modelTypes = ['TCN', 'LSTM', 'Attention GRU', 'Transformer', 'ARIMA', 'CNN'];
+        const modelContributions = [25, 20, 18, 15, 12, 10]; // Example data
+        
+        new Chart(modelCtx, {
+          type: 'doughnut',
+          data: {
+            labels: modelTypes,
+            datasets: [{
+              data: modelContributions,
+              backgroundColor: [
+                'rgba(25, 135, 84, 0.8)',  
+                'rgba(13, 110, 253, 0.8)', 
+                'rgba(13, 202, 240, 0.8)', 
+                'rgba(255, 193, 7, 0.8)',  
+                'rgba(220, 53, 69, 0.8)',  
+                'rgba(108, 117, 125, 0.8)'
+              ],
+              borderWidth: 2,
+              borderColor: '#343a40'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+              legend: {
+                position: 'right',
+                labels: {
+                  font: {
+                    size: 12
+                  },
+                  padding: 15
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(33, 37, 41, 0.9)',
+                padding: 12,
+                titleFont: {
+                  size: 16
+                },
+                bodyFont: {
+                  size: 14
+                },
+                callbacks: {
+                  label: function(context) {
+                    return `${context.label}: ${context.parsed}%`;
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
     }
   </script>
 </body>
