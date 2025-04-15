@@ -7,7 +7,7 @@
     },
     "trading_bot": {
       "name": "trading_bot",
-      "command": "python run_trading_with_realtime_data.py",
+      "command": "python start_trading_with_liquidation.py",
       "terminal": true
     }
   }
