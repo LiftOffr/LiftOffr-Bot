@@ -114,25 +114,25 @@ except KeyboardInterrupt:
     
     try:
         # Start the process and connect I/O
-        proc = subprocess.Popen(
+        process = subprocess.Popen(
             cmd,
             stdout=sys.stdout,
             stderr=sys.stderr,
         )
         
         # Wait for it to complete
-        proc.wait()
-        return proc.returncode
+        process.wait()
+        return process.returncode
     
     except KeyboardInterrupt:
         print("\nStopping trading bot...")
-        if proc and proc.poll() is None:
-            proc.terminate()
+        if process and process.poll() is None:
+            process.terminate()
             try:
-                proc.wait(timeout=5)
+                process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 print("Killing the process...")
-                proc.kill()
+                process.kill()
         print("Trading bot stopped")
         return 0
     
