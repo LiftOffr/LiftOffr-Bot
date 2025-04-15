@@ -2,7 +2,7 @@
   "workflows": [
     {
       "name": "trading_bot",
-      "entrypoint": "python direct_launcher.py"
+      "entrypoint": "python cli_trading_bot.py --sandbox"
     }
   ]
 }
