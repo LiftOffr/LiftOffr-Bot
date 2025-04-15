@@ -174,5 +174,53 @@
     "win_rate": 0.0,
     "total_trades": 2,
     "profitable_trades": 0
+  },
+  {
+    "timestamp": "2025-04-15T17:19:40.189257",
+    "total_value": 14832.99055201879,
+    "available_capital": 20971.558498296192,
+    "total_pnl": -5167.0094479812105,
+    "total_pnl_pct": -25.83504723990605,
+    "unrealized_pnl": 4.346874239194531,
+    "unrealized_pnl_pct": 0.021734371195972657,
+    "win_rate": 0.5,
+    "total_trades": 4,
+    "profitable_trades": 2
+  },
+  {
+    "timestamp": "2025-04-15T17:19:42.486589",
+    "total_value": 20971.558498296192,
+    "available_capital": 19063.40686634236,
+    "total_pnl": 971.5584982961918,
+    "total_pnl_pct": 4.857792491480959,
+    "unrealized_pnl": 0.0,
+    "unrealized_pnl_pct": 0.0,
+    "win_rate": 0.5,
+    "total_trades": 4,
+    "profitable_trades": 2
+  },
+  {
+    "timestamp": "2025-04-15T17:19:44.559012",
+    "total_value": 19063.40686634236,
+    "available_capital": 17276.369875761615,
+    "total_pnl": -936.5931336576396,
+    "total_pnl_pct": -4.6829656682881975,
+    "unrealized_pnl": 0.0,
+    "unrealized_pnl_pct": 0.0,
+    "win_rate": 0.5,
+    "total_trades": 4,
+    "profitable_trades": 2
+  },
+  {
+    "timestamp": "2025-04-15T17:19:46.983450",
+    "total_value": 17276.369875761615,
+    "available_capital": 16820.016825530685,
+    "total_pnl": -2723.630124238385,
+    "total_pnl_pct": -13.618150621191926,
+    "unrealized_pnl": 0.0,
+    "unrealized_pnl_pct": 0.0,
+    "win_rate": 0.4,
+    "total_trades": 5,
+    "profitable_trades": 2
   }
 ]

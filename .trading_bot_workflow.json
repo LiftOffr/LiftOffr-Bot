@@ -2,7 +2,9 @@
   "workflows": [
     {
       "name": "trading_bot",
-      "entrypoint": "python -B main_override.py"
+      "command": "python -B isolated_trading_bot.py",
+      "restart_on": "always",
+      "restart_limit": 10
     }
   ]
 }
