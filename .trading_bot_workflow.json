@@ -2,7 +2,7 @@
   "workflows": [
     {
       "name": "trading_bot",
-      "command": "python main_trading_bot.py",
+      "command": "python workflow_runner.py",
       "restart_on": "failure",
       "restart_limit": 5
     }

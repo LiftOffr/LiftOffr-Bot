@@ -22,5 +22,9 @@
     "win_rate": 0.0,
     "total_trades": 0,
     "profitable_trades": 0
+  },
+  {
+    "timestamp": "2025-04-15T18:22:33.645292",
+    "portfolio_value": -474908.18
   }
 ]
