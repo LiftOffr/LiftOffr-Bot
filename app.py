@@ -311,12 +311,21 @@ def process_portfolio_history(history):
     if isinstance(history, dict) and "timestamps" in history and "values" in history:
         # Convert to list of dicts format for template
         formatted_history = []
-        for i in range(len(history["timestamps"])):
+        
+        # Make sure timestamps and values have the same length
+        timestamps = history.get("timestamps", [])
+        values = history.get("values", [])
+        
+        for i in range(min(len(timestamps), len(values))):
             formatted_history.append({
-                "timestamp": history["timestamps"][i],
-                "portfolio_value": history["values"][i]
+                "timestamp": timestamps[i],
+                "portfolio_value": values[i]
             })
-        history = formatted_history
+        
+        # If we have data, use it; otherwise keep the history as is for default handling
+        if formatted_history:
+            history = formatted_history
+        logger.info(f"Converted portfolio history: {history}")
     
     # Ensure we have at least two data points
     if len(history) < 2:
