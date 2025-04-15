@@ -164,9 +164,13 @@ def index():
         return f"<h1>Error loading dashboard</h1><p>{str(e)}</p>"
 
 import sys
+import os
 
-# Only start the server if this file is run directly, not when imported
-if __name__ == "__main__" and not hasattr(sys, '_called_from_test'):
+# Only start the server if this file is run directly, not when imported,
+# and if we're not in a trading bot process
+if __name__ == "__main__" and not hasattr(sys, '_called_from_test') and not os.environ.get("TRADING_BOT_PROCESS"):
     # Make sure to bind to 0.0.0.0 so it's accessible externally
     print("Starting Flask application on port 5000...")
     app.run(host="0.0.0.0", port=5000, debug=True)
+else:
+    print("Flask app imported but not started (in imported mode or trading bot process)")

@@ -2,7 +2,7 @@
   "workflows": [
     {
       "name": "trading_bot",
-      "entrypoint": "python cli_trading_bot.py --sandbox"
+      "entrypoint": "./run_cli_bot.sh"
     }
   ]
 }
