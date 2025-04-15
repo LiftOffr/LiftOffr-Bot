@@ -307,6 +307,17 @@ def get_risk_metrics():
 
 def process_portfolio_history(history):
     """Process portfolio history for charting"""
+    # Check if history is a dict with timestamps and values (new format)
+    if isinstance(history, dict) and "timestamps" in history and "values" in history:
+        # Convert to list of dicts format for template
+        formatted_history = []
+        for i in range(len(history["timestamps"])):
+            formatted_history.append({
+                "timestamp": history["timestamps"][i],
+                "portfolio_value": history["values"][i]
+            })
+        history = formatted_history
+    
     # Ensure we have at least two data points
     if len(history) < 2:
         now = datetime.now().isoformat()

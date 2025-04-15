@@ -1,10 +1,8 @@
-[
-  {
-    "timestamp": "2025-04-15T06:23:07.242865",
-    "balance": 20000.0,
-    "equity": 20000.0,
-    "portfolio_value": 20000.0,
-    "unrealized_pnl": 0.0,
-    "num_positions": 16
-  }
-]
+{
+  "timestamps": [
+    "2025-04-15T06:42:45.831435"
+  ],
+  "values": [
+    111892.14789728452
+  ]
+}

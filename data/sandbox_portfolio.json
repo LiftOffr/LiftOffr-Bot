@@ -1,6 +1,6 @@
 {
-  "balance": 32597.649146281765,
-  "equity": 32597.649146281765,
+  "balance": 111892.14789728452,
+  "equity": 111892.14789728452,
   "unrealized_pnl_usd": 0.0,
   "unrealized_pnl_pct": 0.0,
   "total_return_percentage": 0.0,
@@ -49,7 +49,47 @@
       "leverage": 93.93081695334777,
       "confidence": 0.8985086447048122,
       "strategy": "Adaptive"
+    },
+    {
+      "pair": "SOL/USD",
+      "direction": "LONG",
+      "entry_price": 132.1575,
+      "exit_price": 138.29736746194058,
+      "entry_time": "2025-04-14T20:35:28.169007",
+      "exit_time": "2025-04-15T06:42:32.765534",
+      "pnl_percentage": 3.984127345441659,
+      "pnl_amount": 19893.401942544006,
+      "exit_reason": "TP",
+      "position_size": 4999.689668959223,
+      "leverage": 85.7562989623215,
+      "confidence": 0.766878870087095,
+      "strategy": "ARIMA",
+      "strategy_category": "those dudes",
+      "fees": 25.998386278587958,
+      "slippage": 1.0,
+      "trade_duration_hours": 10.117943479599692
+    },
+    {
+      "pair": "SOL/USD",
+      "direction": "LONG",
+      "entry_price": 132.1575,
+      "exit_price": 143.40774398357667,
+      "entry_time": "2025-04-13T22:53:16.747730",
+      "exit_time": "2025-04-15T06:42:45.831435",
+      "pnl_percentage": 7.329561728887338,
+      "pnl_amount": 59401.09680845875,
+      "exit_reason": "TP",
+      "position_size": 8110.071431095542,
+      "leverage": 86.10093750851033,
+      "confidence": 0.7725194354911673,
+      "strategy": "TCN",
+      "strategy_category": "him all along",
+      "fees": 42.17237144169682,
+      "slippage": 1.0,
+      "trade_duration_hours": 31.8247454735127
     }
   ],
-  "last_updated": "2025-04-15T06:25:18.164510"
+  "last_updated": "2025-04-15T06:42:45.831435",
+  "total_trades": 2,
+  "winning_trades": 2
 }
