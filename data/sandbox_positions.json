@@ -1,1 +1,26 @@
-[]
+[
+  {
+    "pair": "SOL/USD",
+    "direction": "LONG",
+    "entry_price": 148.50,
+    "current_price": 152.75,
+    "position_size": 4000.0,
+    "leverage": 38.84,
+    "entry_time": "2025-04-15T02:30:00.000Z",
+    "unrealized_pnl": 0.0286,
+    "strategy": "ML-Enhanced",
+    "confidence": 0.82
+  },
+  {
+    "pair": "BTC/USD",
+    "direction": "SHORT",
+    "entry_price": 61250.00,
+    "current_price": 60950.00,
+    "position_size": 4000.0,
+    "leverage": 39.43,
+    "entry_time": "2025-04-15T02:40:00.000Z",
+    "unrealized_pnl": 0.0193,
+    "strategy": "Adaptive",
+    "confidence": 0.78
+  }
+]

@@ -61,6 +61,45 @@ def get_portfolio_data():
     positions = load_file(POSITIONS_FILE, [])
     portfolio_history = load_file(PORTFOLIO_HISTORY_FILE, [])
     
+    # Calculate total unrealized PnL
+    total_position_value = 0
+    total_entry_value = 0
+    unrealized_pnl_usd = 0
+    
+    for position in positions:
+        position_size = position.get("position_size", 0.0)
+        leverage = position.get("leverage", 1.0)
+        entry_price = position.get("entry_price", 0.0)
+        current_price = position.get("current_price", entry_price)
+        direction = position.get("direction", "").lower()
+        
+        if direction == "long":
+            position_pnl = (current_price - entry_price) / entry_price * leverage * position_size
+        else:  # short
+            position_pnl = (entry_price - current_price) / entry_price * leverage * position_size
+            
+        unrealized_pnl_usd += position_pnl
+        
+        if direction == "long":
+            entry_value = position_size
+            current_value = position_size * (current_price / entry_price)
+        else:  # short
+            entry_value = position_size
+            current_value = position_size * (entry_price / current_price)
+            
+        total_entry_value += entry_value
+        total_position_value += current_value
+    
+    # Calculate unrealized PnL percentage
+    unrealized_pnl_pct = 0
+    if total_entry_value > 0:
+        unrealized_pnl_pct = (total_position_value / total_entry_value - 1) * 100
+    
+    # Add to portfolio
+    portfolio["unrealized_pnl_usd"] = unrealized_pnl_usd
+    portfolio["unrealized_pnl_pct"] = unrealized_pnl_pct
+    portfolio["total_position_value"] = total_position_value
+    
     return portfolio, positions, portfolio_history
 
 def get_risk_metrics():

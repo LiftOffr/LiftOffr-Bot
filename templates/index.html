@@ -182,6 +182,35 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Total Unrealized PnL Section -->
+        {% if positions|length > 0 %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Unrealized PnL (All Positions)</h5>
+                            <div class="d-flex align-items-center">
+                                <div class="me-4">
+                                    <span class="small text-muted me-2">PnL %:</span>
+                                    <span class="badge fs-6 {% if portfolio.unrealized_pnl_pct > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ "%.2f"|format(portfolio.unrealized_pnl_pct) }}%
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="small text-muted me-2">PnL USD:</span>
+                                    <span class="badge fs-6 {% if portfolio.unrealized_pnl_usd > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                        ${{ "%.2f"|format(portfolio.unrealized_pnl_usd) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         <div class="row">
             <div class="col-lg-8">
