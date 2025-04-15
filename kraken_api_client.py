@@ -512,24 +512,22 @@ class KrakenWebSocketClient:
         
         try:
             logger.info(f"Connecting to Kraken WebSocket API: {KRAKEN_WEBSOCKET_URL}")
-            self.ws = await websockets.connect(KRAKEN_WEBSOCKET_URL)
-            self.running = True
-            logger.info("Connected to Kraken WebSocket API")
+            if WEBSOCKETS_AVAILABLE:
+                self.ws = await websockets.connect(KRAKEN_WEBSOCKET_URL)
+                self.running = True
+                logger.info("Connected to Kraken WebSocket API")
+            else:
+                logger.warning("WebSockets not available, falling back to sandbox mode")
+                self.sandbox = True
+                self.running = True
+                asyncio.create_task(self._sandbox_ticker_updates())
         except Exception as e:
             logger.error(f"WebSocket connection error: {e}")
-            raiseet connection in sandbox mode")
+            # Fall back to sandbox mode on error
+            logger.warning("Falling back to sandbox mode due to connection error")
+            self.sandbox = True
             self.running = True
             asyncio.create_task(self._sandbox_ticker_updates())
-            return
-        
-        try:
-            logger.info(f"Connecting to Kraken WebSocket API: {KRAKEN_WEBSOCKET_URL}")
-            self.ws = await websockets.connect(KRAKEN_WEBSOCKET_URL)
-            self.running = True
-            logger.info("Connected to Kraken WebSocket API")
-        except Exception as e:
-            logger.error(f"WebSocket connection error: {e}")
-            raise
     
     async def disconnect(self):
         """Disconnect from WebSocket API"""
