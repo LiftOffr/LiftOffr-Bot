@@ -200,7 +200,6 @@ class IntegratedTradingBot:
                 
                 await asyncio.sleep(1)
             
-            await client.disconnect()
         
         except Exception as e:
             logger.error(f"Error in price monitoring: {e}")
