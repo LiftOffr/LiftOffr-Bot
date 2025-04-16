@@ -17,7 +17,8 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
 
 # Import our modules
-import kraken_api_client as kraken
+from kraken_api_client import KrakenAPIClient
+from kraken_websocket_client import KrakenWebSocketClient
 import ml_risk_manager as ml_risk
 
 # Configure logging
@@ -178,7 +179,7 @@ class IntegratedTradingBot:
     
     async def _start_price_monitoring(self):
         """Start WebSocket price monitoring"""
-        client = kraken.KrakenWebSocketClient(sandbox=self.sandbox)
+        client = KrakenWebSocketClient(sandbox=self.sandbox)
         
         try:
             await client.connect()
@@ -520,7 +521,7 @@ class IntegratedTradingBot:
         3. Adjust stop loss
         4. Hold position
         """
-        for i, position in enumerate(self.positions[:]):  # Copy to avoid issues with deletion
+        for i, position in enumerate(list(self.positions.values())):  # Copy to avoid issues with deletion
             pair = position.get("pair")
             if not pair or pair not in self.current_prices:
                 continue
@@ -599,7 +600,8 @@ class IntegratedTradingBot:
             self.running = True
             
             # Initialize current prices from API
-            self.current_prices = kraken.get_current_prices(self.trading_pairs)
+            kraken_client = KrakenAPIClient(sandbox=self.sandbox)
+            self.current_prices = kraken_client.get_current_prices(self.trading_pairs)
             logger.info(f"Initialized prices for {len(self.current_prices)} pairs")
             
             # Start price monitoring thread
