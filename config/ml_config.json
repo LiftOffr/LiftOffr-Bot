@@ -1,163 +1,91 @@
 {
-  "pairs": {
-    "BTC/USD": {
-      "active": true,
-      "trained": true,
-      "accuracy": 0.9715,
-      "win_rate": 0.9325,
-      "backtest_return": 9.87,
-      "base_leverage": 39.8,
-      "confidence_threshold": 0.65
-    },
-    "ETH/USD": {
-      "active": true,
-      "trained": true,
-      "accuracy": 0.9612,
-      "win_rate": 0.9447,
-      "backtest_return": 10.54,
-      "base_leverage": 42.1,
-      "confidence_threshold": 0.68
-    },
-    "SOL/USD": {
-      "active": true,
-      "trained": true,
-      "accuracy": 0.9638,
-      "win_rate": 0.9183,
-      "backtest_return": 12.13,
-      "base_leverage": 38.9,
-      "confidence_threshold": 0.67
-    },
-    "ADA/USD": {
-      "active": true,
-      "trained": true,
-      "accuracy": 0.9483,
-      "win_rate": 0.9112,
-      "backtest_return": 9.74,
-      "base_leverage": 41.2,
-      "confidence_threshold": 0.7
-    },
-    "DOT/USD": {
-      "active": true,
-      "trained": true,
-      "accuracy": 0.9491,
-      "win_rate": 0.9287,
-      "backtest_return": 10.22,
-      "base_leverage": 40.5,
-      "confidence_threshold": 0.69
-    },
-    "LINK/USD": {
-      "active": true,
-      "trained": true,
-      "accuracy": 0.9532,
-      "win_rate": 0.9094,
-      "backtest_return": 9.91,
-      "base_leverage": 39.7,
-      "confidence_threshold": 0.66
-    },
-    "AVAX/USD": {
-      "active": true,
-      "trained": true,
-      "accuracy": 0.9377,
-      "win_rate": 0.9063,
-      "backtest_return": 10.13,
-      "base_leverage": 40.2,
-      "confidence_threshold": 0.72
-    },
-    "MATIC/USD": {
-      "active": true,
-      "trained": true,
-      "accuracy": 0.9419,
-      "win_rate": 0.9152,
-      "backtest_return": 9.89,
-      "base_leverage": 39.5,
-      "confidence_threshold": 0.71
-    },
-    "UNI/USD": {
-      "active": true,
-      "trained": true,
-      "accuracy": 0.9356,
-      "win_rate": 0.9036,
-      "backtest_return": 9.65,
-      "base_leverage": 38.7,
-      "confidence_threshold": 0.73
-    },
-    "ATOM/USD": {
-      "active": true,
-      "trained": true,
-      "accuracy": 0.9408,
-      "win_rate": 0.9123,
-      "backtest_return": 9.83,
-      "base_leverage": 40.1,
-      "confidence_threshold": 0.71
-    }
-  },
-  "ensemble": {
-    "models": [
-      "tcn",
-      "lstm",
-      "attention_gru",
-      "transformer",
-      "xgboost",
-      "lightgbm"
-    ],
-    "strategy": "weighted_average",
-    "dynamic_weights": true,
-    "target_accuracy": 0.99,
-    "target_win_rate": 0.99,
-    "target_return": 10.0
-  },
-  "dynamic_leverage": {
-    "enabled": true,
-    "base_multiplier": 1.0,
-    "max_multiplier": 3.15,
-    "confidence_threshold": 0.75,
-    "scaling_factor": 2.5
-  },
-  "risk_management": {
-    "max_trades_per_pair": 1,
-    "max_concurrent_positions": 5,
-    "max_portfolio_allocation": 0.8,
-    "default_stop_loss_pct": 4.0,
-    "trailing_stop_activation_pct": 1.5,
-    "trailing_stop_distance_pct": 2.0
-  },
-  "market_regime": {
-    "detection_enabled": true,
-    "bear_market_leverage_multiplier": 0.7,
-    "volatile_market_leverage_multiplier": 0.8,
-    "bull_market_leverage_multiplier": 1.2
-  },
   "models": {
     "BTC/USD": {
       "model_type": "lstm",
-      "model_path": "model_weights/lstm_btc_model.h5",
       "confidence_threshold": 0.65,
       "min_leverage": 5.0,
-      "max_leverage": 125.0,
-      "risk_percentage": 0.2
+      "max_leverage": 75.0,
+      "risk_percentage": 0.2,
+      "model_path": "model_weights/btc_model.h5"
     },
     "ETH/USD": {
       "model_type": "lstm",
-      "model_path": "model_weights/lstm_eth_model.h5",
       "confidence_threshold": 0.65,
       "min_leverage": 5.0,
-      "max_leverage": 125.0,
-      "risk_percentage": 0.2
+      "max_leverage": 75.0,
+      "risk_percentage": 0.2,
+      "model_path": "model_weights/eth_model.h5"
     },
     "SOL/USD": {
       "model_type": "lstm",
-      "model_path": "model_weights/lstm_sol_model.h5",
       "confidence_threshold": 0.65,
       "min_leverage": 5.0,
-      "max_leverage": 125.0,
-      "risk_percentage": 0.2
+      "max_leverage": 75.0,
+      "risk_percentage": 0.2,
+      "model_path": "model_weights/sol_model.h5"
+    },
+    "ADA/USD": {
+      "model_type": "lstm",
+      "confidence_threshold": 0.65,
+      "min_leverage": 5.0,
+      "max_leverage": 75.0,
+      "risk_percentage": 0.2,
+      "model_path": "model_weights/ada_model.h5"
+    },
+    "DOT/USD": {
+      "model_type": "lstm",
+      "confidence_threshold": 0.65,
+      "min_leverage": 5.0,
+      "max_leverage": 75.0,
+      "risk_percentage": 0.2,
+      "model_path": "model_weights/dot_model.h5"
+    },
+    "LINK/USD": {
+      "model_type": "lstm",
+      "confidence_threshold": 0.65,
+      "min_leverage": 5.0,
+      "max_leverage": 75.0,
+      "risk_percentage": 0.2,
+      "model_path": "model_weights/link_model.h5"
+    },
+    "AVAX/USD": {
+      "model_type": "lstm",
+      "confidence_threshold": 0.65,
+      "min_leverage": 5.0,
+      "max_leverage": 75.0,
+      "risk_percentage": 0.2,
+      "model_path": "model_weights/avax_model.h5"
+    },
+    "MATIC/USD": {
+      "model_type": "lstm",
+      "confidence_threshold": 0.65,
+      "min_leverage": 5.0,
+      "max_leverage": 75.0,
+      "risk_percentage": 0.2,
+      "model_path": "model_weights/matic_model.h5"
+    },
+    "UNI/USD": {
+      "model_type": "lstm",
+      "confidence_threshold": 0.65,
+      "min_leverage": 5.0,
+      "max_leverage": 75.0,
+      "risk_percentage": 0.2,
+      "model_path": "model_weights/uni_model.h5"
+    },
+    "ATOM/USD": {
+      "model_type": "lstm",
+      "confidence_threshold": 0.65,
+      "min_leverage": 5.0,
+      "max_leverage": 75.0,
+      "risk_percentage": 0.2,
+      "model_path": "model_weights/atom_model.h5"
     }
   },
   "global_settings": {
     "confidence_threshold": 0.65,
     "dynamic_leverage_range": {
       "min": 5.0,
-      "max": 125.0
+      "max": 75.0
     },
     "risk_percentage": 0.2,
     "max_positions_per_pair": 1

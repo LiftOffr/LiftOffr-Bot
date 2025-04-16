@@ -1,18 +1,5 @@
 {
-  "total": 20000.0,
-  "available": 20000.0,
-  "balance": 5989.529421996338,
-  "equity": 20000.0,
-  "unrealized_pnl": 0.0,
-  "unrealized_pnl_pct": 0.0,
-  "total_pnl": 0.0,
-  "total_pnl_pct": 0.0,
-  "daily_pnl": 0.0,
-  "weekly_pnl": 0.0,
-  "monthly_pnl": 0.0,
-  "open_positions_count": 0,
-  "margin_used_pct": 0.0,
-  "available_margin": 20000.0,
-  "max_leverage": 125.0,
-  "last_updated": "2025-04-15T23:34:09.388647"
+  "balance": 52843.392222530885,
+  "initial_balance": 20000.0,
+  "last_updated": "2025-04-16T00:07:30.861508"
 }

@@ -1,26 +1,47 @@
 {
-  "trade_btc_usd_20250415232932": {
+  "trade_btc_usd_20250416000707": {
+    "position_id": "btc_usd_20250416000707",
     "symbol": "BTC/USD",
-    "entry_price": 55725.17076198649,
-    "exit_price": 56801.13650966276,
-    "size": 6.063736601070692,
-    "long": false,
-    "leverage": 85.79657554626465,
-    "entry_time": "2025-04-15T23:29:32.699354",
-    "exit_time": "2025-04-15T23:33:38.204066",
-    "profit_loss": -6524.372885683011,
-    "status": "closed"
+    "direction": "LONG",
+    "entry_price": 57294.572264191156,
+    "exit_price": 57505.61101676718,
+    "size": 3.657822837449883,
+    "leverage": 52.393348722470265,
+    "margin": 4000.0000000000005,
+    "pnl": 771.9423687595138,
+    "pnl_percentage": 0.19298559218987843,
+    "status": "CLOSED",
+    "entry_time": "2025-04-16T00:07:07.385720",
+    "exit_time": "2025-04-16T00:07:09.387336"
   },
-  "trade_sol_usd_20250415232933": {
-    "symbol": "SOL/USD",
-    "entry_price": 152.59993486841748,
-    "exit_price": 149.73370430314068,
-    "size": 2611.826760558501,
-    "long": true,
-    "leverage": 100.56313753128052,
-    "entry_time": "2025-04-15T23:29:33.909097",
-    "exit_time": "2025-04-15T23:34:09.388015",
-    "profit_loss": -7486.097692320651,
-    "status": "closed"
+  "trade_matic_usd_20250416000725": {
+    "position_id": "matic_usd_20250416000725",
+    "symbol": "MATIC/USD",
+    "direction": "LONG",
+    "entry_price": 0.7468774590056568,
+    "exit_price": 0.7712413917270325,
+    "size": 390601.10019717686,
+    "leverage": 70.22240674970239,
+    "margin": 4154.388473751902,
+    "pnl": 9516.57892609935,
+    "pnl_percentage": 2.2907291858300285,
+    "status": "CLOSED",
+    "entry_time": "2025-04-16T00:07:25.857187",
+    "exit_time": "2025-04-16T00:07:27.858426"
+  },
+  "trade_atom_usd_20250416000728": {
+    "position_id": "atom_usd_20250416000728",
+    "symbol": "ATOM/USD",
+    "direction": "LONG",
+    "entry_price": 8.49890467826077,
+    "exit_price": 9.089741481936379,
+    "size": 38174.45153612242,
+    "leverage": 53.558412705584935,
+    "margin": 6057.704258971775,
+    "pnl": 22554.87092767202,
+    "pnl_percentage": 3.723336426380849,
+    "status": "CLOSED",
+    "entry_time": "2025-04-16T00:07:28.859472",
+    "exit_time": "2025-04-16T00:07:30.860673"
   }
 }
