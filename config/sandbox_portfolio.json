@@ -1,9 +1,79 @@
 {
   "base_currency": "USD",
   "starting_capital": 20000.0,
-  "current_capital": 20000.0,
-  "equity": 20000.0,
-  "positions": {},
-  "completed_trades": [],
-  "last_updated": "2025-04-16 04:36:56"
+  "current_capital": 11500.0,
+  "equity": 22000.0,
+  "positions": {
+    "c2140f1e-9582-461f-9a6d-3bfe167b0d90": {
+      "id": "c2140f1e-9582-461f-9a6d-3bfe167b0d90",
+      "pair": "ETH/USD",
+      "side": "long",
+      "entry_time": "2025-04-16T04:58:03.713136",
+      "entry_price": 3245.6,
+      "current_price": 3245.6,
+      "amount": 6000.0,
+      "units": 1.8486566428395366,
+      "leverage": 1.0,
+      "unrealized_pnl": 0.0,
+      "unrealized_pnl_percent": 0.0,
+      "strategy": "ml_ensemble",
+      "stop_loss": null,
+      "take_profit": null
+    },
+    "0c6ecb48-6e78-4092-9bfa-a92d74a842ce": {
+      "id": "0c6ecb48-6e78-4092-9bfa-a92d74a842ce",
+      "pair": "SOL/USD",
+      "side": "long",
+      "entry_time": "2025-04-16T04:58:09.551326",
+      "entry_price": 169.85,
+      "current_price": 169.85,
+      "amount": 4500.0,
+      "units": 26.493965263467768,
+      "leverage": 3.0,
+      "unrealized_pnl": 0.0,
+      "unrealized_pnl_percent": 0.0,
+      "strategy": "ml_ensemble",
+      "stop_loss": null,
+      "take_profit": null
+    }
+  },
+  "completed_trades": [
+    {
+      "id": "822e1acf-7187-4e61-96fd-7bbade283965",
+      "pair": "SOL/USD",
+      "side": "long",
+      "entry_time": "2025-04-16T03:57:27.117053",
+      "exit_time": "2025-04-16T04:57:27.117053",
+      "entry_price": 1.0,
+      "exit_price": 1.15,
+      "amount": 5000.0,
+      "leverage": 3,
+      "profit_loss": 750.0,
+      "profit_loss_percent": 15.0,
+      "tags": [
+        "simulated",
+        "demo"
+      ],
+      "strategy": "ml_ensemble"
+    },
+    {
+      "id": "b27d2529-36d5-4223-8609-8a7bc9c6560a",
+      "pair": "BTC/USD",
+      "side": "long",
+      "entry_time": "2025-04-16T03:57:31.955607",
+      "exit_time": "2025-04-16T04:57:31.955607",
+      "entry_price": 1.0,
+      "exit_price": 1.1666666666666667,
+      "amount": 7500.0,
+      "leverage": 3,
+      "profit_loss": 1250.0,
+      "profit_loss_percent": 16.666666666666664,
+      "tags": [
+        "simulated",
+        "demo"
+      ],
+      "strategy": "ml_ensemble"
+    }
+  ],
+  "last_updated": "2025-04-16T04:58:09.551333"
 }
