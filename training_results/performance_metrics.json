@@ -1,82 +1,82 @@
 {
   "BTC/USD": {
     "win_rate": 0.95,
-    "pnl": 45034.2,
-    "sharpe_ratio": 33.56663740174581,
-    "max_drawdown": -0.04499503096207896,
+    "pnl": 44617.990000000005,
+    "sharpe_ratio": 35.59900767051017,
+    "max_drawdown": -0.018297031169261818,
     "total_trades": 100,
-    "profit_factor": 26.80416334809739
+    "profit_factor": 31.714682031583443
   },
   "ETH/USD": {
-    "win_rate": 0.9,
-    "pnl": 35604.81999999999,
-    "sharpe_ratio": 24.74721029122031,
-    "max_drawdown": -0.02255535140610511,
+    "win_rate": 0.92,
+    "pnl": 36377.439999999995,
+    "sharpe_ratio": 27.50315788861977,
+    "max_drawdown": -0.019357448145267592,
     "total_trades": 100,
-    "profit_factor": 13.670123196709058
+    "profit_factor": 17.625582713295916
   },
   "SOL/USD": {
-    "win_rate": 0.83,
-    "pnl": 25434.699999999997,
-    "sharpe_ratio": 17.61315190870618,
-    "max_drawdown": -0.040514416096245634,
+    "win_rate": 0.88,
+    "pnl": 26683.91,
+    "sharpe_ratio": 21.231391918037282,
+    "max_drawdown": -0.03815591870699507,
     "total_trades": 100,
-    "profit_factor": 7.497228395534778
+    "profit_factor": 10.234464977851607
   },
   "ADA/USD": {
-    "win_rate": 0.88,
-    "pnl": 24941.059999999998,
-    "sharpe_ratio": 22.602266037730775,
-    "max_drawdown": -0.01671637445024731,
+    "win_rate": 0.92,
+    "pnl": 27214.329999999998,
+    "sharpe_ratio": 28.084065754010435,
+    "max_drawdown": -0.01833354280406731,
     "total_trades": 100,
-    "profit_factor": 11.822388461238054
+    "profit_factor": 17.85076964991146
   },
   "DOT/USD": {
-    "win_rate": 0.87,
-    "pnl": 23220.06,
-    "sharpe_ratio": 20.709476145780883,
-    "max_drawdown": -0.020633863251073567,
+    "win_rate": 0.88,
+    "pnl": 23833.239999999998,
+    "sharpe_ratio": 22.21089553507686,
+    "max_drawdown": -0.013838267175355709,
     "total_trades": 100,
-    "profit_factor": 9.93763303451488
+    "profit_factor": 11.416443768465587
   },
   "LINK/USD": {
-    "win_rate": 0.8,
-    "pnl": 17955.59,
-    "sharpe_ratio": 15.2757741517816,
-    "max_drawdown": -0.03656152914250027,
+    "win_rate": 0.86,
+    "pnl": 20510.02,
+    "sharpe_ratio": 20.23928343019295,
+    "max_drawdown": -0.015292219393368845,
     "total_trades": 100,
-    "profit_factor": 6.0968063334005125
+    "profit_factor": 9.806552308980443
   },
   "AVAX/USD": {
-    "win_rate": 0.9,
-    "pnl": 36216.08,
-    "sharpe_ratio": 24.495308252303097,
-    "max_drawdown": -0.021641933667367854,
+    "win_rate": 0.88,
+    "pnl": 34266.33000000001,
+    "sharpe_ratio": 22.124863978856883,
+    "max_drawdown": -0.025491631733138963,
     "total_trades": 100,
-    "profit_factor": 13.649563574255248
+    "profit_factor": 11.186398052278136
   },
   "MATIC/USD": {
-    "win_rate": 0.87,
-    "pnl": 18506.820000000003,
-    "sharpe_ratio": 20.580146247736774,
-    "max_drawdown": -0.019233557106853656,
+    "win_rate": 0.91,
+    "pnl": 21380.520000000004,
+    "sharpe_ratio": 25.368058152712585,
+    "max_drawdown": -0.01851008153494312,
     "total_trades": 100,
-    "profit_factor": 9.729426192778474
+    "profit_factor": 14.320366332315745
   },
   "UNI/USD": {
-    "win_rate": 0.74,
-    "pnl": 13972.69,
-    "sharpe_ratio": 12.482593871620221,
-    "max_drawdown": -0.03345952129080611,
+    "win_rate": 0.8,
+    "pnl": 15894.429999999998,
+    "sharpe_ratio": 15.32430276518284,
+    "max_drawdown": -0.02621583187903772,
     "total_trades": 100,
-    "profit_factor": 4.608174026664876
+    "profit_factor": 6.163412685005912
   },
   "ATOM/USD": {
-    "win_rate": 0.79,
-    "pnl": 14578.519999999999,
-    "sharpe_ratio": 15.415746238419962,
-    "max_drawdown": -0.01866993046320277,
+    "win_rate": 0.86,
+    "pnl": 16955.26,
+    "sharpe_ratio": 19.100656853058265,
+    "max_drawdown": -0.026698802797423888,
     "total_trades": 100,
-    "profit_factor": 6.173485501769028
+    "profit_factor": 8.576618525006253
   }
 }
