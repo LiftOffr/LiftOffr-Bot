@@ -40,42 +40,72 @@ class KrakenWebSocketClient:
         self.connected = False
         self.last_prices = {}
         self.thread = None
+        self.last_message_time = 0
+        self.watchdog_thread = None
         
         # Convert pairs to Kraken format (remove / and lowercase)
         self.kraken_pairs = [p.replace("/", "").lower() for p in self.pairs]
+        
+        # Start the connection watchdog
+        self._start_watchdog()
     
     def on_message(self, ws, message):
         """Handle incoming WebSocket messages"""
         try:
             data = json.loads(message)
             
-            # Handle ticker data
-            if isinstance(data, list) and len(data) >= 2 and data[2] == 'ticker':
-                pair = data[3]
-                ticker_data = data[1]
+            # Handle heartbeat message
+            if isinstance(data, dict) and data.get("event") == "heartbeat":
+                logger.debug("Received heartbeat")
+                return
                 
-                # Extract close price (current price)
-                if 'c' in ticker_data and len(ticker_data['c']) > 0:
-                    price = float(ticker_data['c'][0])
+            # Handle system status
+            if isinstance(data, dict) and data.get("event") == "systemStatus":
+                status = data.get("status")
+                logger.info(f"Kraken WebSocket status: {status}")
+                return
+                
+            # Handle subscription status
+            if isinstance(data, dict) and data.get("event") == "subscriptionStatus":
+                status = data.get("status")
+                pair = data.get("pair")
+                subscription = data.get("subscription", {}).get("name")
+                if status == "subscribed":
+                    logger.info(f"Successfully subscribed to {subscription} for {pair}")
+                else:
+                    logger.warning(f"Subscription status for {pair}: {status}")
+                return
+            
+            # Handle ticker data (main price updates)
+            if isinstance(data, list) and len(data) >= 2:
+                # Kraken format is [channelID, data, channelName, pair]
+                if len(data) >= 4 and data[2] == "ticker":
+                    pair = data[3]  # This is the pair name
+                    ticker_data = data[1]  # This contains the ticker data
                     
-                    # Find the original pair format
-                    original_pair = None
-                    for p in self.pairs:
-                        if p.replace("/", "").lower() == pair.lower():
-                            original_pair = p
-                            break
-                    
-                    if original_pair:
+                    # Extract close price (current price)
+                    if 'c' in ticker_data and len(ticker_data['c']) > 0:
+                        price = float(ticker_data['c'][0])
+                        
+                        # Standardize pair format (XBT/USD -> BTC/USD)
+                        standard_pair = pair
+                        if pair.startswith("XBT"):
+                            standard_pair = "BTC" + pair[3:]
+                        
                         # Update last price
-                        self.last_prices[original_pair] = price
-                        logger.debug(f"WebSocket price update for {original_pair}: ${price}")
+                        self.last_prices[standard_pair] = price
+                        logger.debug(f"Price update for {standard_pair}: ${price}")
                         
                         # Call callback if provided
                         if self.callback:
-                            self.callback(original_pair, price)
+                            self.callback(standard_pair, price)
+                            
+                        # Log connection status periodically on price updates
+                        if standard_pair.endswith("/USD") and int(time.time()) % 60 == 0:
+                            logger.info(f"WebSocket connection active, prices updating for {standard_pair}: ${price}")
         
         except Exception as e:
-            logger.error(f"Error processing WebSocket message: {e}")
+            logger.error(f"Error processing WebSocket message: {e}, raw message: {message[:100]}...")
     
     def on_error(self, ws, error):
         """Handle WebSocket errors"""
@@ -83,14 +113,31 @@ class KrakenWebSocketClient:
     
     def on_close(self, ws, close_status_code, close_msg):
         """Handle WebSocket connection close"""
-        logger.info(f"WebSocket connection closed: {close_status_code} - {close_msg}")
+        logger.warning(f"WebSocket connection closed: {close_status_code} - {close_msg}")
         self.connected = False
         
         # Try to reconnect after a delay if still running
         if self.running:
-            logger.info("Attempting to reconnect in 5 seconds...")
-            time.sleep(5)
+            delay = 5
+            logger.info(f"Attempting to reconnect in {delay} seconds...")
+            
+            # Don't block the callback thread with sleep
+            reconnect_thread = threading.Thread(target=self._delayed_reconnect, args=(delay,))
+            reconnect_thread.daemon = True
+            reconnect_thread.start()
+            
+    def _delayed_reconnect(self, delay):
+        """Reconnect after a delay"""
+        try:
+            time.sleep(delay)
+            logger.info("Reconnecting WebSocket...")
             self.connect()
+        except Exception as e:
+            logger.error(f"Error during reconnection: {e}")
+            # Exponential backoff for the next retry
+            next_delay = min(delay * 2, 60)  # Maximum 60 second delay
+            logger.info(f"Will retry again in {next_delay} seconds...")
+            self._delayed_reconnect(next_delay)
     
     def on_open(self, ws):
         """Handle WebSocket connection open"""
@@ -103,29 +150,26 @@ class KrakenWebSocketClient:
     def _subscribe(self):
         """Subscribe to ticker data for configured pairs"""
         if not self.connected or not self.ws:
+            logger.warning("Cannot subscribe - WebSocket not connected")
             return
         
-        # Create subscription message
-        subscription = {
-            "name": "ticker"
-        }
-        
-        # Subscribe to each pair
-        for pair in self.kraken_pairs:
+        try:
+            # Kraken expects the subscription format as:
+            # {"name": "subscribe", "reqid": ID, "pair": ["XBT/USD",...], "subscription": {"name": "ticker"}}
             subscribe_msg = {
-                "method": "SUBSCRIBE",
-                "params": {
-                    "name": "ticker",
-                    "token": "invalid"  # Public API doesn't require token
-                },
-                "req_id": int(time.time())
+                "name": "subscribe",
+                "reqid": int(time.time()),
+                "pair": self.pairs,  # Use original pair format with slash
+                "subscription": {
+                    "name": "ticker"
+                }
             }
             
-            try:
-                self.ws.send(json.dumps(subscribe_msg))
-                logger.info(f"Subscribed to {pair} ticker")
-            except Exception as e:
-                logger.error(f"Error subscribing to {pair}: {e}")
+            logger.info(f"Sending subscription request for {self.pairs}")
+            self.ws.send(json.dumps(subscribe_msg))
+            logger.info(f"Subscription request sent for {len(self.pairs)} pairs")
+        except Exception as e:
+            logger.error(f"Error subscribing to ticker feed: {e}")
     
     def connect(self):
         """Connect to Kraken WebSocket API"""
