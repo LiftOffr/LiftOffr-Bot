@@ -1,0 +1,98 @@
+Training machine learning models for live trading—especially in volatile markets like crypto—requires balancing model accuracy, speed, data latency, and execution reliability. Here’s a structured roadmap tailored for our goals:
+
+1. Trading Objective
+	•	Prediction Goal: Predict direction (up/down), magnitude of price move, and volatility
+	•	Trade Horizon: Scalping, intraday (15-min, 1H and 4H), and swing (1D+)
+	•	Target Asset: all pairs
+
+2. Collect & Stream Data (Live + Historical)
+	•	Historical data: Use for backtesting + initial training.
+	•	OHLCV data (15m–4H)
+           OHLCV Historical API: https://api.amberdata.com/markets/spot/ohlcv/{instrument} 
+            OHLCV latest API per exchange (use Kraken): https://api.amberdata.com/market/spot/ohlcv/exchange/{exchange}/latest
+	•	Order book depth
+	•	Funding rates, open interest, news sentiment (optional features)
+	•	Live data:
+	•	Use WebSockets (Kraken) for real-time price feeds
+	•	Capture tick-level or 1s resolution if latency-sensitive
+	•	Ensure time-synced and clean datasets
+
+3. Feature Engineering
+	•	Technical indicators:
+	•	EMA ribbons, RSI, MACD, Bollinger Bands, ATR
+	•	Order book imbalance
+	•	Volume delta, VWAP
+	•	Pattern signals:
+	•	Candlestick patterns
+	•	Divergences (e.g., RSI vs price)
+	•	Custom labels (for supervised learning):
+	•	Uptrend/downtrend in next N bars
+	•	Take-profit or stop-loss hit first?
+
+4. Choose Model Architecture ensure the model is using all of these models for all aspects of our ML bot
+
+A. For Sequential Signal Prediction:
+	•	LSTM/GRU – good for long-term dependencies
+	•	CNN – captures local patterns in time-series
+	•	TCN (Temporal Convolutional Network) – causal and faster than LSTM, recommended for live usage
+
+B. Hybrid Approach:
+
+Combine:
+	•	CNN branch (local price pattern)
+	•	LSTM branch (sequence memory)
+	•	TCN branch (temporal dynamics)
+Then use a meta-learner like XGBoost or MLP to output the trade signal.
+
+5. Train the Model
+	•	Split Data: Train/validation/test sets using time-based split (no shuffling)
+	•	Labeling:
+	•	Example: 1 if price increases >0.5% in next 3 bars, -1 if decreases >0.5%, else 0
+	•	Training:
+	•	Optimize for precision for low false signals and optimize profit maximization 
+	•	Use early stopping, regularization, and dropout to avoid overfitting
+
+6. Backtest + Simulate
+	•	Run model predictions on unseen historical data
+	•	Include:
+	•	Execution latency
+	•	Slippage and liquidation 
+	•	Fee structure (e.g., Kraken ~0.16% taker)
+	•	Leverage
+	•	Evaluate:
+	•	Win rate, Sharpe ratio
+	•	Drawdowns, average PnL
+	•	Hit rate of stop-loss vs take-profit
+
+7. Deploy to Live Environment
+
+A. Real-Time Inference:
+	•	Serve the model (e.g., via FastAPI or Flask)
+	•	Feed in live features every bar (e.g., every 15m)
+	•	Signal output: Long, Short, or Hold
+
+B. Execution Engine:
+	•	Send limit orders with pre-computed entry, SL, and TP
+	•	Ensure:
+	•	Signal confirmation delay filter
+	•	Cooldowns to avoid overtrading
+	•	Auto-cancellation if signal flips before fill
+
+8. Risk Controls
+	•	Dynamic position sizing and dynamic leverage 
+	•	Portfolio-level max drawdown
+	•	Strategy override logic if multiple signals conflict
+       
+
+9. Monitor + Retrain
+	•	Daily logging of:
+	•	Signal accuracy
+	•	PnL by strategy
+	•	Feature drift (i.e., market behavior shift)
+	•	Retrain window: Weekly or monthly using rolling data window
+	•	Use ensemble models to fade out stale models and adapt to new market regimes
+
+Bonus: Latency Optimization Tips
+	•	Use compiled inference (ONNX, TorchScript)
+	•	Keep signal computation under 500ms
+	•	Use asynchronous execution (asyncio) to process data and trades in parallel
