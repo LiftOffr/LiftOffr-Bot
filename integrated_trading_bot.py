@@ -207,7 +207,7 @@ class IntegratedTradingBot:
         
         finally:
             if client:
-                await client.disconnect()
+                client.disconnect()
     
     def _start_price_monitoring_thread(self):
         """Start price monitoring in a separate thread"""
