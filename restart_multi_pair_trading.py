@@ -33,7 +33,7 @@ TRIGGER_FILE = ".trading_bot_restart_trigger"
 CONFIG_DIR = "config"
 ML_CONFIG_FILE = f"{CONFIG_DIR}/ml_config.json"
 PORTFOLIO_FILE = f"{CONFIG_DIR}/sandbox_portfolio.json"
-ENABLED_PAIRS = ["SOL/USD", "BTC/USD", "ETH/USD", "ADA/USD", "DOT/USD", "LINK/USD", "AVAX/USD", "MATIC/USD", "UNI/USD"]
+ENABLED_PAIRS = ["SOL/USD", "BTC/USD", "ETH/USD", "ADA/USD", "DOT/USD", "LINK/USD", "AVAX/USD", "MATIC/USD", "UNI/USD"]  # ATOM/USD removed
 
 
 def parse_arguments():
