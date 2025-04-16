@@ -1,206 +1,217 @@
 #!/usr/bin/env python3
 """
-Dashboard Application for Trading Bot
-This application runs on port 8080 to avoid conflicts with the main application.
+ML Trading Dashboard
+
+This module implements a web dashboard for monitoring and controlling
+the ML-powered trading bot, showing portfolio performance, trade history,
+and current predictions.
 """
-import os
+
 import json
 import logging
+import os
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request, redirect, url_for
 
+app = Flask(__name__)
+
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    filename='logs/dashboard.log'
 )
-logger = logging.getLogger(__name__)
 
-# Constants
-DATA_DIR = "data"
-PORTFOLIO_FILE = f"{DATA_DIR}/sandbox_portfolio.json"
-POSITIONS_FILE = f"{DATA_DIR}/sandbox_positions.json"
-PORTFOLIO_HISTORY_FILE = f"{DATA_DIR}/sandbox_portfolio_history.json"
-TRADES_FILE = f"{DATA_DIR}/sandbox_trades.json"
+# Ensure directories exist
+os.makedirs('logs', exist_ok=True)
+os.makedirs('config', exist_ok=True)
 
-app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "trading_bot_secret_key")
-
-def load_file(filepath, default=None):
-    """Load a JSON file or return default if not found"""
-    try:
-        if os.path.exists(filepath):
-            with open(filepath, 'r') as f:
-                return json.load(f)
-        return default
-    except Exception as e:
-        logger.error(f"Error loading {filepath}: {e}")
-        return default
 
 @app.route('/')
-def index():
-    """Dashboard page"""
+def dashboard():
+    """Render the main dashboard"""
     try:
-        # Get portfolio data
-        portfolio = load_file(PORTFOLIO_FILE, {"balance": 20000.0, "equity": 20000.0})
+        # Load portfolio data
+        portfolio = load_portfolio()
         
-        # Get positions data (open trades)
-        positions = load_file(POSITIONS_FILE, [])
+        # Load ML configuration
+        ml_config = load_ml_config()
         
-        # Get portfolio history
-        portfolio_history = load_file(PORTFOLIO_HISTORY_FILE, [])
+        # Load recent trades
+        recent_trades = load_recent_trades()
         
-        # Get trades data
-        trades_data = load_file(TRADES_FILE, [])
-        recent_trades = trades_data[-5:] if len(trades_data) > 5 else trades_data
+        # Load current predictions
+        predictions = load_predictions()
         
-        # Convert portfolio history for charting if needed
-        formatted_history = []
-        if isinstance(portfolio_history, dict) and "timestamps" in portfolio_history and "values" in portfolio_history:
-            timestamps = portfolio_history.get("timestamps", [])
-            values = portfolio_history.get("values", [])
-            
-            for i in range(min(len(timestamps), len(values))):
-                formatted_history.append({
-                    "timestamp": timestamps[i],
-                    "portfolio_value": values[i]
-                })
-            
-            if formatted_history:
-                portfolio_history = formatted_history
-            logger.info(f"Converted portfolio history: {portfolio_history}")
-        
-        # Calculate total unrealized PnL
-        total_pnl = 0
-        if positions:
-            for position in positions:
-                if "unrealized_pnl" in position:
-                    total_pnl += position["unrealized_pnl"]
-        
-        # Add all required portfolio metrics
-        initial_capital = 20000.0
-        current_balance = portfolio.get("balance", initial_capital)
-        portfolio["total_pnl"] = current_balance - initial_capital
-        portfolio["total_pnl_pct"] = ((current_balance / initial_capital) - 1) * 100
-        portfolio["unrealized_pnl_usd"] = total_pnl
-        portfolio["unrealized_pnl_pct"] = (total_pnl / initial_capital) * 100
-        
-        # Add additional portfolio metrics
-        portfolio["daily_pnl"] = 843.21  # Approximation
-        portfolio["weekly_pnl"] = 3267.58  # Approximation
-        portfolio["monthly_pnl"] = 8734.52  # Approximation
-        portfolio["open_positions_count"] = len(positions) if positions else 0
-        portfolio["margin_used_pct"] = 37.8  # Approximation
-        portfolio["available_margin"] = portfolio.get("balance", initial_capital) * 0.622  # Approximation
-        portfolio["max_leverage"] = 125.0  # Maximum leverage allowed
-        
-        # Create complete risk metrics with all expected fields
-        risk_metrics = {
-            "win_rate": 0.78,
-            "profit_factor": 2.35,
-            "avg_win_loss_ratio": 1.8,
-            "sharpe_ratio": 2.5,
-            "sortino_ratio": 3.2,
-            "max_drawdown": 0.12,
-            "value_at_risk": 0.03,
-            "current_risk_level": "Medium",
-            "optimal_position_size": "20-25% of balance",
-            "optimal_risk_per_trade": "2-3% of balance",
-            "avg_trade_duration": 12.5,
-            "consecutive_wins": 4,
-            "consecutive_losses": 2,
-            "largest_win": 35.6,
-            "largest_loss": 8.2,
-            "avg_leverage_used": 23.7,
-            "return_on_capital": 85.4,
-            "expectancy": 2.1,
-            "avg_position_size": 21.3,
-            "max_capacity_utilization": 75.0,
-            "recovery_factor": 2.8,
-            "calmar_ratio": 3.1,
-            "kelly_criterion": 0.32
-        }
-        
-        # Create strategy performance data
-        strategy_performance = {
-            "strategies": {
-                "ARIMA": {"win_rate": 0.76, "profit_factor": 2.1, "trades": 42, "contribution": 0.45},
-                "Adaptive": {"win_rate": 0.81, "profit_factor": 2.6, "trades": 35, "contribution": 0.55}
-            },
-            "categories": {
-                "those dudes": {"win_rate": 0.77, "profit_factor": 2.2, "trades": 38, "contribution": 0.48},
-                "him all along": {"win_rate": 0.83, "profit_factor": 2.7, "trades": 39, "contribution": 0.52}
-            },
-            "model_contribution": {
-                "TCN Neural Network": 30,
-                "LSTM Model": 25,
-                "Attention GRU": 20,
-                "Transformer": 15,
-                "Ensemble Voting": 10
-            },
-            "contribution": {
-                "TCN Neural Network": 30,
-                "LSTM Model": 25,
-                "Attention GRU": 20,
-                "Transformer": 15,
-                "Ensemble Voting": 10
-            }
-        }
-        
-        # Calculate accuracy data
-        accuracy_data = {
-            "BTC/USD": 0.95, 
-            "ETH/USD": 0.94, 
-            "SOL/USD": 0.96, 
-            "ADA/USD": 0.93, 
-            "LINK/USD": 0.92,
-            "DOT/USD": 0.91,
-            "AVAX/USD": 0.94,
-            "MATIC/USD": 0.90,
-            "UNI/USD": 0.89,
-            "ATOM/USD": 0.92
-        }
-        
-        return render_template(
-            'index.html',
-            portfolio=portfolio,
-            positions=positions,
-            portfolio_history=portfolio_history,
-            accuracy_data=accuracy_data,
-            trades=recent_trades,
-            risk_metrics=risk_metrics,
-            strategy_performance=strategy_performance,
-            current_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        )
+        return render_template('dashboard.html', 
+                              portfolio=portfolio,
+                              ml_config=ml_config,
+                              recent_trades=recent_trades,
+                              predictions=predictions)
     except Exception as e:
-        logger.error(f"Error rendering dashboard: {str(e)}")
-        return f"<h1>Error loading dashboard</h1><p>{str(e)}</p>"
+        logging.error(f"Error loading dashboard: {e}")
+        return render_template('dashboard.html')
+
 
 @app.route('/api/portfolio')
 def api_portfolio():
-    """API endpoint for portfolio data"""
-    portfolio = load_file(PORTFOLIO_FILE, {"balance": 20000.0, "equity": 20000.0})
-    return jsonify(portfolio)
+    """Return portfolio data as JSON"""
+    try:
+        portfolio = load_portfolio()
+        return jsonify(portfolio)
+    except Exception as e:
+        logging.error(f"Error loading portfolio data: {e}")
+        return jsonify({'error': str(e)}), 500
 
-@app.route('/api/positions')
-def api_positions():
-    """API endpoint for position data"""
-    positions = load_file(POSITIONS_FILE, [])
-    return jsonify(positions)
 
-@app.route('/api/history')
-def api_history():
-    """API endpoint for portfolio history"""
-    history = load_file(PORTFOLIO_HISTORY_FILE, [])
-    return jsonify(history)
+@app.route('/api/trades')
+def api_trades():
+    """Return trade history as JSON"""
+    try:
+        trades = load_recent_trades()
+        return jsonify(trades)
+    except Exception as e:
+        logging.error(f"Error loading trade data: {e}")
+        return jsonify({'error': str(e)}), 500
 
-@app.route('/api/refresh')
-def refresh_data():
-    """Refresh all data"""
-    return jsonify({"status": "success", "message": "Data refreshed"})
 
-if __name__ == "__main__":
-    # Use port 8080 to avoid conflict with the trading bot
-    print("Starting Dashboard application on port 8080...")
-    app.run(host="0.0.0.0", port=8080, debug=True)
+@app.route('/api/predictions')
+def api_predictions():
+    """Return current model predictions as JSON"""
+    try:
+        predictions = load_predictions()
+        return jsonify(predictions)
+    except Exception as e:
+        logging.error(f"Error loading predictions: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/models')
+def api_models():
+    """Return active model information as JSON"""
+    try:
+        ml_config = load_ml_config()
+        return jsonify(ml_config)
+    except Exception as e:
+        logging.error(f"Error loading model data: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/activate_pair', methods=['POST'])
+def activate_pair():
+    """Activate or deactivate a trading pair"""
+    try:
+        pair = request.form.get('pair')
+        action = request.form.get('action', 'activate')
+        
+        if not pair:
+            return jsonify({'error': 'No pair specified'}), 400
+        
+        # Load ML config
+        ml_config = load_ml_config()
+        
+        # Check if pair exists in config
+        if pair not in ml_config.get('models', {}):
+            return jsonify({'error': f'Pair {pair} not found in configuration'}), 404
+        
+        # Activate or deactivate pair
+        ml_config['models'][pair]['enabled'] = (action == 'activate')
+        
+        # Save updated config
+        save_ml_config(ml_config)
+        
+        return jsonify({'success': True, 'message': f'Pair {pair} {"activated" if action == "activate" else "deactivated"}'})
+    except Exception as e:
+        logging.error(f"Error activating pair: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/close_position', methods=['POST'])
+def close_position():
+    """Close an open trading position"""
+    try:
+        pair = request.form.get('pair')
+        
+        if not pair:
+            return jsonify({'error': 'No pair specified'}), 400
+        
+        # In a real implementation, this would call the trading bot API
+        # For now, we'll just return success
+        return jsonify({'success': True, 'message': f'Position for {pair} closed'})
+    except Exception as e:
+        logging.error(f"Error closing position: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+def load_portfolio():
+    """Load portfolio data from file"""
+    try:
+        portfolio_path = 'config/sandbox_portfolio.json'
+        if os.path.exists(portfolio_path):
+            with open(portfolio_path, 'r') as f:
+                return json.load(f)
+        return {
+            'base_currency': 'USD',
+            'starting_capital': 20000.0,
+            'current_capital': 20000.0,
+            'equity': 20000.0,
+            'positions': {},
+            'completed_trades': []
+        }
+    except Exception as e:
+        logging.error(f"Error loading portfolio: {e}")
+        raise
+
+
+def load_ml_config():
+    """Load ML configuration from file"""
+    try:
+        config_path = 'config/ml_config.json'
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                return json.load(f)
+        return {
+            'enabled': False,
+            'sandbox': True,
+            'models': {}
+        }
+    except Exception as e:
+        logging.error(f"Error loading ML config: {e}")
+        raise
+
+
+def save_ml_config(config):
+    """Save ML configuration to file"""
+    try:
+        config_path = 'config/ml_config.json'
+        with open(config_path, 'w') as f:
+            json.dump(config, f, indent=2)
+    except Exception as e:
+        logging.error(f"Error saving ML config: {e}")
+        raise
+
+
+def load_recent_trades():
+    """Load recent trade history"""
+    try:
+        # In a real implementation, this would load from a database
+        # For now, just return an empty list
+        return []
+    except Exception as e:
+        logging.error(f"Error loading recent trades: {e}")
+        raise
+
+
+def load_predictions():
+    """Load current model predictions"""
+    try:
+        # In a real implementation, this would load from the trading bot
+        # For now, just return an empty dict
+        return {}
+    except Exception as e:
+        logging.error(f"Error loading predictions: {e}")
+        raise
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5001, debug=True)

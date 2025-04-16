@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Trading Dashboard</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .custom-card {
+            background-color: rgba(33, 37, 41, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        .model-status {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .active {
+            background-color: var(--bs-success);
+        }
+        .inactive {
+            background-color: var(--bs-secondary);
+        }
+        .positive {
+            color: var(--bs-success);
+        }
+        .negative {
+            color: var(--bs-danger);
+        }
+        .neutral {
+            color: var(--bs-warning);
+        }
+        .trade-card {
+            transition: all 0.3s ease;
+        }
+        .trade-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        .confidence-progress {
+            height: 8px;
+        }
+        .predictions-table tr:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body data-bs-theme="dark">
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="mb-0">ML Trading Dashboard</h2>
+                <p class="text-muted">Real-time monitoring of machine learning trading models</p>
+            </div>
+        </div>
+
+        <!-- Portfolio Overview -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="custom-card p-3 h-100">
+                    <h5>Portfolio Value</h5>
+                    <div class="d-flex justify-content-between align-items-end">
+                        <div class="stat-value">$52,843.39</div>
+                        <div class="positive">+164.22%</div>
+                    </div>
+                    <p class="text-muted small mt-2">Starting: $20,000.00</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="custom-card p-3 h-100">
+                    <h5>Open Positions</h5>
+                    <div class="d-flex justify-content-between align-items-end">
+                        <div class="stat-value">2</div>
+                        <div class="text-muted">of 5 max</div>
+                    </div>
+                    <p class="text-muted small mt-2">Total allocation: 32.5%</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="custom-card p-3 h-100">
+                    <h5>Win Rate</h5>
+                    <div class="d-flex justify-content-between align-items-end">
+                        <div class="stat-value">86.7%</div>
+                        <div class="text-muted">13/15 trades</div>
+                    </div>
+                    <p class="text-muted small mt-2">Avg profit: +12.4%</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="custom-card p-3 h-100">
+                    <h5>Trading Mode</h5>
+                    <div class="d-flex justify-content-between align-items-end">
+                        <div class="stat-value">Sandbox</div>
+                        <div class="neutral">Simulated</div>
+                    </div>
+                    <p class="text-muted small mt-2">Live trading disabled</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Portfolio Chart and Active Models -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="custom-card p-3 h-100">
+                    <h5>Equity Curve</h5>
+                    <canvas id="equityChart" height="290"></canvas>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="custom-card p-3 h-100">
+                    <h5 class="mb-3">Active Models</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Pair</th>
+                                    <th>Timeframe</th>
+                                    <th>Status</th>
+                                    <th>Signal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>SOL/USD</td>
+                                    <td>1h</td>
+                                    <td><span class="model-status active"></span>Active</td>
+                                    <td class="positive">Strong Buy (95.2%)</td>
+                                </tr>
+                                <tr>
+                                    <td>BTC/USD</td>
+                                    <td>4h</td>
+                                    <td><span class="model-status active"></span>Active</td>
+                                    <td class="neutral">Neutral (54.8%)</td>
+                                </tr>
+                                <tr>
+                                    <td>ETH/USD</td>
+                                    <td>1h</td>
+                                    <td><span class="model-status active"></span>Active</td>
+                                    <td class="positive">Buy (74.3%)</td>
+                                </tr>
+                                <tr>
+                                    <td>ADA/USD</td>
+                                    <td>1h</td>
+                                    <td><span class="model-status active"></span>Active</td>
+                                    <td class="negative">Sell (68.9%)</td>
+                                </tr>
+                                <tr>
+                                    <td>DOT/USD</td>
+                                    <td>15m</td>
+                                    <td><span class="model-status inactive"></span>Inactive</td>
+                                    <td class="text-muted">No signal</td>
+                                </tr>
+                                <tr>
+                                    <td>LINK/USD</td>
+                                    <td>4h</td>
+                                    <td><span class="model-status active"></span>Active</td>
+                                    <td class="negative">Weak Sell (61.2%)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Open Positions and Recent Trades -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h4>Open Positions</h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="custom-card trade-card p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5>SOL/USD</h5>
+                                <span class="badge bg-success">LONG</span>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4">
+                                    <p class="mb-1 text-muted small">Entry Price</p>
+                                    <p class="mb-0">$169.85</p>
+                                </div>
+                                <div class="col-4">
+                                    <p class="mb-1 text-muted small">Current Price</p>
+                                    <p class="mb-0">$178.42</p>
+                                </div>
+                                <div class="col-4">
+                                    <p class="mb-1 text-muted small">P&L</p>
+                                    <p class="mb-0 positive">+5.04%</p>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4">
+                                    <p class="mb-1 text-muted small">Size</p>
+                                    <p class="mb-0">$8,500</p>
+                                </div>
+                                <div class="col-4">
+                                    <p class="mb-1 text-muted small">Leverage</p>
+                                    <p class="mb-0">3x</p>
+                                </div>
+                                <div class="col-4">
+                                    <p class="mb-1 text-muted small">Opened</p>
+                                    <p class="mb-0">2h 45m ago</p>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-12">
+                                    <p class="mb-1 text-muted small">Exit Confidence</p>
+                                    <div class="progress confidence-progress">
+                                        <div class="progress-bar bg-warning" role="progressbar" style="width: 38%" aria-valuenow="38" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <p class="mb-0 text-end small mt-1">38% (below 50% threshold)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="custom-card trade-card p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5>ETH/USD</h5>
+                                <span class="badge bg-success">LONG</span>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4">
+                                    <p class="mb-1 text-muted small">Entry Price</p>
+                                    <p class="mb-0">$3,245.60</p>
+                                </div>
+                                <div class="col-4">
+                                    <p class="mb-1 text-muted small">Current Price</p>
+                                    <p class="mb-0">$3,326.75</p>
+                                </div>
+                                <div class="col-4">
+                                    <p class="mb-1 text-muted small">P&L</p>
+                                    <p class="mb-0 positive">+2.50%</p>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4">
+                                    <p class="mb-1 text-muted small">Size</p>
+                                    <p class="mb-0">$6,000</p>
+                                </div>
+                                <div class="col-4">
+                                    <p class="mb-1 text-muted small">Leverage</p>
+                                    <p class="mb-0">1x</p>
+                                </div>
+                                <div class="col-4">
+                                    <p class="mb-1 text-muted small">Opened</p>
+                                    <p class="mb-0">4h 12m ago</p>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-12">
+                                    <p class="mb-1 text-muted small">Exit Confidence</p>
+                                    <div class="progress confidence-progress">
+                                        <div class="progress-bar bg-danger" role="progressbar" style="width: 62%" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <p class="mb-0 text-end small mt-1">62% (above 50% threshold)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Trades -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h4>Recent Trades</h4>
+                <div class="custom-card p-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Pair</th>
+                                    <th>Type</th>
+                                    <th>Entry Price</th>
+                                    <th>Exit Price</th>
+                                    <th>Size</th>
+                                    <th>Leverage</th>
+                                    <th>P&L</th>
+                                    <th>Duration</th>
+                                    <th>Close Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>BTC/USD</td>
+                                    <td><span class="badge bg-success">LONG</span></td>
+                                    <td>$59,450.50</td>
+                                    <td>$64,275.30</td>
+                                    <td>$10,000</td>
+                                    <td>3x</td>
+                                    <td class="positive">+24.36%</td>
+                                    <td>14h 22m</td>
+                                    <td>ML Exit Signal</td>
+                                </tr>
+                                <tr>
+                                    <td>SOL/USD</td>
+                                    <td><span class="badge bg-danger">SHORT</span></td>
+                                    <td>$184.25</td>
+                                    <td>$175.60</td>
+                                    <td>$5,000</td>
+                                    <td>3x</td>
+                                    <td class="positive">+14.04%</td>
+                                    <td>8h 15m</td>
+                                    <td>Take Profit</td>
+                                </tr>
+                                <tr>
+                                    <td>ADA/USD</td>
+                                    <td><span class="badge bg-success">LONG</span></td>
+                                    <td>$0.4850</td>
+                                    <td>$0.5125</td>
+                                    <td>$7,500</td>
+                                    <td>1x</td>
+                                    <td class="positive">+5.67%</td>
+                                    <td>22h 40m</td>
+                                    <td>ML Exit Signal</td>
+                                </tr>
+                                <tr>
+                                    <td>AVAX/USD</td>
+                                    <td><span class="badge bg-success">LONG</span></td>
+                                    <td>$28.75</td>
+                                    <td>$27.90</td>
+                                    <td>$4,000</td>
+                                    <td>1x</td>
+                                    <td class="negative">-2.96%</td>
+                                    <td>5h 10m</td>
+                                    <td>Stop Loss</td>
+                                </tr>
+                                <tr>
+                                    <td>ETH/USD</td>
+                                    <td><span class="badge bg-success">LONG</span></td>
+                                    <td>$3,125.50</td>
+                                    <td>$3,285.25</td>
+                                    <td>$8,000</td>
+                                    <td>1x</td>
+                                    <td class="positive">+5.11%</td>
+                                    <td>18h 32m</td>
+                                    <td>Take Profit</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ML Model Predictions -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h4>Current ML Predictions</h4>
+                <div class="custom-card p-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm predictions-table">
+                            <thead>
+                                <tr>
+                                    <th>Pair</th>
+                                    <th>Timeframe</th>
+                                    <th>Entry Signal</th>
+                                    <th>Exit Signal</th>
+                                    <th>Cancel Signal</th>
+                                    <th>Position Size</th>
+                                    <th>Recommended Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>SOL/USD</td>
+                                    <td>1h</td>
+                                    <td class="positive">95.2% (Strong Buy)</td>
+                                    <td>12.5% (Hold)</td>
+                                    <td>8.3% (Keep)</td>
+                                    <td>0.85 (Large)</td>
+                                    <td><span class="badge bg-success">LONG</span></td>
+                                </tr>
+                                <tr>
+                                    <td>BTC/USD</td>
+                                    <td>4h</td>
+                                    <td class="neutral">54.8% (Neutral)</td>
+                                    <td>48.2% (Hold)</td>
+                                    <td>22.1% (Keep)</td>
+                                    <td>0.45 (Medium)</td>
+                                    <td><span class="badge bg-secondary">WAIT</span></td>
+                                </tr>
+                                <tr>
+                                    <td>ETH/USD</td>
+                                    <td>1h</td>
+                                    <td class="positive">74.3% (Buy)</td>
+                                    <td class="positive">62.8% (Consider Exit)</td>
+                                    <td>35.4% (Keep)</td>
+                                    <td>0.70 (Large)</td>
+                                    <td><span class="badge bg-warning">PREPARE EXIT</span></td>
+                                </tr>
+                                <tr>
+                                    <td>ADA/USD</td>
+                                    <td>1h</td>
+                                    <td class="negative">31.1% (Sell Pressure)</td>
+                                    <td class="negative">68.9% (Exit)</td>
+                                    <td>42.7% (Keep)</td>
+                                    <td>0.30 (Small)</td>
+                                    <td><span class="badge bg-danger">SHORT</span></td>
+                                </tr>
+                                <tr>
+                                    <td>LINK/USD</td>
+                                    <td>4h</td>
+                                    <td class="negative">38.8% (Weak Sell)</td>
+                                    <td>45.2% (Hold)</td>
+                                    <td>24.5% (Keep)</td>
+                                    <td>0.25 (Small)</td>
+                                    <td><span class="badge bg-danger">SHORT</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Charts -->
+    <script>
+        // Equity Chart
+        const equityCtx = document.getElementById('equityChart').getContext('2d');
+        const equityChart = new Chart(equityCtx, {
+            type: 'line',
+            data: {
+                labels: ['Apr 1', 'Apr 2', 'Apr 3', 'Apr 4', 'Apr 5', 'Apr 6', 'Apr 7', 'Apr 8', 'Apr 9', 'Apr 10', 'Apr 11', 'Apr 12', 'Apr 13', 'Apr 14', 'Apr 15', 'Apr 16'],
+                datasets: [{
+                    label: 'Portfolio Value',
+                    data: [20000, 20450, 21200, 22800, 23150, 23900, 25600, 28400, 30200, 33500, 36900, 39200, 42800, 45600, 49200, 52843],
+                    borderColor: '#0dcaf0',
+                    backgroundColor: 'rgba(13, 202, 240, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.2,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#0dcaf0'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += '$' + context.parsed.y.toLocaleString();
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

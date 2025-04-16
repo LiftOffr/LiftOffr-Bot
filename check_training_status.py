@@ -1,259 +1,376 @@
 #!/usr/bin/env python3
 """
-Check Training Status for Hybrid Models
+Check Training Status
 
-This script checks the status of hybrid model training and displays:
-1. Available model files
-2. ML configuration settings
-3. Risk management parameters
-4. Architecture overview for each pair
+This script checks the status of model training, showing which models
+have been trained for each pair and timeframe, and displaying summary
+metrics for the trained models.
 
 Usage:
+    python check_training_status.py [--pair PAIR]
+
+Example:
     python check_training_status.py
+    python check_training_status.py --pair SOL/USD
 """
 
-import os
+import argparse
+import glob
 import json
+import os
 import sys
-import logging
-from datetime import datetime
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-logger = logging.getLogger(__name__)
+from typing import Dict, List, Optional
 
 # Constants
-CONFIG_DIR = "config"
-MODEL_WEIGHTS_DIR = "model_weights"
-RESULTS_DIR = "training_results"
-DATA_DIR = "data"
-ML_CONFIG_PATH = f"{CONFIG_DIR}/ml_config.json"
-PORTFOLIO_PATH = f"{DATA_DIR}/sandbox_portfolio.json"
-POSITIONS_PATH = f"{DATA_DIR}/sandbox_positions.json"
-TRADING_PAIRS = [
-    "BTC/USD", "ETH/USD", "SOL/USD", "ADA/USD", "DOT/USD",
-    "LINK/USD", "AVAX/USD", "MATIC/USD", "UNI/USD", "ATOM/USD"
+SUPPORTED_PAIRS = [
+    'SOL/USD', 'BTC/USD', 'ETH/USD', 'ADA/USD', 'DOT/USD',
+    'LINK/USD', 'AVAX/USD', 'MATIC/USD', 'UNI/USD', 'ATOM/USD'
 ]
+TIMEFRAMES = ['1m', '5m', '15m', '1h', '4h', '1d']
+MODEL_TYPES = ['entry', 'exit', 'cancel', 'sizing', 'ensemble']
 
-def load_ml_config():
-    """Load ML configuration"""
-    try:
-        if os.path.exists(ML_CONFIG_PATH):
-            with open(ML_CONFIG_PATH, 'r') as f:
-                config = json.load(f)
-            logger.info(f"Loaded ML configuration with {len(config.get('models', {}))} models")
-            return config
-        else:
-            logger.warning(f"ML configuration file not found: {ML_CONFIG_PATH}")
-            return {"models": {}, "global_settings": {}}
-    except Exception as e:
-        logger.error(f"Error loading ML configuration: {e}")
-        return {"models": {}, "global_settings": {}}
 
-def load_portfolio():
-    """Load portfolio data"""
-    try:
-        if os.path.exists(PORTFOLIO_PATH):
-            with open(PORTFOLIO_PATH, 'r') as f:
-                portfolio = json.load(f)
-            logger.info(f"Loaded portfolio with balance: ${portfolio.get('balance', 0):.2f}")
-            return portfolio
-        else:
-            logger.warning(f"Portfolio file not found: {PORTFOLIO_PATH}")
-            return {"balance": 0, "initial_balance": 0}
-    except Exception as e:
-        logger.error(f"Error loading portfolio: {e}")
-        return {"balance": 0, "initial_balance": 0}
+def parse_arguments():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(description='Check training status')
+    parser.add_argument('--pair', type=str, choices=SUPPORTED_PAIRS,
+                       help='Trading pair to check (e.g., SOL/USD)')
+    return parser.parse_args()
 
-def load_positions():
-    """Load positions data"""
-    try:
-        if os.path.exists(POSITIONS_PATH):
-            with open(POSITIONS_PATH, 'r') as f:
-                positions = json.load(f)
-            logger.info(f"Loaded {len(positions)} positions")
-            return positions
-        else:
-            logger.warning(f"Positions file not found: {POSITIONS_PATH}")
-            return {}
-    except Exception as e:
-        logger.error(f"Error loading positions: {e}")
-        return {}
 
-def check_model_files():
-    """Check for available model files"""
-    if not os.path.exists(MODEL_WEIGHTS_DIR):
-        logger.warning(f"Model weights directory not found: {MODEL_WEIGHTS_DIR}")
-        return []
+def check_data_files(pair: Optional[str] = None) -> Dict:
+    """
+    Check which data files exist
     
-    model_files = []
-    for file in os.listdir(MODEL_WEIGHTS_DIR):
-        if file.endswith(".h5"):
-            model_files.append(file)
+    Args:
+        pair: Trading pair to check (optional, if None checks all pairs)
+        
+    Returns:
+        Dictionary mapping pairs to lists of available timeframes
+    """
+    pairs_to_check = [pair] if pair else SUPPORTED_PAIRS
+    data_files = {}
+    
+    for p in pairs_to_check:
+        p_formatted = p.replace('/', '_')
+        available_timeframes = []
+        
+        for tf in TIMEFRAMES:
+            file_path = f"historical_data/{p_formatted}_{tf}.csv"
+            if os.path.exists(file_path):
+                available_timeframes.append(tf)
+        
+        if available_timeframes:
+            data_files[p] = available_timeframes
+    
+    return data_files
+
+
+def check_model_files(pair: Optional[str] = None) -> Dict:
+    """
+    Check which model files exist
+    
+    Args:
+        pair: Trading pair to check (optional, if None checks all pairs)
+        
+    Returns:
+        Nested dictionary mapping pairs to timeframes to lists of available model types
+    """
+    pairs_to_check = [pair] if pair else SUPPORTED_PAIRS
+    model_files = {}
+    
+    for p in pairs_to_check:
+        p_formatted = p.replace('/', '_')
+        model_files[p] = {}
+        
+        for tf in TIMEFRAMES:
+            available_models = []
+            
+            for model_type in MODEL_TYPES:
+                info_path = f"ml_models/{p_formatted}_{tf}_{model_type}_info.json"
+                model_path = f"ml_models/{p_formatted}_{tf}_{model_type}_model.h5"
+                
+                # For ensemble, we only need the info file
+                if model_type == 'ensemble' and os.path.exists(info_path):
+                    available_models.append(model_type)
+                # For other models, we need both info and model files
+                elif os.path.exists(info_path) and (model_type == 'ensemble' or os.path.exists(model_path)):
+                    available_models.append(model_type)
+            
+            if available_models:
+                model_files[p][tf] = available_models
     
     return model_files
 
-def check_model_results():
-    """Check for model training results"""
-    if not os.path.exists(RESULTS_DIR):
-        logger.warning(f"Results directory not found: {RESULTS_DIR}")
-        return []
-    
-    result_files = []
-    for file in os.listdir(RESULTS_DIR):
-        if file.endswith(".txt") or file.endswith(".png"):
-            result_files.append(file)
-    
-    return result_files
 
-def format_model_status(pair, config, model_files):
-    """Format status of a model for a particular pair"""
-    # Get model configuration for the pair
-    model_config = config.get("models", {}).get(pair, {})
+def get_model_metrics(pair: str, timeframe: str, model_type: str) -> Optional[Dict]:
+    """
+    Get metrics for a specific model
     
-    # Check if model file exists
-    model_path = model_config.get("model_path", "")
-    model_filename = os.path.basename(model_path) if model_path else ""
-    model_exists = model_filename in model_files
+    Args:
+        pair: Trading pair
+        timeframe: Timeframe
+        model_type: Model type
+        
+    Returns:
+        Dictionary with metrics or None if not available
+    """
+    pair_formatted = pair.replace('/', '_')
+    info_path = f"ml_models/{pair_formatted}_{timeframe}_{model_type}_info.json"
     
-    # Format model status
-    status = "AVAILABLE" if model_exists else "NOT AVAILABLE"
-    model_type = model_config.get("model_type", "N/A")
-    accuracy = model_config.get("accuracy", 0)
-    win_rate = model_config.get("win_rate", 0)
+    if not os.path.exists(info_path):
+        return None
     
-    # Format status string
-    status_str = f"{pair}:\n"
-    status_str += f"  Status: {status}\n"
-    status_str += f"  Model Type: {model_type}\n"
-    status_str += f"  Model Path: {model_path}\n"
-    status_str += f"  Accuracy: {accuracy:.4f}\n" if accuracy else "  Accuracy: N/A\n"
-    status_str += f"  Win Rate: {win_rate:.4f}\n" if win_rate else "  Win Rate: N/A\n"
-    
-    return status_str, model_exists
+    try:
+        with open(info_path, 'r') as f:
+            info = json.load(f)
+        
+        if 'metrics' in info:
+            return info['metrics']
+        return {}
+    except Exception as e:
+        print(f"Error loading model info: {e}")
+        return None
 
-def print_hybrid_model_architecture():
-    """Print overview of the hybrid model architecture"""
-    architecture = "\n" + "=" * 80 + "\n"
-    architecture += "HYBRID MODEL ARCHITECTURE OVERVIEW\n"
-    architecture += "=" * 80 + "\n\n"
+
+def print_training_progress(data_files: Dict, model_files: Dict, pair: Optional[str] = None):
+    """
+    Print training progress for all pairs
     
-    architecture += "The implemented architecture combines multiple model types:\n\n"
+    Args:
+        data_files: Dictionary mapping pairs to lists of available timeframes
+        model_files: Nested dictionary mapping pairs to timeframes to lists of available model types
+        pair: Trading pair to check (optional, if None checks all pairs)
+    """
+    pairs_to_check = [pair] if pair else SUPPORTED_PAIRS
     
-    architecture += "1. CNN BRANCH - Local Price Pattern Recognition\n"
-    architecture += "   ├── Conv1D Layers: Capture local patterns in price data\n"
-    architecture += "   ├── Batch Normalization: Normalize activations\n"
-    architecture += "   ├── Max Pooling: Extract most important features\n"
-    architecture += "   └── Dense Layers: Process extracted features\n\n"
+    print("\n=== Training Progress ===\n")
     
-    architecture += "2. LSTM BRANCH - Long-Term Sequential Dependencies\n"
-    architecture += "   ├── LSTM Layers: Capture long-term patterns and sequences\n"
-    architecture += "   ├── Dropout: Prevent overfitting\n"
-    architecture += "   └── Dense Layers: Process sequence outputs\n\n"
+    total_data_files = sum(len(tfs) for p, tfs in data_files.items() if p in pairs_to_check)
+    total_expected_data_files = len(pairs_to_check) * len(TIMEFRAMES)
+    data_percentage = (total_data_files / total_expected_data_files) * 100 if total_expected_data_files > 0 else 0
     
-    architecture += "3. TCN BRANCH - Temporal Convolutional Network\n"
-    architecture += "   ├── Dilated Causal Convolutions: See wider time horizons\n"
-    architecture += "   ├── Residual Connections: Help with gradient flow\n"
-    architecture += "   └── Temporal Modeling: Capture complex time dependencies\n\n"
+    print(f"Data Collection: {total_data_files}/{total_expected_data_files} files ({data_percentage:.1f}%)")
     
-    architecture += "4. ATTENTION MECHANISMS\n"
-    architecture += "   ├── Self-Attention: Learn relationships between time steps\n"
-    architecture += "   ├── Multi-Head Attention: Multiple attention perspectives\n"
-    architecture += "   └── Highlight important parts of the sequence\n\n"
+    total_models = 0
+    total_expected_models = 0
     
-    architecture += "5. META-LEARNER - Combines All Branches\n"
-    architecture += "   ├── Concatenates outputs from all branches\n"
-    architecture += "   ├── Deep neural network to optimally combine signals\n"
-    architecture += "   └── Outputs final prediction with confidence\n\n"
+    for p in pairs_to_check:
+        if p in model_files:
+            for tf in model_files[p]:
+                total_models += len(model_files[p][tf])
+                
+        if p in data_files:
+            timeframes = data_files[p]
+            for tf in timeframes:
+                total_expected_models += len(MODEL_TYPES)
     
-    architecture += "6. DYNAMIC RISK MANAGEMENT\n"
-    architecture += "   ├── Maximum portfolio risk: 25%\n"
-    architecture += "   ├── Dynamic leverage: 5x - 75x based on confidence\n"
-    architecture += "   ├── Dynamic position sizing\n"
-    architecture += "   └── Adjusts for market volatility\n"
+    models_percentage = (total_models / total_expected_models) * 100 if total_expected_models > 0 else 0
+    print(f"Model Training: {total_models}/{total_expected_models} models ({models_percentage:.1f}%)")
     
-    print(architecture)
+    # Print detailed progress for each pair
+    for p in pairs_to_check:
+        print(f"\n{p}:")
+        
+        if p not in data_files:
+            print("  No data files found")
+            continue
+        
+        for tf in TIMEFRAMES:
+            if tf in data_files[p]:
+                model_count = 0
+                model_status = []
+                
+                if p in model_files and tf in model_files[p]:
+                    model_count = len(model_files[p][tf])
+                    for model_type in MODEL_TYPES:
+                        status = "✓" if model_type in model_files[p][tf] else " "
+                        model_status.append(f"{status} {model_type}")
+                
+                status_str = ", ".join(model_status)
+                print(f"  {tf}: {model_count}/{len(MODEL_TYPES)} models - {status_str}")
+            else:
+                print(f"  {tf}: No data available")
+
+
+def print_model_metrics(model_files: Dict, pair: Optional[str] = None):
+    """
+    Print metrics for trained models
+    
+    Args:
+        model_files: Nested dictionary mapping pairs to timeframes to lists of available model types
+        pair: Trading pair to check (optional, if None checks all pairs)
+    """
+    pairs_to_check = [pair] if pair else list(model_files.keys())
+    
+    print("\n=== Model Metrics ===\n")
+    
+    for p in pairs_to_check:
+        if p not in model_files or not model_files[p]:
+            continue
+        
+        print(f"{p}:")
+        
+        for tf in model_files[p]:
+            print(f"  {tf}:")
+            
+            # Check if ensemble model exists
+            if 'ensemble' in model_files[p][tf]:
+                metrics = get_model_metrics(p, tf, 'ensemble')
+                
+                if metrics:
+                    # Print primary metrics
+                    win_rate = metrics.get('win_rate', 0) * 100
+                    profit_factor = metrics.get('profit_factor', 0)
+                    sharpe_ratio = metrics.get('sharpe_ratio', 0)
+                    
+                    print(f"    Ensemble: Win Rate={win_rate:.1f}%, Profit Factor={profit_factor:.2f}, Sharpe={sharpe_ratio:.2f}")
+            
+            # Print individual model metrics
+            for model_type in ['entry', 'exit', 'cancel', 'sizing']:
+                if model_type in model_files[p][tf]:
+                    metrics = get_model_metrics(p, tf, model_type)
+                    
+                    if metrics:
+                        # Different metrics for different model types
+                        if model_type in ['entry', 'exit', 'cancel']:
+                            precision = metrics.get('precision', 0)
+                            recall = metrics.get('recall', 0)
+                            f1 = metrics.get('f1_score', 0)
+                            
+                            print(f"    {model_type.capitalize()}: Precision={precision:.3f}, Recall={recall:.3f}, F1={f1:.3f}")
+                        elif model_type == 'sizing':
+                            mae = metrics.get('test_mae', 0)
+                            r2 = metrics.get('r_squared', 0)
+                            
+                            print(f"    {model_type.capitalize()}: MAE={mae:.3f}, R²={r2:.3f}")
+
+
+def print_best_models():
+    """Print best performing models based on metrics"""
+    print("\n=== Best Performing Models ===\n")
+    
+    best_models = {}
+    
+    # Find all model info files
+    info_files = glob.glob("ml_models/*_ensemble_info.json")
+    
+    for info_file in info_files:
+        try:
+            with open(info_file, 'r') as f:
+                info = json.load(f)
+            
+            pair = info.get('pair')
+            timeframe = info.get('timeframe')
+            
+            if 'metrics' not in info or not pair or not timeframe:
+                continue
+            
+            metrics = info['metrics']
+            
+            # Extract key metrics
+            win_rate = metrics.get('win_rate', 0)
+            profit_factor = metrics.get('profit_factor', 0)
+            sharpe_ratio = metrics.get('sharpe_ratio', 0)
+            
+            # Calculate combined score (custom formula)
+            combined_score = win_rate * 0.4 + min(profit_factor / 5, 1) * 0.4 + min(sharpe_ratio / 3, 1) * 0.2
+            
+            # Store model info
+            model_key = f"{pair}_{timeframe}"
+            best_models[model_key] = {
+                'pair': pair,
+                'timeframe': timeframe,
+                'win_rate': win_rate,
+                'profit_factor': profit_factor,
+                'sharpe_ratio': sharpe_ratio,
+                'combined_score': combined_score
+            }
+        except Exception as e:
+            print(f"Error processing {info_file}: {e}")
+    
+    # Sort models by combined score
+    sorted_models = sorted(
+        best_models.values(),
+        key=lambda x: x['combined_score'],
+        reverse=True
+    )
+    
+    # Print top 5 models
+    for i, model in enumerate(sorted_models[:5], 1):
+        pair = model['pair']
+        timeframe = model['timeframe']
+        win_rate = model['win_rate'] * 100
+        profit_factor = model['profit_factor']
+        sharpe_ratio = model['sharpe_ratio']
+        score = model['combined_score'] * 100
+        
+        print(f"{i}. {pair} ({timeframe}): Win Rate={win_rate:.1f}%, Profit Factor={profit_factor:.2f}, Sharpe={sharpe_ratio:.2f}, Score={score:.1f}%")
+
+
+def get_training_progress_summary():
+    """Get a summary of training progress"""
+    data_files = check_data_files()
+    model_files = check_model_files()
+    
+    total_pairs = len(SUPPORTED_PAIRS)
+    pairs_with_data = len(data_files)
+    pairs_with_models = sum(1 for p in model_files if model_files[p])
+    
+    total_data_files = sum(len(tfs) for p, tfs in data_files.items())
+    total_expected_data_files = total_pairs * len(TIMEFRAMES)
+    data_percentage = (total_data_files / total_expected_data_files) * 100 if total_expected_data_files > 0 else 0
+    
+    total_models = 0
+    total_expected_models = 0
+    
+    for p in model_files:
+        for tf in model_files[p]:
+            total_models += len(model_files[p][tf])
+            
+    for p in data_files:
+        timeframes = data_files[p]
+        for tf in timeframes:
+            total_expected_models += len(MODEL_TYPES)
+    
+    models_percentage = (total_models / total_expected_models) * 100 if total_expected_models > 0 else 0
+    
+    return {
+        'total_pairs': total_pairs,
+        'pairs_with_data': pairs_with_data,
+        'pairs_with_models': pairs_with_models,
+        'data_percentage': data_percentage,
+        'models_percentage': models_percentage
+    }
+
 
 def main():
     """Main function"""
-    print("\n" + "=" * 80)
-    print("HYBRID MODEL TRAINING STATUS")
-    print("=" * 80 + "\n")
+    args = parse_arguments()
+    
+    # Check data files
+    data_files = check_data_files(args.pair)
     
     # Check model files
-    model_files = check_model_files()
-    print(f"Model files found: {len(model_files)}")
-    for i, file in enumerate(model_files):
-        print(f"  {i+1}. {file}")
-    print()
+    model_files = check_model_files(args.pair)
     
-    # Check result files
-    result_files = check_model_results()
-    print(f"Result files found: {len(result_files)}")
-    for i, file in enumerate(result_files[:5]):  # Show only first 5 files
-        print(f"  {i+1}. {file}")
-    if len(result_files) > 5:
-        print(f"  ... and {len(result_files) - 5} more files")
-    print()
+    # Print training progress
+    print_training_progress(data_files, model_files, args.pair)
     
-    # Load ML configuration
-    config = load_ml_config()
+    # Print model metrics
+    if model_files:
+        print_model_metrics(model_files, args.pair)
     
-    # Print global settings
-    global_settings = config.get("global_settings", {})
-    print("Global Settings:")
-    print(f"  Maximum Portfolio Risk: {global_settings.get('max_portfolio_risk', 0.25):.2%}")
-    print(f"  Base Leverage: {global_settings.get('base_leverage', 5.0)}x")
-    print(f"  Max Leverage: {global_settings.get('max_leverage', 75.0)}x")
-    print(f"  Confidence Threshold: {global_settings.get('confidence_threshold', 0.65)}")
-    print(f"  Risk Percentage: {global_settings.get('risk_percentage', 0.20):.2%}")
-    print()
+    # Print best models
+    if not args.pair:
+        print_best_models()
     
-    # Load portfolio and positions
-    portfolio = load_portfolio()
-    positions = load_positions()
-    
-    # Print portfolio information
-    print("Portfolio Information:")
-    print(f"  Balance: ${portfolio.get('balance', 0):.2f}")
-    print(f"  Initial Balance: ${portfolio.get('initial_balance', 0):.2f}")
-    profit_loss = portfolio.get('balance', 0) - portfolio.get('initial_balance', 0)
-    profit_loss_percentage = (profit_loss / portfolio.get('initial_balance', 1)) * 100
-    print(f"  Profit/Loss: ${profit_loss:.2f} ({profit_loss_percentage:.2f}%)")
-    print(f"  Open Positions: {len(positions)}")
-    print()
-    
-    # Print model status for each pair
-    print("Model Status by Trading Pair:")
-    available_models = 0
-    for pair in TRADING_PAIRS:
-        status_str, model_exists = format_model_status(pair, config, model_files)
-        print(status_str)
-        if model_exists:
-            available_models += 1
-    
-    # Print summary
-    print("\nTraining Progress Summary:")
-    print(f"  Trading Pairs: {len(TRADING_PAIRS)}")
-    print(f"  Models Available: {available_models}/{len(TRADING_PAIRS)}")
-    print(f"  Training Progress: {available_models/len(TRADING_PAIRS):.0%} complete")
-    print()
-    
-    # Print hybrid model architecture
-    print_hybrid_model_architecture()
-    
-    print("\n" + "=" * 80)
-    print("TRAINING STATUS CHECK COMPLETE")
-    print("=" * 80)
+    # Print overall summary
+    if not args.pair:
+        summary = get_training_progress_summary()
+        print(f"\nOverall Progress: {summary['data_percentage']:.1f}% of data collected, {summary['models_percentage']:.1f}% of models trained")
+        print(f"{summary['pairs_with_data']}/{summary['total_pairs']} pairs have data, {summary['pairs_with_models']}/{summary['total_pairs']} pairs have models")
+
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        logger.error(f"Error checking training status: {e}")
-        import traceback
-        traceback.print_exc()
+    main()

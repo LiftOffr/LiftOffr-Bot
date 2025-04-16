@@ -1,9 +1,4 @@
 {
-  "workflows": {
-    "web_server": {
-      "name": "web_server",
-      "command": "python start_web_app.py",
-      "terminal": true
-    }
-  }
+  "name": "Start application",
+  "command": "gunicorn --bind 0.0.0.0:5001 --reuse-port --reload app:app"
 }

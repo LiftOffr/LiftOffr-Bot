@@ -1,118 +1,438 @@
 {
+  "enabled": true,
+  "sandbox": true,
   "models": {
+    "SOL/USD": {
+      "enabled": true,
+      "timeframe": "1h",
+      "model_path": "ml_models",
+      "use_ensemble": true,
+      "specialized_models": {
+        "entry": {
+          "enabled": true,
+          "model_name": "SOL_USD_1h_entry_model.h5",
+          "threshold": 0.6
+        },
+        "exit": {
+          "enabled": true,
+          "model_name": "SOL_USD_1h_exit_model.h5",
+          "threshold": 0.5
+        },
+        "cancel": {
+          "enabled": true,
+          "model_name": "SOL_USD_1h_cancel_model.h5",
+          "threshold": 0.7
+        },
+        "sizing": {
+          "enabled": true,
+          "model_name": "SOL_USD_1h_sizing_model.h5",
+          "min_size": 0.25,
+          "max_size": 1.0
+        }
+      },
+      "risk_management": {
+        "max_position_size": 0.2,
+        "max_positions": 5,
+        "confidence_scaling": true,
+        "max_leverage": 75,
+        "min_leverage": 1,
+        "confidence_thresholds": {
+          "low": 0.6,
+          "medium": 0.75,
+          "high": 0.85,
+          "very_high": 0.95
+        },
+        "leverage_tiers": {
+          "low": 1,
+          "medium": 3,
+          "high": 15,
+          "very_high": 75
+        }
+      }
+    },
     "BTC/USD": {
-      "model_type": "hybrid_quick",
-      "model_path": "model_weights/hybrid_btc_usd_quick_model.h5",
-      "accuracy": 0.6513157894736842,
-      "direction_accuracy": 0,
-      "win_rate": 0.6,
-      "base_leverage": 5.0,
-      "max_leverage": 75.0,
-      "confidence_threshold": 0.65,
-      "risk_percentage": 0.2,
-      "active": true
+      "enabled": true,
+      "timeframe": "4h",
+      "model_path": "ml_models",
+      "use_ensemble": true,
+      "specialized_models": {
+        "entry": {
+          "enabled": true,
+          "model_name": "BTC_USD_4h_entry_model.h5",
+          "threshold": 0.65
+        },
+        "exit": {
+          "enabled": true,
+          "model_name": "BTC_USD_4h_exit_model.h5",
+          "threshold": 0.55
+        },
+        "cancel": {
+          "enabled": true,
+          "model_name": "BTC_USD_4h_cancel_model.h5",
+          "threshold": 0.75
+        },
+        "sizing": {
+          "enabled": true,
+          "model_name": "BTC_USD_4h_sizing_model.h5",
+          "min_size": 0.2,
+          "max_size": 0.8
+        }
+      },
+      "risk_management": {
+        "max_position_size": 0.15,
+        "max_positions": 3,
+        "confidence_scaling": true,
+        "max_leverage": 50,
+        "min_leverage": 1,
+        "confidence_thresholds": {
+          "low": 0.65,
+          "medium": 0.8,
+          "high": 0.9,
+          "very_high": 0.97
+        },
+        "leverage_tiers": {
+          "low": 1,
+          "medium": 2,
+          "high": 10,
+          "very_high": 50
+        }
+      }
     },
     "ETH/USD": {
-      "model_type": "lstm",
-      "confidence_threshold": 0.65,
-      "min_leverage": 5.0,
-      "max_leverage": 75.0,
-      "risk_percentage": 0.2,
-      "model_path": "model_weights/eth_model.h5",
-      "base_leverage": 5.0,
-      "active": true
-    },
-    "SOL/USD": {
-      "model_type": "lstm",
-      "confidence_threshold": 0.65,
-      "min_leverage": 5.0,
-      "max_leverage": 75.0,
-      "risk_percentage": 0.2,
-      "model_path": "model_weights/sol_model.h5",
-      "base_leverage": 5.0,
-      "active": true
+      "enabled": true,
+      "timeframe": "1h",
+      "model_path": "ml_models",
+      "use_ensemble": true,
+      "specialized_models": {
+        "entry": {
+          "enabled": true,
+          "model_name": "ETH_USD_1h_entry_model.h5",
+          "threshold": 0.62
+        },
+        "exit": {
+          "enabled": true,
+          "model_name": "ETH_USD_1h_exit_model.h5",
+          "threshold": 0.52
+        },
+        "cancel": {
+          "enabled": true,
+          "model_name": "ETH_USD_1h_cancel_model.h5",
+          "threshold": 0.72
+        },
+        "sizing": {
+          "enabled": true,
+          "model_name": "ETH_USD_1h_sizing_model.h5",
+          "min_size": 0.25,
+          "max_size": 0.9
+        }
+      },
+      "risk_management": {
+        "max_position_size": 0.18,
+        "max_positions": 4,
+        "confidence_scaling": true,
+        "max_leverage": 60,
+        "min_leverage": 1,
+        "confidence_thresholds": {
+          "low": 0.62,
+          "medium": 0.77,
+          "high": 0.87,
+          "very_high": 0.96
+        },
+        "leverage_tiers": {
+          "low": 1,
+          "medium": 3,
+          "high": 12,
+          "very_high": 60
+        }
+      }
     },
     "ADA/USD": {
-      "model_type": "lstm",
-      "confidence_threshold": 0.65,
-      "min_leverage": 5.0,
-      "max_leverage": 75.0,
-      "risk_percentage": 0.2,
-      "model_path": "model_weights/ada_model.h5",
-      "base_leverage": 5.0,
-      "active": true
+      "enabled": true,
+      "timeframe": "1h",
+      "model_path": "ml_models",
+      "use_ensemble": true,
+      "specialized_models": {
+        "entry": {
+          "enabled": true,
+          "model_name": "ADA_USD_1h_entry_model.h5",
+          "threshold": 0.63
+        },
+        "exit": {
+          "enabled": true,
+          "model_name": "ADA_USD_1h_exit_model.h5",
+          "threshold": 0.53
+        },
+        "cancel": {
+          "enabled": true,
+          "model_name": "ADA_USD_1h_cancel_model.h5",
+          "threshold": 0.73
+        },
+        "sizing": {
+          "enabled": true,
+          "model_name": "ADA_USD_1h_sizing_model.h5",
+          "min_size": 0.25,
+          "max_size": 0.85
+        }
+      },
+      "risk_management": {
+        "max_position_size": 0.14,
+        "max_positions": 3,
+        "confidence_scaling": true,
+        "max_leverage": 45,
+        "min_leverage": 1,
+        "confidence_thresholds": {
+          "low": 0.63,
+          "medium": 0.78,
+          "high": 0.88,
+          "very_high": 0.96
+        },
+        "leverage_tiers": {
+          "low": 1,
+          "medium": 2,
+          "high": 10,
+          "very_high": 45
+        }
+      }
     },
     "DOT/USD": {
-      "model_type": "lstm",
-      "confidence_threshold": 0.65,
-      "min_leverage": 5.0,
-      "max_leverage": 75.0,
-      "risk_percentage": 0.2,
-      "model_path": "model_weights/dot_model.h5",
-      "base_leverage": 5.0,
-      "active": true
+      "enabled": true,
+      "timeframe": "1h",
+      "model_path": "ml_models",
+      "use_ensemble": true,
+      "specialized_models": {
+        "entry": {
+          "enabled": true,
+          "model_name": "DOT_USD_1h_entry_model.h5",
+          "threshold": 0.64
+        },
+        "exit": {
+          "enabled": true,
+          "model_name": "DOT_USD_1h_exit_model.h5",
+          "threshold": 0.54
+        },
+        "cancel": {
+          "enabled": true,
+          "model_name": "DOT_USD_1h_cancel_model.h5",
+          "threshold": 0.74
+        },
+        "sizing": {
+          "enabled": true,
+          "model_name": "DOT_USD_1h_sizing_model.h5",
+          "min_size": 0.25,
+          "max_size": 0.85
+        }
+      },
+      "risk_management": {
+        "max_position_size": 0.13,
+        "max_positions": 2,
+        "confidence_scaling": true,
+        "max_leverage": 40,
+        "min_leverage": 1,
+        "confidence_thresholds": {
+          "low": 0.64,
+          "medium": 0.79,
+          "high": 0.89,
+          "very_high": 0.96
+        },
+        "leverage_tiers": {
+          "low": 1,
+          "medium": 2,
+          "high": 8,
+          "very_high": 40
+        }
+      }
     },
     "LINK/USD": {
-      "model_type": "lstm",
-      "confidence_threshold": 0.65,
-      "min_leverage": 5.0,
-      "max_leverage": 75.0,
-      "risk_percentage": 0.2,
-      "model_path": "model_weights/link_model.h5",
-      "base_leverage": 5.0,
-      "active": true
+      "enabled": true,
+      "timeframe": "1h",
+      "model_path": "ml_models",
+      "use_ensemble": true,
+      "specialized_models": {
+        "entry": {
+          "enabled": true,
+          "model_name": "LINK_USD_1h_entry_model.h5",
+          "threshold": 0.63
+        },
+        "exit": {
+          "enabled": true,
+          "model_name": "LINK_USD_1h_exit_model.h5",
+          "threshold": 0.53
+        },
+        "cancel": {
+          "enabled": true,
+          "model_name": "LINK_USD_1h_cancel_model.h5",
+          "threshold": 0.73
+        },
+        "sizing": {
+          "enabled": true,
+          "model_name": "LINK_USD_1h_sizing_model.h5",
+          "min_size": 0.25,
+          "max_size": 0.85
+        }
+      },
+      "risk_management": {
+        "max_position_size": 0.14,
+        "max_positions": 3,
+        "confidence_scaling": true,
+        "max_leverage": 45,
+        "min_leverage": 1,
+        "confidence_thresholds": {
+          "low": 0.63,
+          "medium": 0.78,
+          "high": 0.88,
+          "very_high": 0.96
+        },
+        "leverage_tiers": {
+          "low": 1,
+          "medium": 2,
+          "high": 10,
+          "very_high": 45
+        }
+      }
     },
     "AVAX/USD": {
-      "model_type": "lstm",
-      "confidence_threshold": 0.65,
-      "min_leverage": 5.0,
-      "max_leverage": 75.0,
-      "risk_percentage": 0.2,
-      "model_path": "model_weights/avax_model.h5",
-      "base_leverage": 5.0,
-      "active": true
+      "enabled": true,
+      "timeframe": "1h",
+      "model_path": "ml_models",
+      "use_ensemble": true,
+      "specialized_models": {
+        "entry": {
+          "enabled": true,
+          "model_name": "AVAX_USD_1h_entry_model.h5",
+          "threshold": 0.64
+        },
+        "exit": {
+          "enabled": true,
+          "model_name": "AVAX_USD_1h_exit_model.h5",
+          "threshold": 0.54
+        },
+        "cancel": {
+          "enabled": true,
+          "model_name": "AVAX_USD_1h_cancel_model.h5",
+          "threshold": 0.74
+        },
+        "sizing": {
+          "enabled": true,
+          "model_name": "AVAX_USD_1h_sizing_model.h5",
+          "min_size": 0.25,
+          "max_size": 0.85
+        }
+      },
+      "risk_management": {
+        "max_position_size": 0.12,
+        "max_positions": 2,
+        "confidence_scaling": true,
+        "max_leverage": 40,
+        "min_leverage": 1,
+        "confidence_thresholds": {
+          "low": 0.64,
+          "medium": 0.79,
+          "high": 0.89,
+          "very_high": 0.96
+        },
+        "leverage_tiers": {
+          "low": 1,
+          "medium": 2,
+          "high": 8,
+          "very_high": 40
+        }
+      }
     },
     "MATIC/USD": {
-      "model_type": "lstm",
-      "confidence_threshold": 0.65,
-      "min_leverage": 5.0,
-      "max_leverage": 75.0,
-      "risk_percentage": 0.2,
-      "model_path": "model_weights/matic_model.h5",
-      "base_leverage": 5.0,
-      "active": true
+      "enabled": true,
+      "timeframe": "1h",
+      "model_path": "ml_models",
+      "use_ensemble": true,
+      "specialized_models": {
+        "entry": {
+          "enabled": true,
+          "model_name": "MATIC_USD_1h_entry_model.h5",
+          "threshold": 0.63
+        },
+        "exit": {
+          "enabled": true,
+          "model_name": "MATIC_USD_1h_exit_model.h5",
+          "threshold": 0.53
+        },
+        "cancel": {
+          "enabled": true,
+          "model_name": "MATIC_USD_1h_cancel_model.h5",
+          "threshold": 0.73
+        },
+        "sizing": {
+          "enabled": true,
+          "model_name": "MATIC_USD_1h_sizing_model.h5",
+          "min_size": 0.25,
+          "max_size": 0.85
+        }
+      },
+      "risk_management": {
+        "max_position_size": 0.13,
+        "max_positions": 2,
+        "confidence_scaling": true,
+        "max_leverage": 45,
+        "min_leverage": 1,
+        "confidence_thresholds": {
+          "low": 0.63,
+          "medium": 0.78,
+          "high": 0.88,
+          "very_high": 0.96
+        },
+        "leverage_tiers": {
+          "low": 1,
+          "medium": 2,
+          "high": 8,
+          "very_high": 45
+        }
+      }
     },
     "UNI/USD": {
-      "model_type": "lstm",
-      "confidence_threshold": 0.65,
-      "min_leverage": 5.0,
-      "max_leverage": 75.0,
-      "risk_percentage": 0.2,
-      "model_path": "model_weights/uni_model.h5",
-      "base_leverage": 5.0,
-      "active": true
-    },
-    "ATOM/USD": {
-      "model_type": "lstm",
-      "confidence_threshold": 0.65,
-      "min_leverage": 5.0,
-      "max_leverage": 75.0,
-      "risk_percentage": 0.2,
-      "model_path": "model_weights/atom_model.h5",
-      "base_leverage": 5.0,
-      "active": true
+      "enabled": true,
+      "timeframe": "1h",
+      "model_path": "ml_models",
+      "use_ensemble": true,
+      "specialized_models": {
+        "entry": {
+          "enabled": true,
+          "model_name": "UNI_USD_1h_entry_model.h5",
+          "threshold": 0.63
+        },
+        "exit": {
+          "enabled": true,
+          "model_name": "UNI_USD_1h_exit_model.h5",
+          "threshold": 0.53
+        },
+        "cancel": {
+          "enabled": true,
+          "model_name": "UNI_USD_1h_cancel_model.h5",
+          "threshold": 0.73
+        },
+        "sizing": {
+          "enabled": true,
+          "model_name": "UNI_USD_1h_sizing_model.h5",
+          "min_size": 0.25,
+          "max_size": 0.85
+        }
+      },
+      "risk_management": {
+        "max_position_size": 0.12,
+        "max_positions": 2,
+        "confidence_scaling": true,
+        "max_leverage": 40,
+        "min_leverage": 1,
+        "confidence_thresholds": {
+          "low": 0.63,
+          "medium": 0.78,
+          "high": 0.88,
+          "very_high": 0.96
+        },
+        "leverage_tiers": {
+          "low": 1,
+          "medium": 2,
+          "high": 8,
+          "very_high": 40
+        }
+      }
     }
-  },
-  "global_settings": {
-    "confidence_threshold": 0.65,
-    "dynamic_leverage_range": {
-      "min": 5.0,
-      "max": 75.0
-    },
-    "risk_percentage": 0.2,
-    "max_positions_per_pair": 1,
-    "base_leverage": 5.0,
-    "max_leverage": 75.0,
-    "max_portfolio_risk": 0.25
   }
 }

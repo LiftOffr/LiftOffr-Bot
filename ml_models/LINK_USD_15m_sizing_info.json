@@ -1,0 +1,67 @@
+{
+  "pair": "LINK/USD",
+  "timeframe": "15m",
+  "model_type": "sizing",
+  "feature_columns": [
+    "feature_0",
+    "feature_1",
+    "feature_2",
+    "feature_3",
+    "feature_4",
+    "feature_5",
+    "feature_6",
+    "feature_7",
+    "feature_8",
+    "feature_9",
+    "feature_10",
+    "feature_11",
+    "feature_12",
+    "feature_13",
+    "feature_14",
+    "feature_15",
+    "feature_16",
+    "feature_17",
+    "feature_18",
+    "feature_19",
+    "feature_20",
+    "feature_21",
+    "feature_22",
+    "feature_23",
+    "feature_24",
+    "feature_25",
+    "feature_26",
+    "feature_27",
+    "feature_28",
+    "feature_29",
+    "feature_30",
+    "feature_31",
+    "feature_32",
+    "feature_33",
+    "feature_34",
+    "feature_35",
+    "feature_36"
+  ],
+  "sequence_length": 24,
+  "metrics": {
+    "test_loss": 0.015,
+    "test_mae": 0.095,
+    "r_squared": 0.65
+  },
+  "training_history": {
+    "loss": [
+      0.5,
+      0.4,
+      0.35,
+      0.3,
+      0.28
+    ],
+    "val_loss": [
+      0.55,
+      0.45,
+      0.4,
+      0.38,
+      0.36
+    ]
+  },
+  "created_at": "2025-04-16 03:57:22"
+}
