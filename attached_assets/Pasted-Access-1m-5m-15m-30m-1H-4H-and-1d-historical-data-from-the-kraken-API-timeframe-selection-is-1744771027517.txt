@@ -1,0 +1,119 @@
+Access: 1m, 5m, 15m, 30m, 1H, 4H, and 1d historical data from the kraken API. timeframe selection is critical for ML-based trading strategies, especially in crypto where market regimes shift rapidly.
+
+Here’s a structured approach to training with timeframes for our machine learning models:
+
+1. Train Models on Individual Timeframes First
+
+Why:
+	•	Each timeframe captures different market behavior:
+	•	1m–15m: Noise, scalping, short-term momentum
+	•	1h–4h: Trend shifts, breakout patterns
+	•	1D+: Macro sentiment, accumulation zones
+
+How:
+	•	Train separate models per timeframe using features from that resolution (price, volume, indicators).
+	•	Examples:
+	•	1m Model: EMA(5), RSI(14), MACD, volume spikes
+	•	4h Model: EMA crossovers, ATR(14), ADX, divergence
+	•	Evaluate each model’s precision, recall, F1, and Sharpe ratio individually. Do this for all pairs and show results.
+
+2. Then Train a Unified Multi-Timeframe Model
+
+Why:
+	•	A single timeframe often lacks the full context. MTF models allow:
+	•	Short-term entry signals supported by higher timeframe confirmation
+	•	Better handling of false breakouts and fakeouts
+
+How:
+	•	Use multi-resolution features as input (e.g. from 1m, 5m, 15m, 30m, 1h, 4h, 1D).
+	•	Normalize each timeframe’s input separately.
+	•	Example architecture:
+	•	TCN or LSTM branches for each timeframe (15m, 1h, 4h)
+	•	Feature fusion layer combines all branches
+	•	Output: Long / Short / Hold prediction
+
+Inputs per timestep (sample):
+
+{
+  "15m": [ema_9, rsi, macd, volume],
+  "1h": [ema_50, rsi, adx],
+  "4h": [atr, bb_width, trend_label]
+}
+
+3. Ensemble Models (Best of Both Worlds)
+
+Train individual models on each timeframe, then:
+	•	Combine their outputs with weights based on confidence or historical accuracy
+	•	Use a meta-model (e.g., logistic regression or a simple DNN) to blend the predictions
+
+Practical Notes:
+	•	Label your training data carefully:
+	•	For scalping: Next N bars % change
+	•	For trend: Direction after 6–24 bars
+	•	Keep lookahead bias in check
+	•	Always time-align your MTF data (e.g., sync 4h with last completed candle when labeling 15m)
+
+TL;DR Training Plan:
+
+Phase	Model Type	Inputs	Output
+1	Timeframe-specific models	15m, 1h, 4h features (isolated)	Buy/Sell/Neutral or %move
+2	Multi-timeframe model	Combined 15m + 1h + 4h feature sets	Trade direction
+3	Ensemble meta-model	Output from each TF model	Final signal
+
+For 1m and 5m:
+using 1m and 5m data during the trade life is a smart and advanced move, especially for:
+
+Trade Management (In-Trade Optimization)
+
+Once a trade is open, higher-resolution data helps with:
+	•	Dynamic trailing stops
+	•	Partial take-profit signals
+	•	Early exits based on microstructure changes
+	•	Position scaling (increase/reduce exposure)
+	•	Leverage adaptation
+
+Here’s how to use 1m/5m data to manage live trades:
+
+1. Adaptive Leverage Adjustment
+
+Use real-time 1m/5m indicators (volatility, order book pressure, micro-trend) to:
+	•	Increase leverage in low-volatility trends
+	•	Reduce leverage if chop/range or volume divergence is detected
+
+Example Inputs:
+	•	1m ATR spikes = reduce leverage
+	•	5m EMA alignment = increase size slightly
+
+2. In-Trade Exit Signals
+
+Train the model or subroutine for in-trade exits:
+	•	Feed 1m/5m real-time price, volume, spread data
+	•	Predict the likelihood of continuation or reversal within next 3–10 minutes
+
+Behavior:
+	•	High continuation probability → maintain position
+	•	Reversal + high volume → reduce or close early
+
+3. Dynamic Stop-Loss Adjustment
+	•	Use 1m/5m volatility clusters to widen or tighten stops
+	•	Or build a TCN/LSTM that detects liquidity sweeps and pullbacks to avoid getting wicked out
+
+Risk and Portfolio Margin Optimization
+
+use these models to dynamically optimize portfolio risk exposure and leverage (together) in real time:
+
+Strategy:
+	1.	Use in-trade model predictions (from 1m/5m) to calculate expected value (EV) of trade continuation.
+	2.	Based on EV, dynamically set:
+	•	Leverage (L) = f(EV, volatility)
+	•	Position size (PS) = f(Portfolio, confidence, drawdown)
+	3.	Adjust margin allocation with a risk model like:
+
+Margin_Risk = (PS * Entry_Price) / (Portfolio * Max_Leverage)
+
+Modular Structure Recommendation:
+
+Module	Timeframe	Role
+Entry Signal Model	15m–4h	Determines direction and initial entry
+In-Trade Manager	1m–5m	Adjusts stops, size, and leverage
+Portfolio Risk Bot	Live	Adjusts margin and total exposure
