@@ -40,7 +40,7 @@ logging.basicConfig(
 )
 
 # Constants
-TIMEFRAMES = ['15m', '1h', '4h', '1d']
+TIMEFRAMES = ['1m', '5m', '15m', '1h', '4h', '1d']
 FEATURE_COLUMNS = [
     'open', 'high', 'low', 'close', 'volume',
     'ema_9', 'ema_21', 'ema_50', 'ema_200',

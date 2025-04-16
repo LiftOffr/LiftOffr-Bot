@@ -1,0 +1,55 @@
+Access 1m and 5m timeframes and train them how it was discussed in detailed training approach like in the last message. (Managing the trade throughout the trade through dynamically changing limit orders for exits and leverage - look back at the last message to see how to properly train and what to aim for in trading) Also:
+
+Implement all of this for the training: Make sure we are not training until the model reaches a 100% win rate — in fact, if you’re even approaching that in backtests or training results, it’s a red flag of overfitting.
+
+Here’s how to intelligently manage training cycles and evaluate convergence for an ML-based trading model:
+
+1. Target Metrics (Instead of 100% Win Rate)
+
+100% win rate = overfit = unusable in live markets
+
+Instead, use these robust metrics:
+
+Metric	Ideal Target	Why It’s Better Than Win Rate
+Precision/Recall	0.70–0.90 depending on class	Handles imbalance and false signals
+F1 Score	0.75+	Harmonic balance of precision/recall
+Sharpe Ratio	1.5+	Measures risk-adjusted return
+Drawdown Control	Max DD < 20%	Keeps risk in check
+Win %	60–70%	Realistic and enough for compounding
+Average R:R	1.5:1 or better	Balances win/loss ratio
+
+2. Training Loop Guidelines
+
+How many epochs / iterations?
+	•	Start with 50–200 epochs depending on model complexity
+	•	Use early stopping: halt training when validation loss plateaus or worsens
+	•	Cross-validate: train on rolling windows of time to mimic live adaptation
+
+3. Avoid Overfitting by Using:
+	•	Train/Validation/Test splits across different market regimes
+	•	Dropout, regularization, and noise injection
+	•	Walk-forward training (e.g. train on 2019-2022, test on 2023-2024)
+
+4. Instead of Optimizing for Win Rate… Optimize for this:
+
+Live Performance Objectives:
+	•	Maximize profit factor (gross win/gross loss)
+	•	Maintain stable equity curve
+	•	Minimize volatility of returns
+	•	Ensure it generalizes across pairs/timeframes
+
+5. What If You Really Want High Win Rates?
+
+Train multiple models for specific purposes:
+	•	One model for entry
+	•	One model for exit timing
+	•	One model for trade cancellation
+	•	One for position sizing/risk adjustment
+
+Then ensemble them, which can give very high combined win probabilities (but still never 100%).
+
+TL;DR:
+	•	Never train until you hit 100% win rate
+	•	Train until your validation scores plateau
+	•	Optimize for profitability, stability, and risk-adjusted return
+	•	Focus on generalization, not memorization
