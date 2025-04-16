@@ -1,47 +1,17 @@
 {
-  "trade_btc_usd_20250416000707": {
-    "position_id": "btc_usd_20250416000707",
-    "symbol": "BTC/USD",
-    "direction": "LONG",
-    "entry_price": 57294.572264191156,
-    "exit_price": 57505.61101676718,
-    "size": 3.657822837449883,
-    "leverage": 52.393348722470265,
-    "margin": 4000.0000000000005,
-    "pnl": 771.9423687595138,
-    "pnl_percentage": 0.19298559218987843,
+  "trade_eth_usd_20250416004037": {
+    "position_id": "eth_usd_20250416004037",
+    "symbol": "ETH/USD",
+    "direction": "SHORT",
+    "entry_price": 3479.632128304045,
+    "exit_price": 3531.953191853896,
+    "size": 68.89416214030905,
+    "leverage": 59.931585009001886,
+    "margin": 4000.0,
+    "pnl": -3604.615835556835,
+    "pnl_percentage": -0.9011539588892088,
     "status": "CLOSED",
-    "entry_time": "2025-04-16T00:07:07.385720",
-    "exit_time": "2025-04-16T00:07:09.387336"
-  },
-  "trade_matic_usd_20250416000725": {
-    "position_id": "matic_usd_20250416000725",
-    "symbol": "MATIC/USD",
-    "direction": "LONG",
-    "entry_price": 0.7468774590056568,
-    "exit_price": 0.7712413917270325,
-    "size": 390601.10019717686,
-    "leverage": 70.22240674970239,
-    "margin": 4154.388473751902,
-    "pnl": 9516.57892609935,
-    "pnl_percentage": 2.2907291858300285,
-    "status": "CLOSED",
-    "entry_time": "2025-04-16T00:07:25.857187",
-    "exit_time": "2025-04-16T00:07:27.858426"
-  },
-  "trade_atom_usd_20250416000728": {
-    "position_id": "atom_usd_20250416000728",
-    "symbol": "ATOM/USD",
-    "direction": "LONG",
-    "entry_price": 8.49890467826077,
-    "exit_price": 9.089741481936379,
-    "size": 38174.45153612242,
-    "leverage": 53.558412705584935,
-    "margin": 6057.704258971775,
-    "pnl": 22554.87092767202,
-    "pnl_percentage": 3.723336426380849,
-    "status": "CLOSED",
-    "entry_time": "2025-04-16T00:07:28.859472",
-    "exit_time": "2025-04-16T00:07:30.860673"
+    "entry_time": "2025-04-16T00:40:37.235643",
+    "exit_time": "2025-04-16T00:40:38.235785"
   }
 }
