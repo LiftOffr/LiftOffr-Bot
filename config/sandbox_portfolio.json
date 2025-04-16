@@ -2,7 +2,7 @@
   "base_currency": "USD",
   "starting_capital": 20000.0,
   "current_capital": 11500.0,
-  "equity": 22000.0,
+  "equity": 4873.267004575439,
   "positions": {
     "c2140f1e-9582-461f-9a6d-3bfe167b0d90": {
       "id": "c2140f1e-9582-461f-9a6d-3bfe167b0d90",
@@ -10,12 +10,12 @@
       "side": "long",
       "entry_time": "2025-04-16T04:58:03.713136",
       "entry_price": 3245.6,
-      "current_price": 3245.6,
+      "current_price": 1576.81,
       "amount": 6000.0,
       "units": 1.8486566428395366,
       "leverage": 1.0,
-      "unrealized_pnl": 0.0,
-      "unrealized_pnl_percent": 0.0,
+      "unrealized_pnl": -3085.01971900419,
+      "unrealized_pnl_percent": -51.416995316736504,
       "strategy": "ml_ensemble",
       "stop_loss": null,
       "take_profit": null
@@ -26,12 +26,12 @@
       "side": "long",
       "entry_time": "2025-04-16T04:58:09.551326",
       "entry_price": 169.85,
-      "current_price": 169.85,
+      "current_price": 125.29,
       "amount": 4500.0,
       "units": 26.493965263467768,
       "leverage": 3.0,
-      "unrealized_pnl": 0.0,
-      "unrealized_pnl_percent": 0.0,
+      "unrealized_pnl": -3541.7132764203707,
+      "unrealized_pnl_percent": -78.70473947600823,
       "strategy": "ml_ensemble",
       "stop_loss": null,
       "take_profit": null
@@ -75,5 +75,5 @@
       "strategy": "ml_ensemble"
     }
   ],
-  "last_updated": "2025-04-16T04:58:09.551333"
+  "last_updated": "2025-04-16T13:01:50.631014"
 }
