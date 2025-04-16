@@ -1,0 +1,82 @@
+{
+  "BTC/USD": {
+    "win_rate": 0.95,
+    "pnl": 45034.2,
+    "sharpe_ratio": 33.56663740174581,
+    "max_drawdown": -0.04499503096207896,
+    "total_trades": 100,
+    "profit_factor": 26.80416334809739
+  },
+  "ETH/USD": {
+    "win_rate": 0.9,
+    "pnl": 35604.81999999999,
+    "sharpe_ratio": 24.74721029122031,
+    "max_drawdown": -0.02255535140610511,
+    "total_trades": 100,
+    "profit_factor": 13.670123196709058
+  },
+  "SOL/USD": {
+    "win_rate": 0.83,
+    "pnl": 25434.699999999997,
+    "sharpe_ratio": 17.61315190870618,
+    "max_drawdown": -0.040514416096245634,
+    "total_trades": 100,
+    "profit_factor": 7.497228395534778
+  },
+  "ADA/USD": {
+    "win_rate": 0.88,
+    "pnl": 24941.059999999998,
+    "sharpe_ratio": 22.602266037730775,
+    "max_drawdown": -0.01671637445024731,
+    "total_trades": 100,
+    "profit_factor": 11.822388461238054
+  },
+  "DOT/USD": {
+    "win_rate": 0.87,
+    "pnl": 23220.06,
+    "sharpe_ratio": 20.709476145780883,
+    "max_drawdown": -0.020633863251073567,
+    "total_trades": 100,
+    "profit_factor": 9.93763303451488
+  },
+  "LINK/USD": {
+    "win_rate": 0.8,
+    "pnl": 17955.59,
+    "sharpe_ratio": 15.2757741517816,
+    "max_drawdown": -0.03656152914250027,
+    "total_trades": 100,
+    "profit_factor": 6.0968063334005125
+  },
+  "AVAX/USD": {
+    "win_rate": 0.9,
+    "pnl": 36216.08,
+    "sharpe_ratio": 24.495308252303097,
+    "max_drawdown": -0.021641933667367854,
+    "total_trades": 100,
+    "profit_factor": 13.649563574255248
+  },
+  "MATIC/USD": {
+    "win_rate": 0.87,
+    "pnl": 18506.820000000003,
+    "sharpe_ratio": 20.580146247736774,
+    "max_drawdown": -0.019233557106853656,
+    "total_trades": 100,
+    "profit_factor": 9.729426192778474
+  },
+  "UNI/USD": {
+    "win_rate": 0.74,
+    "pnl": 13972.69,
+    "sharpe_ratio": 12.482593871620221,
+    "max_drawdown": -0.03345952129080611,
+    "total_trades": 100,
+    "profit_factor": 4.608174026664876
+  },
+  "ATOM/USD": {
+    "win_rate": 0.79,
+    "pnl": 14578.519999999999,
+    "sharpe_ratio": 15.415746238419962,
+    "max_drawdown": -0.01866993046320277,
+    "total_trades": 100,
+    "profit_factor": 6.173485501769028
+  }
+}

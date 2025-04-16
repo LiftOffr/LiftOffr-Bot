@@ -1,17 +1,1 @@
-{
-  "trade_eth_usd_20250416004037": {
-    "position_id": "eth_usd_20250416004037",
-    "symbol": "ETH/USD",
-    "direction": "SHORT",
-    "entry_price": 3479.632128304045,
-    "exit_price": 3531.953191853896,
-    "size": 68.89416214030905,
-    "leverage": 59.931585009001886,
-    "margin": 4000.0,
-    "pnl": -3604.615835556835,
-    "pnl_percentage": -0.9011539588892088,
-    "status": "CLOSED",
-    "entry_time": "2025-04-16T00:40:37.235643",
-    "exit_time": "2025-04-16T00:40:38.235785"
-  }
-}
+[]
