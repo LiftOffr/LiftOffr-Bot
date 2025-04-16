@@ -1,1775 +1,983 @@
 #!/usr/bin/env python3
 """
-Multi-Timeframe Model Trainer
+Multi-Timeframe Trainer
 
-This script implements the three-phase approach to multi-timeframe trading:
-1. Train models on individual timeframes (1m, 5m, 15m, 30m, 1h, 4h, 1d)
-2. Build a unified multi-timeframe model
-3. Create an ensemble meta-model
+This script implements a sophisticated multi-timeframe training approach:
+1. Trains individual models for each timeframe (15m, 1h, 4h, 1d)
+2. Creates unified models that combine data from all timeframes
+3. Builds ensemble meta-models that integrate predictions from all timeframes
 
 Usage:
-    python multi_timeframe_trainer.py --pair BTC/USD
+    python multi_timeframe_trainer.py --pair BTC/USD [--all] [--skip-individual]
+                                     [--skip-unified] [--skip-ensemble]
 """
 
 import os
 import sys
 import json
+import time
 import logging
 import argparse
-import time
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple, Union
+from datetime import datetime
+from typing import List, Dict, Tuple, Optional, Union, Any
 
 import tensorflow as tf
-from tensorflow.keras.models import Model, load_model, save_model
-from tensorflow.keras.layers import (
-    Input, Dense, LSTM, Conv1D, MaxPooling1D, Dropout, Flatten,
-    Concatenate, BatchNormalization, GlobalAveragePooling1D, Bidirectional,
-    TimeDistributed, Lambda, Reshape
-)
-from tensorflow.keras.callbacks import (
-    EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
-)
-from tensorflow.keras.optimizers import Adam
-
-from sklearn.preprocessing import MinMaxScaler
+from tensorflow import keras
+from tensorflow.keras import layers
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score, f1_score, 
-    confusion_matrix, classification_report
-)
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
     handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler("mtf_training.log")
+        logging.StreamHandler(sys.stdout)
     ]
 )
-logger = logging.getLogger(__name__)
 
 # Constants
-HISTORICAL_DATA_DIR = "historical_data"
-MODEL_WEIGHTS_DIR = "model_weights"
-MTF_MODEL_DIR = "mtf_models"
-ENSEMBLE_DIR = "ensemble_models"
-RESULTS_DIR = "training_results"
-CONFIG_DIR = "config"
-ML_CONFIG_PATH = f"{CONFIG_DIR}/ml_config.json"
-
-# Default pairs and timeframes
-ALL_TIMEFRAMES = ['1m', '5m', '15m', '30m', '1h', '4h', '1d']
-TRAINING_TIMEFRAMES = ['15m', '1h', '4h', '1d']  # Focus on most important timeframes
-ALL_PAIRS = [
-    "BTC/USD", "ETH/USD", "SOL/USD", "ADA/USD", "DOT/USD",
-    "LINK/USD", "AVAX/USD", "MATIC/USD", "UNI/USD", "ATOM/USD"
+TIMEFRAMES = ['15m', '1h', '4h', '1d']
+FEATURE_COLUMNS = [
+    'open', 'high', 'low', 'close', 'volume',
+    'ema_9', 'ema_21', 'ema_50', 'ema_200',
+    'rsi_14', 'macd', 'macd_signal', 'macd_hist',
+    'bbands_upper', 'bbands_middle', 'bbands_lower',
+    'atr_14'
 ]
-
-# Create required directories
-for directory in [HISTORICAL_DATA_DIR, MODEL_WEIGHTS_DIR, MTF_MODEL_DIR, 
-                 ENSEMBLE_DIR, RESULTS_DIR, CONFIG_DIR]:
-    os.makedirs(directory, exist_ok=True)
+TARGET_COLUMNS = ['next_close_pct']
+SUPPORTED_PAIRS = [
+    'BTC/USD', 'ETH/USD', 'SOL/USD', 'ADA/USD', 'DOT/USD',
+    'LINK/USD', 'AVAX/USD', 'MATIC/USD', 'UNI/USD', 'ATOM/USD'
+]
+SEQUENCE_LENGTH = 60
+BATCH_SIZE = 64
+EPOCHS = 100
+PATIENCE = 20
+TEST_SIZE = 0.2
+VALIDATION_SIZE = 0.2
 
 def parse_arguments():
     """Parse command line arguments"""
-    parser = argparse.ArgumentParser(description="Multi-Timeframe Model Trainer")
-    parser.add_argument("--pair", type=str, default="BTC/USD",
-                        help=f"Trading pair to train models for (options: {', '.join(ALL_PAIRS)})")
-    parser.add_argument("--timeframes", type=str, default="15m,1h,4h,1d",
-                        help=f"Comma-separated list of timeframes (default: 15m,1h,4h,1d)")
-    parser.add_argument("--epochs", type=int, default=30,
-                        help="Number of training epochs (default: 30)")
-    parser.add_argument("--batch_size", type=int, default=32,
-                        help="Batch size for training (default: 32)")
-    parser.add_argument("--sequence_length", type=int, default=60,
-                        help="Sequence length for time series (default: 60)")
-    parser.add_argument("--predict_horizon", type=int, default=4,
-                        help="Number of intervals to predict ahead (default: 4)")
-    parser.add_argument("--update_ml_config", action="store_true", default=True,
-                        help="Update ML configuration with trained models")
-    parser.add_argument("--phase", type=str, default="all",
-                        help="Training phase (options: individual, mtf, ensemble, all)")
-    parser.add_argument("--fetch_missing", action="store_true", default=False,
-                        help="Fetch missing data if needed")
+    parser = argparse.ArgumentParser(description='Multi-Timeframe Model Trainer')
+    parser.add_argument('--pair', type=str, default='BTC/USD',
+                        help='Trading pair to train for (e.g., BTC/USD)')
+    parser.add_argument('--all', action='store_true',
+                        help='Train models for all supported trading pairs')
+    parser.add_argument('--skip-individual', action='store_true',
+                        help='Skip training individual timeframe models')
+    parser.add_argument('--skip-unified', action='store_true',
+                        help='Skip training unified models')
+    parser.add_argument('--skip-ensemble', action='store_true',
+                        help='Skip training ensemble models')
+    parser.add_argument('--force', action='store_true',
+                        help='Force retraining of existing models')
     return parser.parse_args()
 
-def load_historical_data(pair: str, timeframe: str) -> Optional[pd.DataFrame]:
-    """Load historical data for a pair and timeframe"""
-    pair_clean = pair.replace("/", "_")
-    file_path = f"{HISTORICAL_DATA_DIR}/{pair_clean}_{timeframe}.csv"
+def load_data(pair: str, timeframe: str) -> pd.DataFrame:
+    """
+    Load historical data for a trading pair and timeframe
     
-    if os.path.exists(file_path):
-        logger.info(f"Loading historical data for {pair} ({timeframe}) from {file_path}")
-        try:
-            df = pd.read_csv(file_path)
-            
-            # Ensure timestamp is datetime
-            if 'timestamp' in df.columns:
-                if isinstance(df['timestamp'][0], str):
-                    df['timestamp'] = pd.to_datetime(df['timestamp'])
-            
-            logger.info(f"Loaded {len(df)} records for {pair} ({timeframe})")
-            return df
-        except Exception as e:
-            logger.error(f"Error loading data from {file_path}: {e}")
-            return None
-    else:
-        logger.warning(f"Historical data not found: {file_path}")
+    Args:
+        pair: Trading pair (e.g., BTC/USD)
+        timeframe: Timeframe (e.g., 15m, 1h, 4h, 1d)
+        
+    Returns:
+        DataFrame with historical data
+    """
+    pair_symbol = pair.replace('/', '_')
+    file_path = f'historical_data/{pair_symbol}_{timeframe}.csv'
+    
+    if not os.path.exists(file_path):
+        logging.warning(f"Data file not found: {file_path}")
         return None
-
-def fetch_missing_data(pair: str, timeframe: str, days: int = 7) -> bool:
-    """Fetch missing data for a pair and timeframe"""
-    try:
-        import subprocess
-        
-        logger.info(f"Fetching {timeframe} data for {pair}...")
-        
-        command = [
-            "python", "fetch_kraken_15m_data.py",
-            "--pair", pair,
-            "--timeframe", timeframe,
-            "--days", str(days)
-        ]
-        
-        process = subprocess.run(
-            command,
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True
-        )
-        
-        # Check if file was created
-        pair_clean = pair.replace("/", "_")
-        file_path = f"{HISTORICAL_DATA_DIR}/{pair_clean}_{timeframe}.csv"
-        
-        if os.path.exists(file_path):
-            logger.info(f"Successfully fetched {timeframe} data for {pair}")
-            return True
-        else:
-            logger.error(f"Failed to fetch {timeframe} data for {pair}")
-            return False
-    except Exception as e:
-        logger.error(f"Error fetching data: {e}")
-        return False
-
-def calculate_indicators(df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
-    """Calculate technical indicators optimized for specific timeframes"""
-    logger.info(f"Calculating technical indicators for {timeframe} timeframe...")
     
-    # Make a copy to avoid modifying the original
-    df_indicators = df.copy()
+    # Load data from CSV
+    df = pd.read_csv(file_path)
     
-    # Common indicators for all timeframes
-    # 1. Moving Averages
-    for period in [5, 10, 20, 50, 100, 200]:
-        df_indicators[f'sma_{period}'] = df_indicators['close'].rolling(window=period).mean()
-        df_indicators[f'ema_{period}'] = df_indicators['close'].ewm(span=period, adjust=False).mean()
-        
-        # Relative to price
-        df_indicators[f'sma_{period}_rel'] = (df_indicators['close'] / df_indicators[f'sma_{period}'] - 1) * 100
-        df_indicators[f'ema_{period}_rel'] = (df_indicators['close'] / df_indicators[f'ema_{period}'] - 1) * 100
-    
-    # 2. RSI
-    for period in [6, 14, 20, 50]:
-        delta = df_indicators['close'].diff()
-        gain = delta.where(delta > 0, 0)
-        loss = -delta.where(delta < 0, 0)
-        
-        avg_gain = gain.rolling(window=period).mean()
-        avg_loss = loss.rolling(window=period).mean()
-        
-        rs = avg_gain / avg_loss.replace(0, 0.001)  # Avoid division by zero
-        df_indicators[f'rsi_{period}'] = 100 - (100 / (1 + rs))
-    
-    # 3. MACD
-    ema_12 = df_indicators['close'].ewm(span=12, adjust=False).mean()
-    ema_26 = df_indicators['close'].ewm(span=26, adjust=False).mean()
-    df_indicators['macd'] = ema_12 - ema_26
-    df_indicators['macd_signal'] = df_indicators['macd'].ewm(span=9, adjust=False).mean()
-    df_indicators['macd_hist'] = df_indicators['macd'] - df_indicators['macd_signal']
-    
-    # 4. Bollinger Bands
-    for period in [20, 50]:
-        df_indicators[f'bb_middle_{period}'] = df_indicators['close'].rolling(window=period).mean()
-        df_indicators[f'bb_std_{period}'] = df_indicators['close'].rolling(window=period).std()
-        df_indicators[f'bb_upper_{period}'] = df_indicators[f'bb_middle_{period}'] + (df_indicators[f'bb_std_{period}'] * 2)
-        df_indicators[f'bb_lower_{period}'] = df_indicators[f'bb_middle_{period}'] - (df_indicators[f'bb_std_{period}'] * 2)
-        df_indicators[f'bb_width_{period}'] = (df_indicators[f'bb_upper_{period}'] - df_indicators[f'bb_lower_{period}']) / df_indicators[f'bb_middle_{period}']
-        df_indicators[f'bb_b_{period}'] = (df_indicators['close'] - df_indicators[f'bb_lower_{period}']) / (df_indicators[f'bb_upper_{period}'] - df_indicators[f'bb_lower_{period}'] + 0.0001)
-    
-    # 5. ATR (Average True Range)
-    for period in [7, 14, 21]:
-        tr1 = df_indicators['high'] - df_indicators['low']
-        tr2 = abs(df_indicators['high'] - df_indicators['close'].shift())
-        tr3 = abs(df_indicators['low'] - df_indicators['close'].shift())
-        tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-        df_indicators[f'atr_{period}'] = tr.rolling(window=period).mean()
-        df_indicators[f'atr_percent_{period}'] = df_indicators[f'atr_{period}'] / df_indicators['close'] * 100
-    
-    # 6. Momentum
-    for period in [5, 10, 20, 50]:
-        df_indicators[f'momentum_{period}'] = df_indicators['close'] - df_indicators['close'].shift(period)
-        df_indicators[f'rate_of_change_{period}'] = (df_indicators['close'] / df_indicators['close'].shift(period) - 1) * 100
-    
-    # 7. Stochastic Oscillator
-    for period in [14, 21]:
-        low_min = df_indicators['low'].rolling(window=period).min()
-        high_max = df_indicators['high'].rolling(window=period).max()
-        df_indicators[f'stoch_k_{period}'] = 100 * ((df_indicators['close'] - low_min) / (high_max - low_min + 0.0001))
-        df_indicators[f'stoch_d_{period}'] = df_indicators[f'stoch_k_{period}'].rolling(window=3).mean()
-    
-    # 8. Volume Indicators
-    df_indicators['volume_ma_20'] = df_indicators['volume'].rolling(window=20).mean()
-    df_indicators['volume_ratio'] = df_indicators['volume'] / df_indicators['volume_ma_20'].replace(0, 0.001)
-    
-    # 9. Trend Indicators
-    df_indicators['bull_market'] = (df_indicators['ema_50'] > df_indicators['ema_200']).astype(int)
-    df_indicators['bear_market'] = (df_indicators['ema_50'] < df_indicators['ema_200']).astype(int)
-    
-    # 10. Volatility Metrics
-    df_indicators['volatility_14'] = df_indicators['close'].rolling(window=14).std() / df_indicators['close'] * 100
-    
-    # Add timeframe-specific indicators
-    if timeframe in ['1m', '5m', '15m']:
-        # Short-term indicators for lower timeframes
-        df_indicators['micro_trend'] = (df_indicators['close'] > df_indicators['ema_5']).astype(int)
-        df_indicators['micro_momentum'] = df_indicators['close'].diff(3) / df_indicators['close'].shift(3) * 100
-        
-        # Volume spikes for scalping
-        df_indicators['volume_spike'] = (df_indicators['volume'] > df_indicators['volume'].rolling(window=10).mean() * 2).astype(int)
-        
-        # Price acceleration
-        df_indicators['price_acceleration'] = df_indicators['close'].diff().diff()
-        
-        # Fast stochastic for quick reversals
-        df_indicators['fast_stoch_k'] = df_indicators['stoch_k_14'].rolling(window=3).mean()
-        df_indicators['fast_stoch_d'] = df_indicators['fast_stoch_k'].rolling(window=3).mean()
-    
-    elif timeframe in ['30m', '1h']:
-        # Medium-term indicators
-        df_indicators['ema_crossover'] = ((df_indicators['ema_10'] > df_indicators['ema_20']) & 
-                                         (df_indicators['ema_10'].shift() <= df_indicators['ema_20'].shift())).astype(int)
-        
-        # ADX for trend strength
-        plus_dm = df_indicators['high'].diff()
-        minus_dm = df_indicators['low'].diff(-1)
-        plus_dm[plus_dm < 0] = 0
-        minus_dm[minus_dm < 0] = 0
-        
-        tr = pd.DataFrame({
-            'tr1': df_indicators['high'] - df_indicators['low'],
-            'tr2': abs(df_indicators['high'] - df_indicators['close'].shift()),
-            'tr3': abs(df_indicators['low'] - df_indicators['close'].shift())
-        }).max(axis=1)
-        
-        plus_di = 100 * (plus_dm.rolling(window=14).mean() / tr.rolling(window=14).mean())
-        minus_di = 100 * (minus_dm.rolling(window=14).mean() / tr.rolling(window=14).mean())
-        dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di)
-        df_indicators['adx'] = dx.rolling(window=14).mean()
-        
-        # Ichimoku Cloud
-        high_9 = df_indicators['high'].rolling(window=9).max()
-        low_9 = df_indicators['low'].rolling(window=9).min()
-        df_indicators['tenkan_sen'] = (high_9 + low_9) / 2
-        
-        high_26 = df_indicators['high'].rolling(window=26).max()
-        low_26 = df_indicators['low'].rolling(window=26).min()
-        df_indicators['kijun_sen'] = (high_26 + low_26) / 2
-        
-        df_indicators['senkou_span_a'] = ((df_indicators['tenkan_sen'] + df_indicators['kijun_sen']) / 2).shift(26)
-        
-        high_52 = df_indicators['high'].rolling(window=52).max()
-        low_52 = df_indicators['low'].rolling(window=52).min()
-        df_indicators['senkou_span_b'] = ((high_52 + low_52) / 2).shift(26)
-    
-    elif timeframe in ['4h', '1d']:
-        # Long-term indicators
-        # VWAP (Volume-Weighted Average Price)
-        df_indicators['vwap'] = (df_indicators['volume'] * df_indicators['close']).cumsum() / df_indicators['volume'].cumsum()
-        
-        # OBV (On-Balance Volume)
-        df_indicators['obv'] = (df_indicators['volume'] * np.where(df_indicators['close'] > df_indicators['close'].shift(), 1, -1)).cumsum()
-        
-        # Mass Index
-        high_low = df_indicators['high'] - df_indicators['low']
-        high_low_ema = high_low.ewm(span=9, adjust=False).mean()
-        ema_ratio = high_low_ema / high_low_ema.ewm(span=9, adjust=False).mean()
-        df_indicators['mass_index'] = ema_ratio.rolling(window=25).sum()
-        
-        # Chaikin Money Flow
-        mf_multiplier = ((df_indicators['close'] - df_indicators['low']) - (df_indicators['high'] - df_indicators['close'])) / (df_indicators['high'] - df_indicators['low'])
-        mf_volume = mf_multiplier * df_indicators['volume']
-        df_indicators['cmf'] = mf_volume.rolling(window=20).sum() / df_indicators['volume'].rolling(window=20).sum()
-    
-    # Drop rows with NaN values
-    df_indicators.dropna(inplace=True)
-    
-    logger.info(f"Calculated {len(df_indicators.columns) - len(df.columns)} indicators for {timeframe}")
-    logger.info(f"Data shape after indicator calculation: {df_indicators.shape}")
-    
-    return df_indicators
-
-def create_target_variable(
-    df: pd.DataFrame, 
-    timeframe: str, 
-    predict_horizon: int, 
-    threshold: float = 0.005
-) -> pd.DataFrame:
-    """Create target variable for ML model training optimized for timeframe"""
-    logger.info(f"Creating target variable for {timeframe} with horizon {predict_horizon}...")
-    
-    # Scale threshold based on timeframe volatility
-    if timeframe in ['1m', '5m', '15m']:
-        # Lower timeframes need smaller thresholds due to smaller price movements
-        actual_threshold = threshold * 0.5
-    elif timeframe in ['4h', '1d']:
-        # Higher timeframes need larger thresholds
-        actual_threshold = threshold * 2.0
-    else:
-        actual_threshold = threshold
-    
-    logger.info(f"Using threshold {actual_threshold:.4f} for {timeframe}")
-    
-    # Calculate future returns
-    future_return = df['close'].shift(-predict_horizon) / df['close'] - 1
-    
-    # Create target labels: 1 (strong up), 0.5 (moderate up), 0 (neutral), -0.5 (moderate down), -1 (strong down)
-    df['target'] = 0
-    df.loc[future_return > actual_threshold*2, 'target'] = 1      # Strong bullish
-    df.loc[(future_return > actual_threshold) & (future_return <= actual_threshold*2), 'target'] = 0.5  # Moderate bullish
-    df.loc[(future_return < -actual_threshold) & (future_return >= -actual_threshold*2), 'target'] = -0.5  # Moderate bearish
-    df.loc[future_return < -actual_threshold*2, 'target'] = -1    # Strong bearish
-    
-    # Drop rows with NaN values (last rows where target couldn't be calculated)
-    df.dropna(subset=['target'], inplace=True)
-    
-    # Convert target to integer classes
-    target_map = {-1.0: 0, -0.5: 1, 0.0: 2, 0.5: 3, 1.0: 4}
-    df['target_class'] = df['target'].map(target_map)
-    
-    # Log class distribution
-    class_counts = df['target_class'].value_counts().sort_index()
-    class_names = ["Strong Down", "Moderate Down", "Neutral", "Moderate Up", "Strong Up"]
-    
-    logger.info(f"Target class distribution for {timeframe}:")
-    for i, name in enumerate(class_names):
-        count = class_counts.get(i, 0)
-        pct = count / len(df) * 100
-        logger.info(f"  {name}: {count} samples ({pct:.1f}%)")
+    # Make sure we have a datetime index
+    if 'timestamp' in df.columns:
+        # Try to parse the timestamp as a datetime string first
+        try:
+            df['datetime'] = pd.to_datetime(df['timestamp'])
+        except (ValueError, TypeError):
+            # If that fails, try parsing as Unix timestamp (seconds since epoch)
+            try:
+                df['datetime'] = pd.to_datetime(df['timestamp'], unit='s')
+            except:
+                logging.error(f"Failed to parse timestamp column in the data")
+                return None
+                
+        df.set_index('datetime', inplace=True)
     
     return df
 
-def prepare_data_for_training(
-    df: pd.DataFrame, 
-    sequence_length: int, 
-    test_size: float = 0.2, 
+def add_features(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add technical indicators as features
+    
+    Args:
+        df: DataFrame with OHLCV data
+        
+    Returns:
+        DataFrame with added features
+    """
+    if df is None or len(df) == 0:
+        return None
+        
+    # Copy the dataframe to avoid modifying the original
+    df = df.copy()
+    
+    # Calculate EMA indicators
+    df['ema_9'] = df['close'].ewm(span=9, adjust=False).mean()
+    df['ema_21'] = df['close'].ewm(span=21, adjust=False).mean()
+    df['ema_50'] = df['close'].ewm(span=50, adjust=False).mean()
+    df['ema_200'] = df['close'].ewm(span=200, adjust=False).mean()
+    
+    # Calculate RSI (14-period)
+    delta = df['close'].diff()
+    gain = delta.where(delta > 0, 0)
+    loss = -delta.where(delta < 0, 0)
+    avg_gain = gain.rolling(window=14).mean()
+    avg_loss = loss.rolling(window=14).mean()
+    rs = avg_gain / avg_loss
+    df['rsi_14'] = 100 - (100 / (1 + rs))
+    
+    # Calculate MACD
+    ema_12 = df['close'].ewm(span=12, adjust=False).mean()
+    ema_26 = df['close'].ewm(span=26, adjust=False).mean()
+    df['macd'] = ema_12 - ema_26
+    df['macd_signal'] = df['macd'].ewm(span=9, adjust=False).mean()
+    df['macd_hist'] = df['macd'] - df['macd_signal']
+    
+    # Calculate Bollinger Bands
+    df['bbands_middle'] = df['close'].rolling(window=20).mean()
+    std_dev = df['close'].rolling(window=20).std()
+    df['bbands_upper'] = df['bbands_middle'] + (std_dev * 2)
+    df['bbands_lower'] = df['bbands_middle'] - (std_dev * 2)
+    
+    # Calculate ATR (14-period)
+    high_low = df['high'] - df['low']
+    high_close = (df['high'] - df['close'].shift()).abs()
+    low_close = (df['low'] - df['close'].shift()).abs()
+    tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+    df['atr_14'] = tr.rolling(window=14).mean()
+    
+    # Target: next period's percentage change
+    df['next_close'] = df['close'].shift(-1)
+    df['next_close_pct'] = (df['next_close'] / df['close'] - 1) * 100
+    
+    # Drop any rows with missing values
+    df.dropna(inplace=True)
+    
+    return df
+
+def prepare_sequence_data(
+    df: pd.DataFrame,
+    feature_columns: List[str],
+    target_columns: List[str],
+    sequence_length: int,
+    test_size: float = 0.2,
     validation_size: float = 0.2
-) -> Tuple:
-    """Prepare data for training, validation, and testing"""
-    logger.info(f"Preparing sequences with length {sequence_length}...")
+) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
+    """
+    Prepare sequence data for LSTM/TCN models
     
-    # Select features and target
-    feature_columns = [col for col in df.columns if col not in ['timestamp', 'target', 'target_class']]
+    Args:
+        df: DataFrame with features and targets
+        feature_columns: List of feature column names
+        target_columns: List of target column names
+        sequence_length: Length of input sequences
+        test_size: Proportion of data to use for testing
+        validation_size: Proportion of training data to use for validation
+        
+    Returns:
+        Dictionary with train/val/test data and scalers
+    """
+    if df is None or len(df) <= sequence_length:
+        return None, None
+
+    # Extract features and targets
+    features = df[feature_columns].values
+    targets = df[target_columns].values
     
-    # Normalize features using MinMaxScaler
-    scaler = MinMaxScaler()
-    features = scaler.fit_transform(df[feature_columns])
+    # Scale features
+    feature_scaler = StandardScaler()
+    features_scaled = feature_scaler.fit_transform(features)
     
-    # Get targets
-    targets = df['target_class'].values
+    # Scale targets
+    target_scaler = StandardScaler()
+    targets_scaled = target_scaler.fit_transform(targets)
     
     # Create sequences
     X, y = [], []
-    for i in range(sequence_length, len(features)):
-        X.append(features[i-sequence_length:i])
-        y.append(targets[i])
+    for i in range(len(features_scaled) - sequence_length):
+        X.append(features_scaled[i:i+sequence_length])
+        y.append(targets_scaled[i+sequence_length])
     
     X = np.array(X)
     y = np.array(y)
     
-    # Convert target to categorical (one-hot encoding)
-    y_categorical = tf.keras.utils.to_categorical(y, num_classes=5)  # 5 classes
-    
-    # Split into train and test
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y_categorical, test_size=test_size, shuffle=False
+    # Split into train, validation, and test sets
+    X_train_val, X_test, y_train_val, y_test = train_test_split(
+        X, y, test_size=test_size, shuffle=False
     )
     
-    # Further split train into train and validation
     X_train, X_val, y_train, y_val = train_test_split(
-        X_train, y_train, test_size=validation_size, shuffle=False
+        X_train_val, y_train_val, test_size=validation_size, shuffle=False
     )
     
-    logger.info(f"Data shapes:")
-    logger.info(f"X_train: {X_train.shape}, y_train: {y_train.shape}")
-    logger.info(f"X_val: {X_val.shape}, y_val: {y_val.shape}")
-    logger.info(f"X_test: {X_test.shape}, y_test: {y_test.shape}")
+    data = {
+        'X_train': X_train,
+        'y_train': y_train,
+        'X_val': X_val,
+        'y_val': y_val,
+        'X_test': X_test,
+        'y_test': y_test,
+    }
     
-    return X_train, y_train, X_val, y_val, X_test, y_test, scaler, feature_columns
+    scalers = {
+        'feature_scaler': feature_scaler,
+        'target_scaler': target_scaler,
+    }
+    
+    return data, scalers
 
-def build_individual_model(
-    input_shape: Tuple, 
-    timeframe: str, 
-    output_shape: int = 5
-) -> Model:
-    """Build a model optimized for specific timeframe"""
-    logger.info(f"Building model for {timeframe} timeframe...")
+def create_hybrid_model(
+    input_shape: Tuple[int, int],
+    output_dim: int = 1,
+    tcn_units: int = 64,
+    tcn_kernel_size: int = 3,
+    tcn_dilations: List[int] = [1, 2, 4, 8, 16],
+    lstm_units: int = 64,
+    cnn_filters: int = 32,
+    dropout_rate: float = 0.2
+) -> tf.keras.Model:
+    """
+    Create a hybrid model with CNN, LSTM, and TCN branches
     
+    Args:
+        input_shape: Input shape (sequence_length, features)
+        output_dim: Number of output dimensions
+        tcn_units: Number of TCN units
+        tcn_kernel_size: TCN kernel size
+        tcn_dilations: TCN dilations
+        lstm_units: Number of LSTM units
+        cnn_filters: Number of CNN filters
+        dropout_rate: Dropout rate
+        
+    Returns:
+        Hybrid model
+    """
     # Input layer
-    inputs = Input(shape=input_shape)
+    inputs = keras.Input(shape=input_shape)
     
-    if timeframe in ['1m', '5m', '15m']:
-        # Lower timeframes need focus on micro patterns and noise filtering
-        # CNN branch for pattern recognition
-        x = Conv1D(filters=64, kernel_size=3, padding='same', activation='relu')(inputs)
-        x = BatchNormalization()(x)
-        x = MaxPooling1D(pool_size=2)(x)
-        x = Conv1D(filters=128, kernel_size=3, padding='same', activation='relu')(x)
-        x = BatchNormalization()(x)
-        x = Conv1D(filters=128, kernel_size=3, padding='same', activation='relu')(x)
-        x = GlobalAveragePooling1D()(x)
-        x = Dense(64, activation='relu')(x)
-        x = Dropout(0.3)(x)
+    # CNN branch
+    cnn_branch = layers.Conv1D(filters=cnn_filters, kernel_size=3, activation='relu', padding='same')(inputs)
+    cnn_branch = layers.MaxPooling1D(pool_size=2)(cnn_branch)
+    cnn_branch = layers.Conv1D(filters=cnn_filters*2, kernel_size=3, activation='relu', padding='same')(cnn_branch)
+    cnn_branch = layers.GlobalAveragePooling1D()(cnn_branch)
+    cnn_branch = layers.Dense(32, activation='relu')(cnn_branch)
     
-    elif timeframe in ['30m', '1h']:
-        # Medium timeframes need balanced approach
-        # LSTM with bidirectional layers for sequence patterns
-        x = Bidirectional(LSTM(64, return_sequences=True))(inputs)
-        x = Dropout(0.3)(x)
-        x = Bidirectional(LSTM(64, return_sequences=False))(x)
-        x = Dense(64, activation='relu')(x)
-        x = Dropout(0.3)(x)
+    # LSTM branch with custom attention mechanism
+    lstm_branch = layers.Bidirectional(layers.LSTM(lstm_units, return_sequences=True))(inputs)
     
-    else:  # ['4h', '1d']
-        # Higher timeframes need focus on trend detection
-        # TCN-like branch with dilated convolutions
-        tcn_layers = []
-        num_filters = 64
-        kernel_size = 3
-        
-        # Use multiple dilated convolutions with different dilation rates
-        for dilation_rate in [1, 2, 4, 8]:
-            conv = Conv1D(
-                filters=num_filters,
-                kernel_size=kernel_size,
-                padding='causal',
-                dilation_rate=dilation_rate,
-                activation='relu'
-            )(inputs)
-            conv = BatchNormalization()(conv)
-            conv = Dropout(0.2)(conv)
-            tcn_layers.append(conv)
-        
-        # Merge TCN layers
-        if len(tcn_layers) > 1:
-            x = Concatenate(axis=-1)(tcn_layers)
-        else:
-            x = tcn_layers[0]
-        
-        x = GlobalAveragePooling1D()(x)
-        x = Dense(64, activation='relu')(x)
-        x = Dropout(0.3)(x)
+    # Custom attention implementation
+    # Query, key, and value are all the same in self-attention
+    query = lstm_branch
+    value = lstm_branch
     
-    # Deep neural network final layers
-    x = Dense(64, activation='relu')(x)
-    x = BatchNormalization()(x)
-    x = Dropout(0.3)(x)
+    # Calculate attention scores
+    attention_scores = layers.Dense(lstm_units * 2)(query)  # Bidirectional has 2x units
+    attention_scores = layers.Activation('tanh')(attention_scores)
+    attention_scores = layers.Dense(1)(attention_scores)  # (batch, seq_len, 1)
     
-    # Output layer (5 classes)
-    outputs = Dense(output_shape, activation='softmax')(x)
+    # Apply softmax to get attention weights
+    attention_weights = layers.Softmax(axis=1)(attention_scores)  # (batch, seq_len, 1)
+    
+    # Apply attention weights to the value
+    context_vector = layers.Multiply()([value, attention_weights])  # (batch, seq_len, units*2)
+    context_vector = layers.Lambda(lambda x: tf.reduce_sum(x, axis=1))(context_vector)  # (batch, units*2)
+    
+    # Continue with LSTM processing
+    lstm_branch = layers.Bidirectional(layers.LSTM(lstm_units // 2))(lstm_branch)
+    lstm_branch = layers.Dense(32, activation='relu')(lstm_branch)
+    
+    # Custom TCN-like branch using 1D convolutions with dilations
+    tcn_branch = inputs
+    for dilation_rate in tcn_dilations:
+        tcn_branch = layers.Conv1D(
+            filters=tcn_units,
+            kernel_size=tcn_kernel_size,
+            padding='causal',
+            dilation_rate=dilation_rate,
+            activation='relu'
+        )(tcn_branch)
+        tcn_branch = layers.BatchNormalization()(tcn_branch)
+        tcn_branch = layers.Dropout(dropout_rate)(tcn_branch)
+    
+    # Global pooling to reduce sequence dimension
+    tcn_branch = layers.GlobalAveragePooling1D()(tcn_branch)
+    tcn_branch = layers.Dense(32, activation='relu')(tcn_branch)
+    
+    # Combine branches
+    combined = layers.concatenate([cnn_branch, lstm_branch, tcn_branch])
+    combined = layers.Dropout(dropout_rate)(combined)
+    combined = layers.Dense(64, activation='relu')(combined)
+    combined = layers.Dropout(dropout_rate)(combined)
+    
+    # Output layer
+    outputs = layers.Dense(output_dim, activation='linear')(combined)
     
     # Create model
-    model = Model(inputs=inputs, outputs=outputs)
+    model = keras.Model(inputs=inputs, outputs=outputs)
     
     # Compile model
     model.compile(
-        optimizer=Adam(learning_rate=0.001),
-        loss='categorical_crossentropy',
-        metrics=['accuracy']
+        optimizer=keras.optimizers.Adam(learning_rate=0.001),
+        loss='mean_squared_error',
+        metrics=['mean_absolute_error']
     )
-    
-    logger.info(f"Model for {timeframe} created")
     
     return model
 
-def train_individual_model(
-    model: Model, 
-    X_train: np.ndarray, 
-    y_train: np.ndarray, 
-    X_val: np.ndarray, 
-    y_val: np.ndarray, 
+def train_individual_timeframe_model(
     pair: str,
     timeframe: str,
-    args
-) -> Tuple:
-    """Train model for individual timeframe"""
-    logger.info(f"Training model for {pair} ({timeframe})...")
+    force: bool = False
+) -> Optional[Tuple[tf.keras.Model, Dict[str, Any]]]:
+    """
+    Train a model for a specific timeframe
     
-    # Create clean pair name for file paths
-    pair_clean = pair.replace("/", "_").lower()
-    
-    # Create checkpoint path
-    checkpoint_path = f"{MODEL_WEIGHTS_DIR}/individual_{pair_clean}_{timeframe}_model.h5"
-    
-    # Create callbacks
-    checkpoint = ModelCheckpoint(
-        checkpoint_path,
-        monitor='val_accuracy',
-        save_best_only=True,
-        mode='max',
-        verbose=1
-    )
-    
-    early_stopping = EarlyStopping(
-        monitor='val_loss',
-        patience=10,
-        restore_best_weights=True,
-        verbose=1
-    )
-    
-    reduce_lr = ReduceLROnPlateau(
-        monitor='val_loss',
-        factor=0.5,
-        patience=5,
-        min_lr=0.00001,
-        verbose=1
-    )
-    
-    # Create logs directory
-    logs_dir = f"{RESULTS_DIR}/logs/{pair_clean}_{timeframe}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    os.makedirs(logs_dir, exist_ok=True)
-    tensorboard = TensorBoard(
-        log_dir=logs_dir,
-        histogram_freq=1
-    )
-    
-    # Train model
-    start_time = time.time()
-    
-    history = model.fit(
-        X_train, y_train,
-        epochs=args.epochs,
-        batch_size=args.batch_size,
-        validation_data=(X_val, y_val),
-        callbacks=[checkpoint, early_stopping, reduce_lr, tensorboard],
-        verbose=1
-    )
-    
-    training_time = time.time() - start_time
-    
-    # Load the best model
-    model = load_model(checkpoint_path)
-    
-    # Format training time
-    hours, remainder = divmod(training_time, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    training_time_str = f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
-    
-    logger.info(f"Training for {pair} ({timeframe}) completed in {training_time_str}")
-    
-    return model, history, checkpoint_path, training_time
-
-def evaluate_individual_model(
-    model: Model, 
-    X_test: np.ndarray, 
-    y_test: np.ndarray, 
-    pair: str,
-    timeframe: str
-) -> Dict:
-    """Evaluate model for individual timeframe"""
-    logger.info(f"Evaluating {pair} ({timeframe}) model...")
-    
-    # Basic evaluation
-    loss, accuracy = model.evaluate(X_test, y_test, verbose=0)
-    logger.info(f"Test loss: {loss:.4f}")
-    logger.info(f"Test accuracy: {accuracy:.4f}")
-    
-    # Get predictions
-    y_pred_proba = model.predict(X_test, verbose=0)
-    y_pred_class = np.argmax(y_pred_proba, axis=1)
-    y_test_class = np.argmax(y_test, axis=1)
-    
-    # Class mapping
-    class_map = {0: -1.0, 1: -0.5, 2: 0.0, 3: 0.5, 4: 1.0}
-    y_pred_signal = np.array([class_map[c] for c in y_pred_class])
-    y_test_signal = np.array([class_map[c] for c in y_test_class])
-    
-    # Calculate class-wise accuracy
-    class_names = ["Strong Down", "Moderate Down", "Neutral", "Moderate Up", "Strong Up"]
-    class_accuracy = {}
-    for i, name in enumerate(class_names):
-        class_mask = y_test_class == i
-        if np.sum(class_mask) > 0:
-            class_accuracy[name] = np.mean(y_pred_class[class_mask] == i)
-        else:
-            class_accuracy[name] = 0.0
-    
-    # Calculate direction accuracy
-    non_neutral_mask = (y_test_signal != 0) & (y_pred_signal != 0)
-    direction_accuracy = np.mean(np.sign(y_pred_signal[non_neutral_mask]) == np.sign(y_test_signal[non_neutral_mask]))
-    
-    # Calculate precision, recall, F1 for non-neutral classes
-    binary_y_test = (y_test_signal > 0).astype(int)  # 1 for positive, 0 for negative
-    binary_y_pred = (y_pred_signal > 0).astype(int)
-    
-    # Filter out neutral predictions
-    non_neutral_indices = np.where((y_test_signal != 0) & (y_pred_signal != 0))[0]
-    if len(non_neutral_indices) > 0:
-        filtered_y_test = binary_y_test[non_neutral_indices]
-        filtered_y_pred = binary_y_pred[non_neutral_indices]
+    Args:
+        pair: Trading pair (e.g., BTC/USD)
+        timeframe: Timeframe (e.g., 15m, 1h, 4h, 1d)
+        force: Whether to force retraining
         
-        precision = precision_score(filtered_y_test, filtered_y_pred)
-        recall = recall_score(filtered_y_test, filtered_y_pred)
-        f1 = f1_score(filtered_y_test, filtered_y_pred)
-    else:
-        precision = 0
-        recall = 0
-        f1 = 0
-    
-    # Combine metrics
-    metrics = {
-        "accuracy": accuracy,
-        "direction_accuracy": direction_accuracy,
-        "class_accuracy": class_accuracy,
-        "precision": precision,
-        "recall": recall,
-        "f1_score": f1
-    }
-    
-    # Print metrics
-    logger.info(f"{pair} ({timeframe}) evaluation metrics:")
-    logger.info(f"  Accuracy: {accuracy:.4f}")
-    logger.info(f"  Direction Accuracy: {direction_accuracy:.4f}")
-    logger.info(f"  Precision: {precision:.4f}")
-    logger.info(f"  Recall: {recall:.4f}")
-    logger.info(f"  F1 Score: {f1:.4f}")
-    
-    return metrics
-
-def save_individual_model_report(
-    pair: str,
-    timeframe: str,
-    model_path: str,
-    metrics: Dict,
-    training_time: float,
-    args
-) -> str:
-    """Save report for individual timeframe model"""
-    # Create report filename
-    pair_clean = pair.replace("/", "_").lower()
-    report_file = f"{RESULTS_DIR}/individual_model_report_{pair_clean}_{timeframe}.json"
-    
-    # Format training time
-    hours, remainder = divmod(training_time, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    training_time_str = f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
-    
-    # Create report data
-    report = {
-        "pair": pair,
-        "timeframe": timeframe,
-        "model_path": model_path,
-        "model_type": "individual",
-        "training_time": training_time_str,
-        "training_params": {
-            "epochs": args.epochs,
-            "batch_size": args.batch_size,
-            "sequence_length": args.sequence_length,
-            "predict_horizon": args.predict_horizon
-        },
-        "metrics": metrics,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    
-    # Save report
-    try:
-        with open(report_file, 'w') as f:
-            json.dump(report, f, indent=2)
-        logger.info(f"Saved report to {report_file}")
-        return report_file
-    except Exception as e:
-        logger.error(f"Error saving report: {e}")
-        return ""
-
-def update_ml_config_with_individual_model(
-    pair: str,
-    timeframe: str,
-    model_path: str,
-    metrics: Dict
-) -> bool:
-    """Update ML configuration with individual timeframe model"""
-    logger.info(f"Updating ML configuration with {pair} ({timeframe}) model...")
-    
-    # Load existing config if it exists
-    if os.path.exists(ML_CONFIG_PATH):
-        try:
-            with open(ML_CONFIG_PATH, 'r') as f:
-                config = json.load(f)
-        except Exception as e:
-            logger.error(f"Error loading ML configuration: {e}")
-            config = {"models": {}, "global_settings": {}}
-    else:
-        config = {"models": {}, "global_settings": {}}
-    
-    # Update global settings if not present
-    if "global_settings" not in config:
-        config["global_settings"] = {}
-    
-    # Set global settings
-    config["global_settings"]["base_leverage"] = 5.0
-    config["global_settings"]["max_leverage"] = 75.0
-    config["global_settings"]["confidence_threshold"] = 0.65
-    config["global_settings"]["risk_percentage"] = 0.20
-    config["global_settings"]["max_portfolio_risk"] = 0.25
-    
-    # Update model config
-    if "models" not in config:
-        config["models"] = {}
-    
-    # Create model key that includes timeframe
-    model_key = f"{pair}_{timeframe}"
-    
-    # Add or update model config
-    config["models"][model_key] = {
-        "pair": pair,
-        "timeframe": timeframe,
-        "model_type": "individual",
-        "model_path": model_path,
-        "accuracy": metrics["accuracy"],
-        "direction_accuracy": metrics["direction_accuracy"],
-        "precision": metrics["precision"],
-        "recall": metrics["recall"],
-        "f1_score": metrics["f1_score"],
-        "base_leverage": 5.0,
-        "max_leverage": 75.0,
-        "confidence_threshold": 0.65,
-        "risk_percentage": 0.20,
-        "active": True,
-        "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    
-    # Save config
-    try:
-        with open(ML_CONFIG_PATH, 'w') as f:
-            json.dump(config, f, indent=2)
-        logger.info(f"Updated ML config for {pair} ({timeframe})")
-        return True
-    except Exception as e:
-        logger.error(f"Error saving ML config: {e}")
-        return False
-
-def build_mtf_model(
-    input_shapes: Dict[str, Tuple], 
-    timeframes: List[str], 
-    output_shape: int = 5
-) -> Model:
-    """Build multi-timeframe model that uses inputs from multiple timeframes"""
-    logger.info(f"Building multi-timeframe model with timeframes: {', '.join(timeframes)}...")
-    
-    # Create branches for each timeframe
-    branches = {}
-    inputs = {}
-    
-    for timeframe in timeframes:
-        # Input for this timeframe
-        inputs[timeframe] = Input(shape=input_shapes[timeframe], name=f"input_{timeframe}")
-        
-        # Branch architecture
-        if timeframe in ['1m', '5m', '15m']:
-            # CNN branch for lower timeframes
-            x = Conv1D(filters=64, kernel_size=3, padding='same', activation='relu')(inputs[timeframe])
-            x = BatchNormalization()(x)
-            x = MaxPooling1D(pool_size=2)(x)
-            x = Conv1D(filters=128, kernel_size=3, padding='same', activation='relu')(x)
-            x = BatchNormalization()(x)
-            x = GlobalAveragePooling1D()(x)
-        
-        elif timeframe in ['30m', '1h']:
-            # LSTM branch for medium timeframes
-            x = Bidirectional(LSTM(64, return_sequences=True))(inputs[timeframe])
-            x = Dropout(0.3)(x)
-            x = Bidirectional(LSTM(64, return_sequences=False))(x)
-        
-        else:  # ['4h', '1d']
-            # TCN-like branch for higher timeframes
-            tcn_layers = []
-            num_filters = 64
-            kernel_size = 3
-            
-            # Use multiple dilated convolutions with different dilation rates
-            for dilation_rate in [1, 2, 4, 8]:
-                conv = Conv1D(
-                    filters=num_filters,
-                    kernel_size=kernel_size,
-                    padding='causal',
-                    dilation_rate=dilation_rate,
-                    activation='relu'
-                )(inputs[timeframe])
-                conv = BatchNormalization()(conv)
-                conv = Dropout(0.2)(conv)
-                tcn_layers.append(conv)
-            
-            # Merge TCN layers
-            if len(tcn_layers) > 1:
-                x = Concatenate(axis=-1)(tcn_layers)
-            else:
-                x = tcn_layers[0]
-            
-            x = GlobalAveragePooling1D()(x)
-        
-        # Final dense layer for this branch
-        x = Dense(64, activation='relu', name=f"dense_{timeframe}")(x)
-        x = Dropout(0.3)(x)
-        
-        # Store branch output
-        branches[timeframe] = x
-    
-    # Merge all branches
-    if len(branches) > 1:
-        merged = Concatenate()([branch for branch in branches.values()])
-    else:
-        merged = list(branches.values())[0]
-    
-    # Add attention layer to focus on important timeframes
-    attention = Dense(64, activation='tanh')(merged)
-    attention = Dense(1, activation='sigmoid')(attention)
-    attention_weighted = tf.keras.layers.Multiply()([merged, attention])
-    
-    # Deep neural network final layers
-    x = Dense(128, activation='relu')(attention_weighted)
-    x = BatchNormalization()(x)
-    x = Dropout(0.4)(x)
-    x = Dense(64, activation='relu')(x)
-    x = BatchNormalization()(x)
-    x = Dropout(0.3)(x)
-    
-    # Output layer (5 classes)
-    outputs = Dense(output_shape, activation='softmax')(x)
-    
-    # Create model
-    model = Model(
-        inputs=[inputs[tf] for tf in timeframes],
-        outputs=outputs
-    )
-    
-    # Compile model
-    model.compile(
-        optimizer=Adam(learning_rate=0.001),
-        loss='categorical_crossentropy',
-        metrics=['accuracy']
-    )
-    
-    logger.info("Multi-timeframe model created")
-    
-    return model
-
-def align_mtf_data(
-    data_dict: Dict[str, pd.DataFrame], 
-    sequence_lengths: Dict[str, int]
-) -> Tuple[Dict[str, pd.DataFrame], List[datetime]]:
-    """Align data from multiple timeframes to common timestamps"""
-    logger.info("Aligning data from multiple timeframes...")
-    
-    # Get the timeframe with the least amount of data
-    min_timeframe = min(data_dict.items(), key=lambda x: len(x[1]))[0]
-    min_df = data_dict[min_timeframe]
-    
-    # Get reference timestamps from the minimum timeframe
-    reference_timestamps = min_df['timestamp'].tolist()
-    
-    # Align all dataframes to these reference timestamps
-    aligned_data = {}
-    common_timestamps = []
-    
-    for timestamp in reference_timestamps:
-        # Check if this timestamp exists in all timeframes
-        valid_for_all = True
-        
-        for timeframe, df in data_dict.items():
-            # Find closest timestamp in this timeframe
-            # For higher timeframes, find the candle that contains this timestamp
-            if timeframe in ['4h', '1d']:
-                # For higher timeframes, find the candle that contains this timestamp
-                mask = (df['timestamp'] <= timestamp)
-                if not mask.any():
-                    valid_for_all = False
-                    break
-            else:
-                # For lower timeframes, find exact or closest match
-                if timestamp not in df['timestamp'].values:
-                    valid_for_all = False
-                    break
-        
-        if valid_for_all:
-            common_timestamps.append(timestamp)
-    
-    logger.info(f"Found {len(common_timestamps)} common timestamps across all timeframes")
-    
-    # Create aligned dataframes
-    for timeframe, df in data_dict.items():
-        aligned_df = pd.DataFrame()
-        
-        for timestamp in common_timestamps:
-            # Find index of closest timestamp in this timeframe
-            if timeframe in ['4h', '1d']:
-                # For higher timeframes, find the candle that contains this timestamp
-                mask = (df['timestamp'] <= timestamp)
-                if mask.any():
-                    idx = mask.idxmax()
-                    aligned_df = pd.concat([aligned_df, df.iloc[[idx]]], ignore_index=True)
-            else:
-                # For lower timeframes, find exact match
-                idx = df[df['timestamp'] == timestamp].index
-                if len(idx) > 0:
-                    aligned_df = pd.concat([aligned_df, df.iloc[[idx[0]]]], ignore_index=True)
-        
-        aligned_data[timeframe] = aligned_df
-    
-    return aligned_data, common_timestamps
-
-def prepare_mtf_data(
-    aligned_data: Dict[str, pd.DataFrame],
-    common_timestamps: List[datetime],
-    feature_columns: Dict[str, List[str]],
-    scalers: Dict[str, MinMaxScaler],
-    sequence_lengths: Dict[str, int],
-    test_size: float = 0.2,
-    validation_size: float = 0.2
-) -> Tuple:
-    """Prepare data for multi-timeframe model training"""
-    logger.info("Preparing data for multi-timeframe model...")
-    
-    # Get common target from the lowest timeframe (most granular)
-    lowest_timeframe = min(aligned_data.keys())
-    lowest_df = aligned_data[lowest_timeframe]
-    
-    # Use target from lowest timeframe
-    targets = lowest_df['target_class'].values
-    
-    # Create sequences for each timeframe
-    X_dict = {}
-    for timeframe, df in aligned_data.items():
-        # Get features
-        features = df[feature_columns[timeframe]].values
-        
-        # Normalize features
-        features = scalers[timeframe].transform(features)
-        
-        # Create sequences
-        X_timeframe = []
-        seq_len = sequence_lengths[timeframe]
-        
-        for i in range(seq_len, len(features)):
-            X_timeframe.append(features[i-seq_len:i])
-        
-        X_dict[timeframe] = np.array(X_timeframe)
-    
-    # Find the minimum number of sequences across all timeframes
-    min_sequences = min([len(X) for X in X_dict.values()])
-    
-    # Trim sequences and targets to match the minimum
-    for timeframe in X_dict:
-        X_dict[timeframe] = X_dict[timeframe][-min_sequences:]
-    
-    # Trim targets to match
-    targets = targets[-min_sequences:]
-    
-    # Convert target to categorical (one-hot encoding)
-    y_categorical = tf.keras.utils.to_categorical(targets, num_classes=5)  # 5 classes
-    
-    # Split into train and test
-    train_indices, test_indices = train_test_split(
-        np.arange(min_sequences), test_size=test_size, shuffle=False
-    )
-    
-    # Further split train into train and validation
-    train_indices, val_indices = train_test_split(
-        train_indices, test_size=validation_size, shuffle=False
-    )
-    
-    # Create train, validation, and test data for each timeframe
-    X_train, X_val, X_test = {}, {}, {}
-    for timeframe in X_dict:
-        X_train[timeframe] = X_dict[timeframe][train_indices]
-        X_val[timeframe] = X_dict[timeframe][val_indices]
-        X_test[timeframe] = X_dict[timeframe][test_indices]
-    
-    # Create train, validation, and test targets
-    y_train = y_categorical[train_indices]
-    y_val = y_categorical[val_indices]
-    y_test = y_categorical[test_indices]
-    
-    logger.info(f"Data shapes:")
-    for timeframe in X_dict:
-        logger.info(f"  {timeframe} - X_train: {X_train[timeframe].shape}, X_val: {X_val[timeframe].shape}, X_test: {X_test[timeframe].shape}")
-    logger.info(f"  y_train: {y_train.shape}, y_val: {y_val.shape}, y_test: {y_test.shape}")
-    
-    return X_train, y_train, X_val, y_val, X_test, y_test
-
-def train_mtf_model(
-    model: Model, 
-    X_train: Dict[str, np.ndarray], 
-    y_train: np.ndarray, 
-    X_val: Dict[str, np.ndarray], 
-    y_val: np.ndarray, 
-    pair: str,
-    timeframes: List[str],
-    args
-) -> Tuple:
-    """Train multi-timeframe model"""
-    logger.info(f"Training multi-timeframe model for {pair} with timeframes: {', '.join(timeframes)}...")
-    
-    # Create clean pair name for file paths
-    pair_clean = pair.replace("/", "_").lower()
-    
-    # Create checkpoint path
-    checkpoint_path = f"{MTF_MODEL_DIR}/mtf_{pair_clean}_model.h5"
-    
-    # Create callbacks
-    checkpoint = ModelCheckpoint(
-        checkpoint_path,
-        monitor='val_accuracy',
-        save_best_only=True,
-        mode='max',
-        verbose=1
-    )
-    
-    early_stopping = EarlyStopping(
-        monitor='val_loss',
-        patience=15,
-        restore_best_weights=True,
-        verbose=1
-    )
-    
-    reduce_lr = ReduceLROnPlateau(
-        monitor='val_loss',
-        factor=0.5,
-        patience=7,
-        min_lr=0.00001,
-        verbose=1
-    )
-    
-    # Create logs directory
-    logs_dir = f"{RESULTS_DIR}/logs/mtf_{pair_clean}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    os.makedirs(logs_dir, exist_ok=True)
-    tensorboard = TensorBoard(
-        log_dir=logs_dir,
-        histogram_freq=1
-    )
-    
-    # Prepare input data
-    X_train_list = [X_train[tf] for tf in timeframes]
-    X_val_list = [X_val[tf] for tf in timeframes]
-    
-    # Train model
-    start_time = time.time()
-    
-    history = model.fit(
-        X_train_list, y_train,
-        epochs=args.epochs,
-        batch_size=args.batch_size,
-        validation_data=(X_val_list, y_val),
-        callbacks=[checkpoint, early_stopping, reduce_lr, tensorboard],
-        verbose=1
-    )
-    
-    training_time = time.time() - start_time
-    
-    # Load the best model
-    model = load_model(checkpoint_path)
-    
-    # Format training time
-    hours, remainder = divmod(training_time, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    training_time_str = f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
-    
-    logger.info(f"Multi-timeframe model training completed in {training_time_str}")
-    
-    return model, history, checkpoint_path, training_time
-
-def evaluate_mtf_model(
-    model: Model, 
-    X_test: Dict[str, np.ndarray], 
-    y_test: np.ndarray, 
-    pair: str,
-    timeframes: List[str]
-) -> Dict:
-    """Evaluate multi-timeframe model"""
-    logger.info(f"Evaluating multi-timeframe model for {pair}...")
-    
-    # Prepare input data
-    X_test_list = [X_test[tf] for tf in timeframes]
-    
-    # Basic evaluation
-    loss, accuracy = model.evaluate(X_test_list, y_test, verbose=0)
-    logger.info(f"Test loss: {loss:.4f}")
-    logger.info(f"Test accuracy: {accuracy:.4f}")
-    
-    # Get predictions
-    y_pred_proba = model.predict(X_test_list, verbose=0)
-    y_pred_class = np.argmax(y_pred_proba, axis=1)
-    y_test_class = np.argmax(y_test, axis=1)
-    
-    # Class mapping
-    class_map = {0: -1.0, 1: -0.5, 2: 0.0, 3: 0.5, 4: 1.0}
-    y_pred_signal = np.array([class_map[c] for c in y_pred_class])
-    y_test_signal = np.array([class_map[c] for c in y_test_class])
-    
-    # Calculate class-wise accuracy
-    class_names = ["Strong Down", "Moderate Down", "Neutral", "Moderate Up", "Strong Up"]
-    class_accuracy = {}
-    for i, name in enumerate(class_names):
-        class_mask = y_test_class == i
-        if np.sum(class_mask) > 0:
-            class_accuracy[name] = np.mean(y_pred_class[class_mask] == i)
-        else:
-            class_accuracy[name] = 0.0
-    
-    # Calculate direction accuracy
-    non_neutral_mask = (y_test_signal != 0) & (y_pred_signal != 0)
-    if np.sum(non_neutral_mask) > 0:
-        direction_accuracy = np.mean(np.sign(y_pred_signal[non_neutral_mask]) == np.sign(y_test_signal[non_neutral_mask]))
-    else:
-        direction_accuracy = 0.0
-    
-    # Calculate precision, recall, F1 for non-neutral classes
-    binary_y_test = (y_test_signal > 0).astype(int)  # 1 for positive, 0 for negative
-    binary_y_pred = (y_pred_signal > 0).astype(int)
-    
-    # Filter out neutral predictions
-    non_neutral_indices = np.where((y_test_signal != 0) & (y_pred_signal != 0))[0]
-    if len(non_neutral_indices) > 0:
-        filtered_y_test = binary_y_test[non_neutral_indices]
-        filtered_y_pred = binary_y_pred[non_neutral_indices]
-        
-        precision = precision_score(filtered_y_test, filtered_y_pred)
-        recall = recall_score(filtered_y_test, filtered_y_pred)
-        f1 = f1_score(filtered_y_test, filtered_y_pred)
-    else:
-        precision = 0
-        recall = 0
-        f1 = 0
-    
-    # Combine metrics
-    metrics = {
-        "accuracy": accuracy,
-        "direction_accuracy": direction_accuracy,
-        "class_accuracy": class_accuracy,
-        "precision": precision,
-        "recall": recall,
-        "f1_score": f1
-    }
-    
-    # Print metrics
-    logger.info(f"Multi-timeframe model metrics:")
-    logger.info(f"  Accuracy: {accuracy:.4f}")
-    logger.info(f"  Direction Accuracy: {direction_accuracy:.4f}")
-    logger.info(f"  Precision: {precision:.4f}")
-    logger.info(f"  Recall: {recall:.4f}")
-    logger.info(f"  F1 Score: {f1:.4f}")
-    
-    return metrics
-
-def save_mtf_model_report(
-    pair: str,
-    timeframes: List[str],
-    model_path: str,
-    metrics: Dict,
-    training_time: float,
-    args
-) -> str:
-    """Save report for multi-timeframe model"""
-    # Create report filename
-    pair_clean = pair.replace("/", "_").lower()
-    report_file = f"{RESULTS_DIR}/mtf_model_report_{pair_clean}.json"
-    
-    # Format training time
-    hours, remainder = divmod(training_time, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    training_time_str = f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
-    
-    # Create report data
-    report = {
-        "pair": pair,
-        "timeframes": timeframes,
-        "model_path": model_path,
-        "model_type": "mtf",
-        "training_time": training_time_str,
-        "training_params": {
-            "epochs": args.epochs,
-            "batch_size": args.batch_size,
-            "sequence_length": args.sequence_length,
-            "predict_horizon": args.predict_horizon
-        },
-        "metrics": metrics,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    
-    # Save report
-    try:
-        with open(report_file, 'w') as f:
-            json.dump(report, f, indent=2)
-        logger.info(f"Saved multi-timeframe model report to {report_file}")
-        return report_file
-    except Exception as e:
-        logger.error(f"Error saving report: {e}")
-        return ""
-
-def update_ml_config_with_mtf_model(
-    pair: str,
-    timeframes: List[str],
-    model_path: str,
-    metrics: Dict
-) -> bool:
-    """Update ML configuration with multi-timeframe model"""
-    logger.info(f"Updating ML configuration with multi-timeframe model for {pair}...")
-    
-    # Load existing config if it exists
-    if os.path.exists(ML_CONFIG_PATH):
-        try:
-            with open(ML_CONFIG_PATH, 'r') as f:
-                config = json.load(f)
-        except Exception as e:
-            logger.error(f"Error loading ML configuration: {e}")
-            config = {"models": {}, "global_settings": {}}
-    else:
-        config = {"models": {}, "global_settings": {}}
-    
-    # Update global settings if not present
-    if "global_settings" not in config:
-        config["global_settings"] = {}
-    
-    # Set global settings
-    config["global_settings"]["base_leverage"] = 5.0
-    config["global_settings"]["max_leverage"] = 75.0
-    config["global_settings"]["confidence_threshold"] = 0.65
-    config["global_settings"]["risk_percentage"] = 0.20
-    config["global_settings"]["max_portfolio_risk"] = 0.25
-    
-    # Update model config
-    if "models" not in config:
-        config["models"] = {}
-    
-    # Create model key
-    model_key = f"{pair}_mtf"
-    
-    # Add or update model config
-    config["models"][model_key] = {
-        "pair": pair,
-        "timeframe": "mtf",
-        "timeframes": timeframes,
-        "model_type": "mtf",
-        "model_path": model_path,
-        "accuracy": metrics["accuracy"],
-        "direction_accuracy": metrics["direction_accuracy"],
-        "precision": metrics["precision"],
-        "recall": metrics["recall"],
-        "f1_score": metrics["f1_score"],
-        "base_leverage": 5.0,
-        "max_leverage": 75.0,
-        "confidence_threshold": 0.65,
-        "risk_percentage": 0.20,
-        "active": True,
-        "preferred": True,  # Prefer MTF model over individual models
-        "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    
-    # Save config
-    try:
-        with open(ML_CONFIG_PATH, 'w') as f:
-            json.dump(config, f, indent=2)
-        logger.info(f"Updated ML config with multi-timeframe model for {pair}")
-        return True
-    except Exception as e:
-        logger.error(f"Error saving ML config: {e}")
-        return False
-
-def build_ensemble_model(
-    individual_models: Dict[str, str],
-    pair: str,
-    timeframes: List[str]
-) -> Optional[str]:
-    """Build ensemble model from individual timeframe models"""
-    logger.info(f"Building ensemble model for {pair} with timeframes: {', '.join(timeframes)}...")
-    
-    # Create clean pair name for file paths
-    pair_clean = pair.replace("/", "_").lower()
-    
-    # Create ensemble path
-    ensemble_path = f"{ENSEMBLE_DIR}/ensemble_{pair_clean}_model.json"
-    
-    # Create ensemble configuration
-    ensemble_config = {
-        "pair": pair,
-        "timeframes": timeframes,
-        "models": individual_models,
-        "weights": {tf: 1.0 / len(timeframes) for tf in timeframes},  # Equal weights initially
-        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    
-    # Save ensemble configuration
-    try:
-        with open(ensemble_path, 'w') as f:
-            json.dump(ensemble_config, f, indent=2)
-        logger.info(f"Saved ensemble model configuration to {ensemble_path}")
-        return ensemble_path
-    except Exception as e:
-        logger.error(f"Error saving ensemble configuration: {e}")
+    Returns:
+        Tuple of (trained model, model info)
+    """
+    pair_symbol = pair.replace('/', '_')
+    model_name = f"{pair_symbol}_{timeframe}"
+    model_path = f"ml_models/{model_name}.h5"
+    info_path = f"ml_models/{model_name}_info.json"
+    
+    # Check if model already exists
+    if os.path.exists(model_path) and os.path.exists(info_path) and not force:
+        logging.info(f"Model already exists for {pair} ({timeframe}). Use --force to retrain.")
         return None
-
-def update_ml_config_with_ensemble(
-    pair: str,
-    timeframes: List[str],
-    ensemble_path: str
-) -> bool:
-    """Update ML configuration with ensemble model"""
-    logger.info(f"Updating ML configuration with ensemble model for {pair}...")
     
-    # Load existing config if it exists
-    if os.path.exists(ML_CONFIG_PATH):
-        try:
-            with open(ML_CONFIG_PATH, 'r') as f:
-                config = json.load(f)
-        except Exception as e:
-            logger.error(f"Error loading ML configuration: {e}")
-            config = {"models": {}, "global_settings": {}}
-    else:
-        config = {"models": {}, "global_settings": {}}
+    logging.info(f"Training individual model for {pair} ({timeframe})...")
     
-    # Update global settings if not present
-    if "global_settings" not in config:
-        config["global_settings"] = {}
+    # Load and prepare data
+    df = load_data(pair, timeframe)
+    if df is None:
+        logging.error(f"Failed to load data for {pair} ({timeframe})")
+        return None
     
-    # Set global settings
-    config["global_settings"]["base_leverage"] = 5.0
-    config["global_settings"]["max_leverage"] = 75.0
-    config["global_settings"]["confidence_threshold"] = 0.65
-    config["global_settings"]["risk_percentage"] = 0.20
-    config["global_settings"]["max_portfolio_risk"] = 0.25
+    # Add features
+    df = add_features(df)
+    if df is None or len(df) == 0:
+        logging.error(f"Failed to add features for {pair} ({timeframe})")
+        return None
     
-    # Update model config
-    if "models" not in config:
-        config["models"] = {}
+    # Prepare sequence data
+    data, scalers = prepare_sequence_data(
+        df, FEATURE_COLUMNS, TARGET_COLUMNS, SEQUENCE_LENGTH, TEST_SIZE, VALIDATION_SIZE
+    )
+    if data is None:
+        logging.error(f"Failed to prepare sequence data for {pair} ({timeframe})")
+        return None
     
-    # Create model key
-    model_key = f"{pair}_ensemble"
+    # Create and train model
+    input_shape = (SEQUENCE_LENGTH, len(FEATURE_COLUMNS))
+    model = create_hybrid_model(input_shape, len(TARGET_COLUMNS))
     
-    # Add or update model config
-    config["models"][model_key] = {
-        "pair": pair,
-        "timeframe": "ensemble",
-        "timeframes": timeframes,
-        "model_type": "ensemble",
-        "model_path": ensemble_path,
-        "accuracy": 0.0,  # Will be determined during trading
-        "direction_accuracy": 0.0,  # Will be determined during trading
-        "base_leverage": 5.0,
-        "max_leverage": 75.0,
-        "confidence_threshold": 0.65,
-        "risk_percentage": 0.20,
-        "active": True,
-        "preferred": True,  # Prefer ensemble model
-        "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Early stopping
+    early_stopping = keras.callbacks.EarlyStopping(
+        monitor='val_loss',
+        patience=PATIENCE,
+        restore_best_weights=True
+    )
+    
+    # Train model
+    start_time = time.time()
+    history = model.fit(
+        data['X_train'], data['y_train'],
+        validation_data=(data['X_val'], data['y_val']),
+        epochs=EPOCHS,
+        batch_size=BATCH_SIZE,
+        callbacks=[early_stopping],
+        verbose=1
+    )
+    training_time = time.time() - start_time
+    
+    # Evaluate model
+    train_metrics = model.evaluate(data['X_train'], data['y_train'], verbose=0)
+    val_metrics = model.evaluate(data['X_val'], data['y_val'], verbose=0)
+    test_metrics = model.evaluate(data['X_test'], data['y_test'], verbose=0)
+    
+    # Make predictions on test set
+    y_pred_scaled = model.predict(data['X_test'])
+    y_pred = scalers['target_scaler'].inverse_transform(y_pred_scaled)
+    y_true = scalers['target_scaler'].inverse_transform(data['y_test'])
+    
+    # Calculate additional metrics
+    mae = mean_absolute_error(y_true, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    r2 = r2_score(y_true, y_pred)
+    
+    # Calculate directional accuracy
+    y_pred_direction = np.sign(y_pred)
+    y_true_direction = np.sign(y_true)
+    directional_accuracy = np.mean(y_pred_direction == y_true_direction)
+    
+    # Save model and info
+    os.makedirs('ml_models', exist_ok=True)
+    model.save(model_path)
+    
+    model_info = {
+        'pair': pair,
+        'timeframe': timeframe,
+        'model_type': 'hybrid',
+        'feature_columns': FEATURE_COLUMNS,
+        'target_columns': TARGET_COLUMNS,
+        'sequence_length': SEQUENCE_LENGTH,
+        'training_time': training_time,
+        'epochs': len(history.history['loss']),
+        'metrics': {
+            'train_loss': float(train_metrics[0]),
+            'train_mae': float(train_metrics[1]),
+            'val_loss': float(val_metrics[0]),
+            'val_mae': float(val_metrics[1]),
+            'test_loss': float(test_metrics[0]),
+            'test_mae': float(test_metrics[1]),
+            'test_rmse': float(rmse),
+            'test_r2': float(r2),
+            'directional_accuracy': float(directional_accuracy)
+        },
+        'created_at': datetime.now().isoformat()
     }
     
-    # Save config
-    try:
-        with open(ML_CONFIG_PATH, 'w') as f:
-            json.dump(config, f, indent=2)
-        logger.info(f"Updated ML config with ensemble model for {pair}")
-        return True
-    except Exception as e:
-        logger.error(f"Error saving ML config: {e}")
-        return False
+    with open(info_path, 'w') as f:
+        json.dump(model_info, f, indent=2)
+    
+    logging.info(f"Saved model and info for {pair} ({timeframe})")
+    logging.info(f"Test MAE: {mae:.4f}, RMSE: {rmse:.4f}, R²: {r2:.4f}, Directional Accuracy: {directional_accuracy:.4f}")
+    
+    return model, model_info
 
-def generate_summary_report(
-    individual_reports: Dict[str, Dict],
-    mtf_reports: Dict[str, Dict],
-    ensemble_configs: Dict[str, Dict],
-    pair: str
-) -> str:
-    """Generate summary report for all models"""
-    # Create report filename
-    pair_clean = pair.replace("/", "_").lower()
-    report_file = f"{RESULTS_DIR}/summary_report_{pair_clean}.md"
+def align_timeframe_data(
+    pair: str,
+    required_timeframes: List[str] = TIMEFRAMES
+) -> Optional[pd.DataFrame]:
+    """
+    Align data from multiple timeframes to create a unified dataset
     
-    # Create report
-    report = f"# Multi-Timeframe Training Summary Report for {pair}\n\n"
-    report += f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-    
-    # Add overview table for individual models
-    report += "## Individual Timeframe Models\n\n"
-    report += "| Timeframe | Accuracy | Direction Accuracy | Precision | Recall | F1 Score |\n"
-    report += "|-----------|----------|-------------------|-----------|--------|----------|\n"
-    
-    for timeframe, data in sorted(individual_reports.items()):
-        metrics = data.get("metrics", {})
-        accuracy = metrics.get("accuracy", 0)
-        direction_accuracy = metrics.get("direction_accuracy", 0)
-        precision = metrics.get("precision", 0)
-        recall = metrics.get("recall", 0)
-        f1_score = metrics.get("f1_score", 0)
+    Args:
+        pair: Trading pair (e.g., BTC/USD)
+        required_timeframes: List of required timeframes
         
-        report += f"| {timeframe} | {accuracy:.2%} | {direction_accuracy:.2%} | {precision:.2%} | {recall:.2%} | {f1_score:.2%} |\n"
+    Returns:
+        DataFrame with aligned data from all timeframes
+    """
+    pair_symbol = pair.replace('/', '_')
+    dataframes = {}
     
-    # Add multi-timeframe model performance
-    if mtf_reports:
-        report += "\n## Multi-Timeframe Model\n\n"
-        for mtf_name, data in mtf_reports.items():
-            metrics = data.get("metrics", {})
-            accuracy = metrics.get("accuracy", 0)
-            direction_accuracy = metrics.get("direction_accuracy", 0)
-            precision = metrics.get("precision", 0)
-            recall = metrics.get("recall", 0)
-            f1_score = metrics.get("f1_score", 0)
-            timeframes = data.get("timeframes", [])
-            
-            report += f"Timeframes: {', '.join(timeframes)}\n\n"
-            report += f"- **Accuracy**: {accuracy:.2%}\n"
-            report += f"- **Direction Accuracy**: {direction_accuracy:.2%}\n"
-            report += f"- **Precision**: {precision:.2%}\n"
-            report += f"- **Recall**: {recall:.2%}\n"
-            report += f"- **F1 Score**: {f1_score:.2%}\n"
-    
-    # Add ensemble model configurations
-    if ensemble_configs:
-        report += "\n## Ensemble Model\n\n"
-        for ensemble_name, data in ensemble_configs.items():
-            timeframes = data.get("timeframes", [])
-            weights = data.get("weights", {})
-            
-            report += f"Timeframes: {', '.join(timeframes)}\n\n"
-            report += "Weights:\n"
-            for tf, weight in weights.items():
-                report += f"- {tf}: {weight:.2f}\n"
-    
-    # Add detailed class accuracy for individual models
-    report += "\n## Detailed Class Accuracy by Timeframe\n\n"
-    
-    for timeframe, data in sorted(individual_reports.items()):
-        report += f"### {timeframe}\n\n"
-        
-        class_accuracy = data.get("metrics", {}).get("class_accuracy", {})
-        for class_name, accuracy in class_accuracy.items():
-            report += f"- {class_name}: {accuracy:.2%}\n"
-        
-        report += "\n"
-    
-    # Add recommendations
-    report += "## Recommendations\n\n"
-    
-    # Find best individual model
-    best_individual = max(
-        individual_reports.items(),
-        key=lambda x: x[1].get("metrics", {}).get("f1_score", 0)
-    )
-    best_timeframe = best_individual[0]
-    best_f1 = best_individual[1].get("metrics", {}).get("f1_score", 0)
-    
-    report += f"1. **Best Individual Model**: {best_timeframe} timeframe with F1 score of {best_f1:.2%}\n"
-    
-    # Compare with MTF model
-    if mtf_reports:
-        mtf_f1 = list(mtf_reports.values())[0].get("metrics", {}).get("f1_score", 0)
-        if mtf_f1 > best_f1:
-            report += "2. The Multi-Timeframe model outperforms all individual models\n"
-        else:
-            report += f"2. The {best_timeframe} model outperforms the Multi-Timeframe model\n"
-    
-    # Recommend ensemble approach
-    report += "3. Consider using the Ensemble model for production, as it can adapt to changing market conditions\n"
-    report += "4. For optimal results, adjust ensemble weights based on recent performance\n"
-    
-    # Trading recommendations
-    report += "\n## Trading Recommendations\n\n"
-    report += "Based on model performance, consider the following trading strategy:\n\n"
-    report += "1. **Entry signals**: Use the ensemble model for entry signals\n"
-    report += "2. **Position sizing**: Scale position size based on model confidence\n"
-    report += "3. **Leverage**: Start with base leverage of 5x and adjust up to 75x based on prediction confidence\n"
-    report += "4. **Exit signals**: Use the 15m timeframe model for short-term exit signals\n"
-    report += "5. **Risk management**: Implement dynamic stop-loss based on the ATR indicator\n"
-    
-    # Save report
-    try:
-        with open(report_file, 'w') as f:
-            f.write(report)
-        logger.info(f"Saved summary report to {report_file}")
-        return report_file
-    except Exception as e:
-        logger.error(f"Error saving summary report: {e}")
-        return ""
-
-def train_individual_timeframe_models(pair: str, timeframes: List[str], args) -> Dict[str, Dict]:
-    """Train models for individual timeframes"""
-    logger.info(f"Training individual timeframe models for {pair}...")
-    
-    # Dictionary to store reports for each timeframe
-    individual_reports = {}
-    
-    # Train model for each timeframe
-    for timeframe in timeframes:
-        logger.info(f"\n{'='*80}")
-        logger.info(f"Processing {pair} ({timeframe})")
-        logger.info(f"{'='*80}\n")
-        
-        # Load data
-        df = load_historical_data(pair, timeframe)
-        
-        if df is None and args.fetch_missing:
-            # Try to fetch missing data
-            fetch_missing_data(pair, timeframe)
-            
-            # Try to load again
-            df = load_historical_data(pair, timeframe)
-        
+    # Load and process data for each timeframe
+    for tf in required_timeframes:
+        df = load_data(pair, tf)
         if df is None:
-            logger.error(f"No data available for {pair} ({timeframe}). Skipping...")
+            logging.error(f"Missing data for {pair} ({tf})")
+            return None
+        
+        # Add features and select needed columns
+        df = add_features(df)
+        if df is None or len(df) == 0:
+            logging.error(f"Failed to add features for {pair} ({tf})")
+            return None
+        
+        # Keep needed columns and add timeframe suffix
+        needed_cols = FEATURE_COLUMNS + TARGET_COLUMNS
+        df = df[needed_cols]
+        df = df.add_suffix(f'_{tf}')
+        
+        dataframes[tf] = df
+    
+    # Start with the highest resolution timeframe (15m)
+    aligned_df = dataframes['15m'].copy()
+    
+    # For each higher timeframe, assign its values to the corresponding 15m candles
+    for tf in required_timeframes[1:]:  # 1h, 4h, 1d
+        df_higher = dataframes[tf]
+        
+        # Resample the higher timeframe to 15m frequency (forward-fill)
+        # Default to None in case none of the conditions are met
+        df_resampled = None
+        
+        if tf == '1h':
+            df_resampled = df_higher.resample('15T').ffill()
+        elif tf == '4h':
+            df_resampled = df_higher.resample('15T').ffill()
+        elif tf == '1d':
+            df_resampled = df_higher.resample('15T').ffill()
+        
+        # If resampling failed for some reason, skip this timeframe
+        if df_resampled is None:
+            logging.warning(f"Failed to resample {tf} data for {pair}, skipping this timeframe")
             continue
         
-        # Calculate indicators
-        df_indicators = calculate_indicators(df, timeframe)
-        
-        # Create target variable
-        df_labeled = create_target_variable(df_indicators, timeframe, args.predict_horizon)
-        
-        # Prepare data for training
-        X_train, y_train, X_val, y_val, X_test, y_test, scaler, feature_columns = prepare_data_for_training(
-            df_labeled, args.sequence_length, test_size=0.2, validation_size=0.2
-        )
-        
-        # Build model
-        input_shape = (args.sequence_length, len(feature_columns))
-        model = build_individual_model(input_shape, timeframe)
-        
-        # Train model
-        model, history, model_path, training_time = train_individual_model(
-            model, X_train, y_train, X_val, y_val, pair, timeframe, args
-        )
-        
-        # Evaluate model
-        metrics = evaluate_individual_model(
-            model, X_test, y_test, pair, timeframe
-        )
-        
-        # Save report
-        report_path = save_individual_model_report(
-            pair, timeframe, model_path, metrics, training_time, args
-        )
-        
-        # Update ML config
-        if args.update_ml_config:
-            update_ml_config_with_individual_model(
-                pair, timeframe, model_path, metrics
-            )
-        
-        # Store report
-        try:
-            with open(report_path, 'r') as f:
-                report = json.load(f)
-                individual_reports[timeframe] = report
-        except Exception as e:
-            logger.error(f"Error loading report: {e}")
+        # Merge with the aligned dataframe
+        aligned_df = aligned_df.join(df_resampled, how='inner')
     
-    return individual_reports
+    # Drop rows with missing values
+    aligned_df.dropna(inplace=True)
+    
+    # Ensure we have enough data
+    if len(aligned_df) <= SEQUENCE_LENGTH:
+        logging.error(f"Not enough aligned data for {pair}")
+        return None
+    
+    return aligned_df
 
-def train_mtf_model_phase(pair: str, timeframes: List[str], args) -> Dict[str, Dict]:
-    """Train multi-timeframe model"""
-    logger.info(f"Training multi-timeframe model for {pair}...")
+def train_unified_model(
+    pair: str,
+    force: bool = False
+) -> Optional[Tuple[tf.keras.Model, Dict[str, Any]]]:
+    """
+    Train a unified model that combines data from all timeframes
     
-    # Dictionary to store reports
-    mtf_reports = {}
+    Args:
+        pair: Trading pair (e.g., BTC/USD)
+        force: Whether to force retraining
+        
+    Returns:
+        Tuple of (trained model, model info)
+    """
+    pair_symbol = pair.replace('/', '_')
+    model_name = f"{pair_symbol}_unified"
+    model_path = f"ml_models/{model_name}.h5"
+    info_path = f"ml_models/{model_name}_info.json"
     
-    # Dictionary to store data, scalers, and feature columns for each timeframe
-    data_dict = {}
-    scaler_dict = {}
-    feature_columns_dict = {}
-    sequence_lengths_dict = {}
+    # Check if model already exists
+    if os.path.exists(model_path) and os.path.exists(info_path) and not force:
+        logging.info(f"Unified model already exists for {pair}. Use --force to retrain.")
+        return None
     
-    # Load and prepare data for each timeframe
-    for timeframe in timeframes:
-        # Load data
-        df = load_historical_data(pair, timeframe)
-        
-        if df is None and args.fetch_missing:
-            # Try to fetch missing data
-            fetch_missing_data(pair, timeframe)
-            
-            # Try to load again
-            df = load_historical_data(pair, timeframe)
-        
-        if df is None:
-            logger.error(f"No data available for {pair} ({timeframe}). Skipping...")
-            continue
-        
-        # Calculate indicators
-        df_indicators = calculate_indicators(df, timeframe)
-        
-        # Create target variable
-        df_labeled = create_target_variable(df_indicators, timeframe, args.predict_horizon)
-        
-        # Store data
-        data_dict[timeframe] = df_labeled
-        
-        # Prepare sequence length
-        # Higher timeframes need shorter sequences
-        if timeframe in ['4h', '1d']:
-            sequence_lengths_dict[timeframe] = max(20, args.sequence_length // 4)
-        else:
-            sequence_lengths_dict[timeframe] = args.sequence_length
-        
-        # Select features
-        feature_columns = [col for col in df_labeled.columns if col not in ['timestamp', 'target', 'target_class']]
-        feature_columns_dict[timeframe] = feature_columns
-        
-        # Fit scaler
-        scaler = MinMaxScaler()
-        scaler.fit(df_labeled[feature_columns])
-        scaler_dict[timeframe] = scaler
+    logging.info(f"Training unified model for {pair}...")
     
-    # Check if we have enough data
-    if len(data_dict) < 2:
-        logger.error(f"Not enough timeframes with data for {pair}. Skipping MTF model...")
-        return mtf_reports
+    # Align data from all timeframes
+    aligned_df = align_timeframe_data(pair)
+    if aligned_df is None:
+        logging.error(f"Failed to align timeframe data for {pair}")
+        return None
     
-    # Align data from multiple timeframes
-    aligned_data, common_timestamps = align_mtf_data(data_dict, sequence_lengths_dict)
+    # Define feature and target columns for the unified model
+    unified_feature_cols = []
+    for tf in TIMEFRAMES:
+        unified_feature_cols.extend([f"{col}_{tf}" for col in FEATURE_COLUMNS])
     
-    # Prepare data for MTF model
-    X_train, y_train, X_val, y_val, X_test, y_test = prepare_mtf_data(
-        aligned_data, common_timestamps, feature_columns_dict, scaler_dict, sequence_lengths_dict,
-        test_size=0.2, validation_size=0.2
+    unified_target_cols = [f"next_close_pct_15m"]
+    
+    # Prepare sequence data
+    data, scalers = prepare_sequence_data(
+        aligned_df, unified_feature_cols, unified_target_cols,
+        SEQUENCE_LENGTH, TEST_SIZE, VALIDATION_SIZE
+    )
+    if data is None:
+        logging.error(f"Failed to prepare sequence data for unified model")
+        return None
+    
+    # Create and train model with expanded input shape
+    input_shape = (SEQUENCE_LENGTH, len(unified_feature_cols))
+    model = create_hybrid_model(
+        input_shape, len(unified_target_cols),
+        tcn_units=96, lstm_units=96, cnn_filters=48
     )
     
-    # Build MTF model
-    input_shapes = {tf: (sequence_lengths_dict[tf], len(feature_columns_dict[tf])) for tf in aligned_data}
-    mtf_model = build_mtf_model(input_shapes, list(aligned_data.keys()))
-    
-    # Train MTF model
-    mtf_model, history, model_path, training_time = train_mtf_model(
-        mtf_model, X_train, y_train, X_val, y_val, pair, list(aligned_data.keys()), args
+    # Early stopping
+    early_stopping = keras.callbacks.EarlyStopping(
+        monitor='val_loss',
+        patience=PATIENCE,
+        restore_best_weights=True
     )
     
-    # Evaluate MTF model
-    metrics = evaluate_mtf_model(
-        mtf_model, X_test, y_test, pair, list(aligned_data.keys())
+    # Train model
+    start_time = time.time()
+    history = model.fit(
+        data['X_train'], data['y_train'],
+        validation_data=(data['X_val'], data['y_val']),
+        epochs=EPOCHS,
+        batch_size=BATCH_SIZE,
+        callbacks=[early_stopping],
+        verbose=1
     )
+    training_time = time.time() - start_time
     
-    # Save report
-    report_path = save_mtf_model_report(
-        pair, list(aligned_data.keys()), model_path, metrics, training_time, args
-    )
+    # Evaluate model
+    train_metrics = model.evaluate(data['X_train'], data['y_train'], verbose=0)
+    val_metrics = model.evaluate(data['X_val'], data['y_val'], verbose=0)
+    test_metrics = model.evaluate(data['X_test'], data['y_test'], verbose=0)
     
-    # Update ML config
-    if args.update_ml_config:
-        update_ml_config_with_mtf_model(
-            pair, list(aligned_data.keys()), model_path, metrics
-        )
+    # Make predictions on test set
+    y_pred_scaled = model.predict(data['X_test'])
+    y_pred = scalers['target_scaler'].inverse_transform(y_pred_scaled)
+    y_true = scalers['target_scaler'].inverse_transform(data['y_test'])
     
-    # Store report
-    try:
-        with open(report_path, 'r') as f:
-            report = json.load(f)
-            mtf_reports["mtf"] = report
-    except Exception as e:
-        logger.error(f"Error loading report: {e}")
+    # Calculate additional metrics
+    mae = mean_absolute_error(y_true, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    r2 = r2_score(y_true, y_pred)
     
-    return mtf_reports
+    # Calculate directional accuracy
+    y_pred_direction = np.sign(y_pred)
+    y_true_direction = np.sign(y_true)
+    directional_accuracy = np.mean(y_pred_direction == y_true_direction)
+    
+    # Save model and info
+    os.makedirs('ml_models', exist_ok=True)
+    model.save(model_path)
+    
+    model_info = {
+        'pair': pair,
+        'model_type': 'unified',
+        'timeframes': TIMEFRAMES,
+        'feature_columns': unified_feature_cols,
+        'target_columns': unified_target_cols,
+        'sequence_length': SEQUENCE_LENGTH,
+        'training_time': training_time,
+        'epochs': len(history.history['loss']),
+        'metrics': {
+            'train_loss': float(train_metrics[0]),
+            'train_mae': float(train_metrics[1]),
+            'val_loss': float(val_metrics[0]),
+            'val_mae': float(val_metrics[1]),
+            'test_loss': float(test_metrics[0]),
+            'test_mae': float(test_metrics[1]),
+            'test_rmse': float(rmse),
+            'test_r2': float(r2),
+            'directional_accuracy': float(directional_accuracy)
+        },
+        'created_at': datetime.now().isoformat()
+    }
+    
+    with open(info_path, 'w') as f:
+        json.dump(model_info, f, indent=2)
+    
+    logging.info(f"Saved unified model and info for {pair}")
+    logging.info(f"Test MAE: {mae:.4f}, RMSE: {rmse:.4f}, R²: {r2:.4f}, Directional Accuracy: {directional_accuracy:.4f}")
+    
+    return model, model_info
 
-def build_ensemble_phase(pair: str, timeframes: List[str], individual_reports: Dict[str, Dict]) -> Dict[str, Dict]:
-    """Build ensemble model"""
-    logger.info(f"Building ensemble model for {pair}...")
+def train_ensemble_model(
+    pair: str,
+    force: bool = False
+) -> Optional[Tuple[tf.keras.Model, Dict[str, Any]]]:
+    """
+    Train an ensemble meta-model that combines predictions from all timeframe models
     
-    # Dictionary to store ensemble configurations
-    ensemble_configs = {}
+    Args:
+        pair: Trading pair (e.g., BTC/USD)
+        force: Whether to force retraining
+        
+    Returns:
+        Tuple of (trained model, model info)
+    """
+    pair_symbol = pair.replace('/', '_')
+    model_name = f"{pair_symbol}_ensemble"
+    model_path = f"ml_models/{model_name}.h5"
+    info_path = f"ml_models/{model_name}_info.json"
     
-    # Get model paths from individual reports
+    # Check if model already exists
+    if os.path.exists(model_path) and os.path.exists(info_path) and not force:
+        logging.info(f"Ensemble model already exists for {pair}. Use --force to retrain.")
+        return None
+    
+    logging.info(f"Training ensemble model for {pair}...")
+    
+    # Check if individual timeframe models exist
     individual_models = {}
-    for timeframe, report in individual_reports.items():
-        model_path = report.get("model_path")
-        if model_path and os.path.exists(model_path):
-            individual_models[timeframe] = model_path
-    
-    if len(individual_models) < 2:
-        logger.error(f"Not enough individual models for {pair}. Skipping ensemble...")
-        return ensemble_configs
-    
-    # Build ensemble model
-    ensemble_path = build_ensemble_model(individual_models, pair, list(individual_models.keys()))
-    
-    if ensemble_path:
-        # Update ML config
-        update_ml_config_with_ensemble(pair, list(individual_models.keys()), ensemble_path)
+    individual_info = {}
+    for tf in TIMEFRAMES:
+        model_file = f"ml_models/{pair_symbol}_{tf}.h5"
+        info_file = f"ml_models/{pair_symbol}_{tf}_info.json"
         
-        # Store ensemble configuration
-        try:
-            with open(ensemble_path, 'r') as f:
-                ensemble_config = json.load(f)
-                ensemble_configs["ensemble"] = ensemble_config
-        except Exception as e:
-            logger.error(f"Error loading ensemble configuration: {e}")
+        if not os.path.exists(model_file) or not os.path.exists(info_file):
+            logging.error(f"Missing individual model for {pair} ({tf})")
+            return None
+        
+        individual_models[tf] = keras.models.load_model(model_file)
+        with open(info_file, 'r') as f:
+            individual_info[tf] = json.load(f)
     
-    return ensemble_configs
+    # Also check if unified model exists
+    unified_model_file = f"ml_models/{pair_symbol}_unified.h5"
+    unified_info_file = f"ml_models/{pair_symbol}_unified_info.json"  # Fixed filename
+    
+    if os.path.exists(unified_model_file) and os.path.exists(unified_info_file):
+        unified_model = keras.models.load_model(unified_model_file)
+        with open(unified_info_file, 'r') as f:
+            unified_info = json.load(f)
+        logging.info(f"Loaded unified model for {pair}")
+    else:
+        logging.info(f"Unified model not found for {pair}")
+        unified_model = None
+        unified_info = None
+    
+    # Align data from all timeframes
+    aligned_df = align_timeframe_data(pair)
+    if aligned_df is None:
+        logging.error(f"Failed to align timeframe data for {pair}")
+        return None
+    
+    # Generate predictions from individual timeframe models
+    meta_features = []
+    
+    # For each timeframe, generate predictions using the appropriate model
+    for tf in TIMEFRAMES:
+        # Extract features for this timeframe
+        tf_feature_cols = [f"{col}_{tf}" for col in FEATURE_COLUMNS]
+        tf_target_cols = [f"next_close_pct_{tf}"]
+        
+        # Prepare sequence data
+        data, scalers = prepare_sequence_data(
+            aligned_df, tf_feature_cols, tf_target_cols,
+            SEQUENCE_LENGTH, TEST_SIZE, VALIDATION_SIZE
+        )
+        
+        if data is None:
+            logging.error(f"Failed to prepare sequence data for {pair} ({tf})")
+            return None
+        
+        # Generate predictions
+        y_pred_scaled = individual_models[tf].predict(data['X_test'])
+        
+        # Store predictions as meta-features
+        meta_features.append(y_pred_scaled)
+    
+    # Add unified model predictions if available
+    if unified_model is not None:
+        # Extract features for unified model
+        unified_feature_cols = []
+        for tf in TIMEFRAMES:
+            unified_feature_cols.extend([f"{col}_{tf}" for col in FEATURE_COLUMNS])
+        
+        unified_target_cols = [f"next_close_pct_15m"]
+        
+        # Prepare sequence data
+        unified_data, unified_scalers = prepare_sequence_data(
+            aligned_df, unified_feature_cols, unified_target_cols,
+            SEQUENCE_LENGTH, TEST_SIZE, VALIDATION_SIZE
+        )
+        
+        if unified_data is not None:
+            # Generate predictions
+            unified_y_pred_scaled = unified_model.predict(unified_data['X_test'])
+            
+            # Store predictions as meta-features
+            meta_features.append(unified_y_pred_scaled)
+    
+    # Combine predictions into meta-features
+    X_meta = np.concatenate(meta_features, axis=1)
+    
+    # Use 15m actual values as targets for the meta-model
+    # Make sure we have data from the last timeframe in the loop
+    y_meta = None
+    final_scalers = None
+    
+    # Get the data from the 15m timeframe models specifically
+    for tf in TIMEFRAMES:
+        if tf == '15m':
+            tf_feature_cols = [f"{col}_{tf}" for col in FEATURE_COLUMNS]
+            tf_target_cols = [f"next_close_pct_{tf}"]
+            
+            temp_data, temp_scalers = prepare_sequence_data(
+                aligned_df, tf_feature_cols, tf_target_cols,
+                SEQUENCE_LENGTH, TEST_SIZE, VALIDATION_SIZE
+            )
+            
+            if temp_data is not None:
+                y_meta = temp_data['y_test']
+                final_scalers = temp_scalers
+                logging.info(f"Using {tf} targets for ensemble meta-model")
+                break
+    
+    # If we couldn't get 15m data, try any timeframe
+    if y_meta is None:
+        for tf in TIMEFRAMES:
+            tf_feature_cols = [f"{col}_{tf}" for col in FEATURE_COLUMNS]
+            tf_target_cols = [f"next_close_pct_{tf}"]
+            
+            temp_data, temp_scalers = prepare_sequence_data(
+                aligned_df, tf_feature_cols, tf_target_cols,
+                SEQUENCE_LENGTH, TEST_SIZE, VALIDATION_SIZE
+            )
+            
+            if temp_data is not None:
+                y_meta = temp_data['y_test']
+                final_scalers = temp_scalers
+                logging.info(f"Using {tf} targets for ensemble meta-model")
+                break
+    
+    if y_meta is None or final_scalers is None:
+        logging.error(f"Could not find target data for ensemble model for {pair}")
+        return None
+    
+    # Split meta-features into training and testing sets
+    meta_split_idx = int(len(X_meta) * 0.7)
+    X_meta_train = X_meta[:meta_split_idx]
+    y_meta_train = y_meta[:meta_split_idx]
+    X_meta_test = X_meta[meta_split_idx:]
+    y_meta_test = y_meta[meta_split_idx:]
+    
+    # Create and train ensemble meta-model
+    meta_model = keras.Sequential([
+        layers.Dense(32, activation='relu', input_shape=(X_meta.shape[1],)),
+        layers.Dropout(0.2),
+        layers.Dense(16, activation='relu'),
+        layers.Dense(1, activation='linear')
+    ])
+    
+    meta_model.compile(
+        optimizer=keras.optimizers.Adam(learning_rate=0.001),
+        loss='mean_squared_error',
+        metrics=['mean_absolute_error']
+    )
+    
+    # Train meta-model
+    start_time = time.time()
+    meta_history = meta_model.fit(
+        X_meta_train, y_meta_train,
+        epochs=50,
+        batch_size=32,
+        validation_split=0.2,
+        verbose=1
+    )
+    training_time = time.time() - start_time
+    
+    # Evaluate meta-model
+    meta_metrics = meta_model.evaluate(X_meta_test, y_meta_test, verbose=0)
+    
+    # Make predictions
+    y_meta_pred = meta_model.predict(X_meta_test)
+    
+    # Calculate additional metrics
+    y_true = final_scalers['target_scaler'].inverse_transform(y_meta_test)
+    y_pred = final_scalers['target_scaler'].inverse_transform(y_meta_pred)
+    mae = mean_absolute_error(y_true, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    r2 = r2_score(y_true, y_pred)
+    
+    # Calculate directional accuracy
+    y_pred_direction = np.sign(y_pred)
+    y_true_direction = np.sign(y_true)
+    directional_accuracy = np.mean(y_pred_direction == y_true_direction)
+    
+    # Save model and info
+    os.makedirs('ml_models', exist_ok=True)
+    meta_model.save(model_path)
+    
+    ensemble_info = {
+        'pair': pair,
+        'model_type': 'ensemble',
+        'timeframes': TIMEFRAMES,
+        'includes_unified': unified_model is not None,
+        'training_time': training_time,
+        'epochs': len(meta_history.history['loss']),
+        'metrics': {
+            'loss': float(meta_metrics[0]),
+            'mae': float(meta_metrics[1]),
+            'rmse': float(rmse),
+            'r2': float(r2),
+            'directional_accuracy': float(directional_accuracy)
+        },
+        'component_models': {
+            tf: {
+                'accuracy': individual_info[tf]['metrics']['directional_accuracy']
+            } for tf in TIMEFRAMES
+        },
+        'created_at': datetime.now().isoformat()
+    }
+    
+    with open(info_path, 'w') as f:
+        json.dump(ensemble_info, f, indent=2)
+    
+    logging.info(f"Saved ensemble model and info for {pair}")
+    logging.info(f"Test MAE: {mae:.4f}, RMSE: {rmse:.4f}, R²: {r2:.4f}, Directional Accuracy: {directional_accuracy:.4f}")
+    
+    return meta_model, ensemble_info
+
+def train_all_for_pair(pair: str, args: argparse.Namespace) -> bool:
+    """
+    Train all model types for a single trading pair
+    
+    Args:
+        pair: Trading pair (e.g., BTC/USD)
+        args: Command-line arguments
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    pair_symbol = pair.replace('/', '_')
+    logging.info(f"=== Training all models for {pair} ===")
+    
+    # Train individual timeframe models
+    if not args.skip_individual:
+        for tf in TIMEFRAMES:
+            result = train_individual_timeframe_model(pair, tf, args.force)
+            if result is None and not os.path.exists(f"ml_models/{pair_symbol}_{tf}.h5"):
+                logging.error(f"Failed to train individual model for {pair} ({tf})")
+                return False
+    
+    # Train unified model
+    if not args.skip_unified:
+        result = train_unified_model(pair, args.force)
+        if result is None and not os.path.exists(f"ml_models/{pair_symbol}_unified.h5"):
+            logging.warning(f"Failed to train unified model for {pair}")
+            # Continue anyway, as ensemble model can work with just individual models
+    
+    # Train ensemble model
+    if not args.skip_ensemble:
+        result = train_ensemble_model(pair, args.force)
+        if result is None and not os.path.exists(f"ml_models/{pair_symbol}_ensemble.h5"):
+            logging.error(f"Failed to train ensemble model for {pair}")
+            return False
+    
+    logging.info(f"=== Completed training for {pair} ===")
+    return True
 
 def main():
     """Main function"""
-    # Parse arguments
     args = parse_arguments()
     
-    # Determine timeframes
-    if args.timeframes == "all":
-        timeframes = TRAINING_TIMEFRAMES
+    # Create directory for models if it doesn't exist
+    os.makedirs('ml_models', exist_ok=True)
+    
+    # Determine which pairs to process
+    pairs_to_process = SUPPORTED_PAIRS if args.all else [args.pair]
+    
+    results = {}
+    for pair in pairs_to_process:
+        success = train_all_for_pair(pair, args)
+        results[pair] = success
+    
+    # Print summary
+    logging.info("=== Training Summary ===")
+    for pair, success in results.items():
+        status = "SUCCESS" if success else "FAILED"
+        logging.info(f"{pair}: {status}")
+    
+    # Overall success
+    overall_success = all(results.values())
+    if overall_success:
+        logging.info("All models trained successfully!")
     else:
-        timeframes = [t.strip() for t in args.timeframes.split(",")]
+        logging.warning("Some models failed to train. Check the logs for details.")
     
-    # Print banner
-    logger.info("\n" + "=" * 80)
-    logger.info("MULTI-TIMEFRAME MODEL TRAINER")
-    logger.info("=" * 80)
-    logger.info(f"Pair: {args.pair}")
-    logger.info(f"Timeframes: {', '.join(timeframes)}")
-    logger.info(f"Epochs: {args.epochs}")
-    logger.info(f"Batch Size: {args.batch_size}")
-    logger.info(f"Sequence Length: {args.sequence_length}")
-    logger.info(f"Prediction Horizon: {args.predict_horizon}")
-    logger.info(f"Phase: {args.phase}")
-    logger.info(f"Update ML Config: {args.update_ml_config}")
-    logger.info(f"Fetch Missing Data: {args.fetch_missing}")
-    logger.info("=" * 80 + "\n")
-    
-    # Dictionary to store reports for each phase
-    individual_reports = {}
-    mtf_reports = {}
-    ensemble_configs = {}
-    
-    # Train individual timeframe models
-    if args.phase in ["individual", "all"]:
-        individual_reports = train_individual_timeframe_models(args.pair, timeframes, args)
-    
-    # Train multi-timeframe model
-    if args.phase in ["mtf", "all"] and len(timeframes) >= 2:
-        mtf_reports = train_mtf_model_phase(args.pair, timeframes, args)
-    
-    # Build ensemble model
-    if args.phase in ["ensemble", "all"] and individual_reports:
-        ensemble_configs = build_ensemble_phase(args.pair, timeframes, individual_reports)
-    
-    # Generate summary report
-    if individual_reports or mtf_reports or ensemble_configs:
-        summary_report = generate_summary_report(individual_reports, mtf_reports, ensemble_configs, args.pair)
-        
-        if summary_report:
-            logger.info(f"Generated summary report: {summary_report}")
-    
-    # Print success message
-    logger.info("\nMulti-timeframe training completed!")
-    
-    return 0
+    return overall_success
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
